@@ -1,0 +1,144 @@
+# HVAC Voice Agent .gitignore
+
+# ===========================================
+# Python
+# ===========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ===========================================
+# Virtual Environments
+# ===========================================
+.venv/
+venv/
+ENV/
+env/
+.env.local
+
+# ===========================================
+# Environment Files (KEEP .env.example)
+# ===========================================
+.env
+.env.production
+.env.staging
+*.local
+
+# ===========================================
+# Database Files (Local Development)
+# ===========================================
+*.db
+*.sqlite
+*.sqlite3
+hvac_agent.db
+
+# ===========================================
+# IDE and Editor
+# ===========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ===========================================
+# OS Files
+# ===========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ===========================================
+# Testing
+# ===========================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# ===========================================
+# Logs
+# ===========================================
+*.log
+logs/
+log/
+
+# ===========================================
+# Temporary Files
+# ===========================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+
+# ===========================================
+# Build and Distribution
+# ===========================================
+*.manifest
+*.spec
+
+# ===========================================
+# Jupyter Notebooks (if any)
+# ===========================================
+.ipynb_checkpoints/
+
+# ===========================================
+# mypy
+# ===========================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ===========================================
+# Docker (local)
+# ===========================================
+docker-compose.override.yml
+
+# ===========================================
+# Local development files
+# ===========================================
+*.local.py
+local_settings.py
+scratch/
+notes/
+TODO.md
+NOTES.md
+
+# ===========================================
+# Reference/Documentation files (local only)
+# ===========================================
+new 1.md
+reference/
