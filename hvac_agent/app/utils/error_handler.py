@@ -59,18 +59,18 @@ class HVACAgentError(Exception):
         self.user_message = user_message or self._get_default_user_message()
     
     def _get_default_user_message(self) -> str:
-        """Get default user-friendly message based on error code."""
+        """Get default user-friendly message based on error code - dispatcher style."""
         messages = {
-            ErrorCode.UNKNOWN: "I'm having a technical issue. Let me try that again.",
-            ErrorCode.DATABASE: "I'm having trouble accessing our system. Please hold on.",
-            ErrorCode.OPENAI: "I'm having trouble processing that. Could you repeat that?",
-            ErrorCode.TWILIO: "I'm having trouble with the call. Please hold on.",
-            ErrorCode.VALIDATION: "I didn't quite catch that. Could you please repeat?",
-            ErrorCode.TIMEOUT: "That's taking longer than expected. Let me try again.",
-            ErrorCode.RATE_LIMIT: "We're experiencing high volume. Please hold on.",
-            ErrorCode.AUTHENTICATION: "I'm having a system issue. Please hold on.",
-            ErrorCode.NOT_FOUND: "I couldn't find that information. Let me check again.",
-            ErrorCode.WEBSOCKET: "I'm having connection issues. Please hold on.",
+            ErrorCode.UNKNOWN: "Technical issue. One moment.",
+            ErrorCode.DATABASE: "System issue. One moment.",
+            ErrorCode.OPENAI: "Didn't catch that. Say that again.",
+            ErrorCode.TWILIO: "Connection issue. One moment.",
+            ErrorCode.VALIDATION: "Didn't catch that. Say that again.",
+            ErrorCode.TIMEOUT: "One moment. Try again.",
+            ErrorCode.RATE_LIMIT: "High volume. One moment.",
+            ErrorCode.AUTHENTICATION: "System issue. One moment.",
+            ErrorCode.NOT_FOUND: "Checking. One moment.",
+            ErrorCode.WEBSOCKET: "Connection issue. One moment.",
         }
         return messages.get(self.code, messages[ErrorCode.UNKNOWN])
     
@@ -125,7 +125,7 @@ class ValidationError(HVACAgentError):
             message=message,
             code=ErrorCode.VALIDATION,
             details={"field": field} if field else {},
-            user_message="I didn't quite understand that. Could you please rephrase?",
+            user_message="Didn't catch that. Say that again.",
         )
 
 
@@ -249,8 +249,8 @@ def get_user_friendly_error(error: Union[Exception, HVACAgentError]) -> str:
     if isinstance(error, HVACAgentError):
         return error.user_message
     
-    # Generic fallback
-    return "I'm sorry, I'm having a technical issue. Let me try that again."
+    # Generic fallback - dispatcher style
+    return "Technical issue. One moment."
 
 
 def create_error_response(

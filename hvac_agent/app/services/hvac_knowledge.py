@@ -338,30 +338,24 @@ def get_energy_saving_tips() -> List[str]:
 def format_insight_for_voice(insight: Dict[str, Any]) -> str:
     """
     Format an insight dictionary for voice response.
+    Dispatcher style - ONE sentence max, then redirect to booking.
     
     Args:
         insight: Insight dictionary
         
     Returns:
-        Voice-friendly string
+        Voice-friendly string (short)
     """
-    parts = []
-    
-    if "title" in insight:
-        parts.append(f"Here's some information about {insight['title']}.")
-    
+    # Dispatcher gives brief info, then redirects to booking
     if "possible_causes" in insight:
-        causes = insight["possible_causes"][:3]  # Limit for voice
-        parts.append(f"Common causes include: {', '.join(causes)}.")
+        cause = insight["possible_causes"][0]  # Just ONE cause
+        return f"Could be {cause.lower()}. Let's get someone out there."
     
     if "diy_checks" in insight:
-        checks = insight["diy_checks"][:2]  # Limit for voice
-        parts.append(f"You can try: {'. '.join(checks)}.")
+        check = insight["diy_checks"][0]  # Just ONE tip
+        return f"Try this: {check}. If that doesn't work, we can schedule."
     
-    if "when_to_call" in insight:
-        parts.append(insight["when_to_call"])
+    if "title" in insight:
+        return f"{insight['title']}. We can take a look. Let's get you scheduled."
     
-    if not parts:
-        parts.append("I can provide general HVAC information. Would you like tips on a specific issue?")
-    
-    return " ".join(parts)
+    return "We handle that. Let's get you scheduled."

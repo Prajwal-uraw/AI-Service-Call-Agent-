@@ -78,10 +78,10 @@ DECISION_GREETINGS = [
     "KC Comfort. Scheduling or question.",
 ]
 
-# Personalized greetings (when we know the name) - still professional
+# Personalized greetings (when we know the name) - guided prompts
 PERSONALIZED_GREETINGS = [
-    "{name}. KC Comfort. What do you need.",
-    "KC Comfort. {name}, what's going on.",
+    "{name}. KC Comfort. Cooling or heating.",
+    "KC Comfort. {name}. Cooling issue or heating.",
 ]
 
 # Booking confirmations - professional, signals follow-through

@@ -24,7 +24,7 @@ from app.services.emergency_service import detect_emergency, get_emergency_conta
 from app.utils.logging import get_logger, log_call_event
 from app.utils.voice_config import get_voice_config, VoiceTone
 from app.utils.error_handler import handle_error, get_user_friendly_error
-from app.utils.latency_helpers import detect_booking_intent
+# detect_booking_intent removed - not used
 from app.utils.texas_persona import (
     get_greeting,
     get_goodbye,
@@ -232,7 +232,7 @@ async def twilio_voice(
             state.requested_human = True
             emergency_contact = get_emergency_contact(db, state.location_code)
             xml = _twiml_transfer(
-                "Connecting you to a representative now. Please hold.",
+                "Transferring you now.",
                 emergency_contact["phone"],
                 voice=voice,
             )
@@ -299,7 +299,29 @@ async def twilio_voice(
         # CALL CONTROL: Detect long speech or multi-topic rambling
         if is_speech_too_long(user_text, max_words=30) or is_multi_topic(user_text):
             log_call_event(logger, "LONG_SPEECH_INTERRUPT", CallSid, words=len(user_text.split()))
-            # Polite interruption - acknowledge and redirect
+            
+            # Still extract what we can from the rambling
+            from app.utils.call_control import extract_issue_type, extract_city, extract_time_preference
+            
+            # Try to extract issue
+            if not state.issue:
+                issue = extract_issue_type(user_text)
+                if issue:
+                    state.issue = issue
+                    state.issue_category = issue
+            
+            # Try to extract city
+            if not state.location_code:
+                city = extract_city(user_text)
+                if city:
+                    state.location_code = city
+            
+            # Try to extract time
+            if not state.appointment_time:
+                time_pref = extract_time_preference(user_text)
+                if time_pref:
+                    state.appointment_time = time_pref
+            
             # Determine current booking stage from state
             if not state.issue:
                 stage = BookingStage.ISSUE
@@ -312,7 +334,12 @@ async def twilio_voice(
             else:
                 stage = BookingStage.CONFIRM
             
-            interrupt_response = get_interruption_response(stage)
+            # Pass extracted values for smarter acknowledgment
+            interrupt_response = get_interruption_response(
+                stage,
+                extracted_issue=state.issue,
+                extracted_city=state.location_code,
+            )
             xml = _twiml_say_and_gather(interrupt_response, voice=voice)
             return Response(content=xml, media_type="application/xml")
         
@@ -322,9 +349,6 @@ async def twilio_voice(
             log_call_event(logger, "QUICK_RESPONSE", CallSid)
             xml = _twiml_say_and_gather(quick_reply, voice=voice)
             return Response(content=xml, media_type="application/xml")
-        
-        # Detect intent for smart filler selection
-        is_booking_intent = detect_booking_intent(user_text)
         
         # Run agent with timeout protection
         try:

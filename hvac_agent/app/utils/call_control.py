@@ -121,21 +121,34 @@ REDIRECT_PROMPTS = {
 }
 
 
-def get_interruption_response(stage: BookingStage) -> str:
+def get_interruption_response(
+    stage: BookingStage,
+    extracted_issue: str = None,
+    extracted_city: str = None,
+) -> str:
     """
     Get polite interruption + redirect for current stage.
     
     Pattern:
-    - Brief acknowledgment
+    - Brief acknowledgment (with what we extracted if any)
     - Immediate redirect to required field
     - No apology, no over-explanation
     """
     import random
     
-    interrupt = random.choice(INTERRUPTION_PHRASES)
+    # Build acknowledgment based on what we extracted
+    if extracted_issue and extracted_city:
+        ack = f"Okay— {extracted_issue} issue in {extracted_city}."
+    elif extracted_issue:
+        ack = f"Okay— {extracted_issue} issue."
+    elif extracted_city:
+        ack = f"Okay— {extracted_city}."
+    else:
+        ack = random.choice(INTERRUPTION_PHRASES)
+    
     redirect = REDIRECT_PROMPTS.get(stage, "What do you need.")
     
-    return f"{interrupt} {redirect}"
+    return f"{ack} {redirect}"
 
 
 # =============================================================================
