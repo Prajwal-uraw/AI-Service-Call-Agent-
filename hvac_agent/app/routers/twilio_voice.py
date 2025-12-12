@@ -92,9 +92,9 @@ def _escape_xml(text: str) -> str:
 
 def _twiml_say_and_gather(
     message: str,
-    voice: str = "Polly.Joanna",
+    voice: str = "Polly.Kendra",
     hints: Optional[str] = None,
-    timeout: int = 4,
+    timeout: int = 5,
     speech_timeout: str = "auto",
     barge_in: bool = True,
 ) -> str:
@@ -127,21 +127,21 @@ def _twiml_say_and_gather(
             {hints_attr}>
         <Say voice="{voice}">{message}</Say>
     </Gather>
-    <Say voice="{voice}">I'm here.</Say>
+    <Say voice="{voice}">Still here, hon! Take your time.</Say>
     <Gather input="speech"
             speechTimeout="auto"
-            timeout="5"
+            timeout="8"
             action="/twilio/voice"
             method="POST"
             bargeIn="true">
     </Gather>
-    <Say voice="{voice}">I'll disconnect now.</Say>
+    <Say voice="{voice}">Alrighty, I'll let you go! Call back anytime, hon!</Say>
     <Hangup/>
 </Response>
 """.strip()
 
 
-def _twiml_goodbye(message: str, voice: str = "Polly.Joanna") -> str:
+def _twiml_goodbye(message: str, voice: str = "Polly.Kendra") -> str:
     """
     Generate TwiML for goodbye message and hangup.
     
@@ -165,7 +165,7 @@ def _twiml_goodbye(message: str, voice: str = "Polly.Joanna") -> str:
 def _twiml_transfer(
     message: str,
     transfer_number: str,
-    voice: str = "Polly.Joanna",
+    voice: str = "Polly.Kendra",
 ) -> str:
     """
     Generate TwiML for transferring to another number.
@@ -188,13 +188,13 @@ def _twiml_transfer(
 """.strip()
 
 
-def _twiml_error(voice: str = "Polly.Joanna") -> str:
-    """Generate TwiML for error scenario - dispatcher style."""
+def _twiml_error(voice: str = "Polly.Kendra") -> str:
+    """Generate TwiML for error scenario - warm and apologetic."""
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="{voice}">Technical issue. Try again or press zero for a representative.</Say>
+    <Say voice="{voice}">Oh I'm so sorry hon, we're having a little technical hiccup! Could you try that again? Or press zero and I'll get you to a real person right away!</Say>
     <Gather input="dtmf" numDigits="1" action="/twilio/voice" method="POST">
-        <Say voice="{voice}">Press zero.</Say>
+        <Say voice="{voice}">Press zero for a person, or just say that again!</Say>
     </Gather>
     <Hangup/>
 </Response>
@@ -248,8 +248,8 @@ async def twilio_voice(
             xml = _twiml_say_and_gather(
                 welcome,
                 voice=voice,
-                hints="schedule, appointment, AC, heating, repair, maintenance, reschedule, cancel, yes, no",
-                timeout=5,
+                hints="schedule, appointment, AC, air conditioning, heating, heater, furnace, repair, maintenance, reschedule, cancel, yes, no, yeah, morning, afternoon, Dallas, Fort Worth, Arlington, cooling, not working, broken, noise, leak",
+                timeout=6,
             )
             return Response(content=xml, media_type="application/xml")
         

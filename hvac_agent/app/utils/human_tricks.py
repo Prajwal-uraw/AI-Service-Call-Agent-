@@ -83,20 +83,21 @@ def cleanup_personality(call_sid: str) -> None:
 # MICRO-ACKNOWLEDGMENTS (<300ms responses)
 # =============================================================================
 
-# Dispatcher-style micro-acks - calm, professional
+# Warm, friendly micro-acks
 MICRO_ACKS = [
-    "Okay.",
-    "Alright.",
-    "Got it.",
-    "Right.",
-    "Understood.",
+    "Oh absolutely!",
+    "You got it!",
+    "Sure thing!",
+    "Of course!",
+    "I hear ya!",
 ]
 
-# No cheerful variants - dispatcher style only
+# Extra warm Texas variants
 TEXAS_MICRO_ACKS = [
-    "Okay.",
-    "Alright.",
-    "Got it.",
+    "Oh for sure, hon!",
+    "Absolutely!",
+    "You bet!",
+    "Of course, sweetie!",
 ]
 
 
@@ -127,20 +128,20 @@ def get_micro_ack(call_sid: str) -> str:
 # THINKING FILLERS (Conversational back-pressure)
 # =============================================================================
 
-# Dispatcher-style - brief, professional
+# Warm, friendly thinking fillers
 THINKING_FILLERS = [
-    "One moment.",
-    "Let me check.",
-    "Checking now.",
-    "One second.",
-    "Let me pull that up.",
+    "Let me take a quick look here...",
+    "Okay, give me just a sec...",
+    "Alrighty, let me check on that for ya...",
+    "One moment, hon...",
+    "Let me see what we've got...",
 ]
 
-# No cheerful variants
+# Extra warm Texas variants
 TEXAS_THINKING_FILLERS = [
-    "One moment.",
-    "Checking.",
-    "Let me see.",
+    "Okie dokie, let me check...",
+    "Hang on just a sec, sweetie...",
+    "Let me pull that up for ya...",
 ]
 
 
@@ -395,13 +396,12 @@ def get_calibration_phrase() -> str:
 # DISPATCHER-STYLE EXIT
 # =============================================================================
 
-# Never say goodbye cheerfully. Signal follow-through.
-HUMAN_EXITS = [
-    "We'll see you then.",
-    "You're set.",
-    "We'll take it from here.",
-    "Alright.",
-    "We'll be there.",
+# Human-like exit phrases - warm and caring
+EXIT_PHRASES = [
+    "Thanks so much for calling! Y'all take care now!",
+    "Have a wonderful day, hon! We'll see you soon!",
+    "Alrighty, you take care! Don't be a stranger!",
+    "Thanks for choosing us! Stay cool out there!",
 ]
 
 
@@ -410,7 +410,7 @@ def get_human_exit(caller_name: Optional[str] = None) -> str:
     Get a dispatcher-style exit phrase.
     Never say goodbye cheerfully. Signal follow-through.
     """
-    return random.choice(HUMAN_EXITS)
+    return random.choice(EXIT_PHRASES)
 
 
 # =============================================================================
@@ -461,7 +461,7 @@ def get_response_delay_ms(caller_pace: str) -> int:
 def add_commitment_hesitation(response: str) -> str:
     """
     Add brief pause before confirming booking.
-    Dispatcher style - minimal, professional.
+    Warm and patient style.
     """
     commitment_phrases = [
         "you're booked",
@@ -472,10 +472,10 @@ def add_commitment_hesitation(response: str) -> str:
     
     for phrase in commitment_phrases:
         if phrase in response.lower():
-            # Brief pause - dispatcher style
+            # Brief pause - warm and patient
             hesitations = [
-                "Alright. ",
-                "Okay. ",
+                "Alright, sweetie... ",
+                "Okay, hon... ",
             ]
             # Only 40% of the time
             if random.random() < 0.4:

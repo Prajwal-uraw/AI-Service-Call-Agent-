@@ -107,17 +107,17 @@ def is_multi_topic(text: str) -> bool:
 # =============================================================================
 
 INTERRUPTION_PHRASES = [
-    "Okay— got it.",
-    "Alright— let me stop you there.",
-    "Okay. Got what I need.",
-    "Right. Let me focus on one thing.",
+    "Oh I hear ya, hon!",
+    "I totally understand!",
+    "Oh bless your heart!",
+    "I know, that's so frustrating!",
 ]
 
 REDIRECT_PROMPTS = {
-    BookingStage.ISSUE: "Is it cooling or heating.",
-    BookingStage.CITY: "What city.",
-    BookingStage.TIME: "Morning or afternoon.",
-    BookingStage.NAME: "Name for the appointment.",
+    BookingStage.ISSUE: "So is it your AC or your heater that's giving you trouble?",
+    BookingStage.CITY: "And which area are you in - Dallas, Fort Worth, or Arlington?",
+    BookingStage.TIME: "Would morning or afternoon work better for you?",
+    BookingStage.NAME: "And what name should I put this under, hon?",
 }
 
 
@@ -127,26 +127,26 @@ def get_interruption_response(
     extracted_city: str = None,
 ) -> str:
     """
-    Get polite interruption + redirect for current stage.
+    Get warm, friendly interruption + redirect for current stage.
     
     Pattern:
-    - Brief acknowledgment (with what we extracted if any)
-    - Immediate redirect to required field
-    - No apology, no over-explanation
+    - Warm acknowledgment (show you heard them)
+    - Gentle redirect to next question
+    - Always caring, never robotic
     """
     import random
     
-    # Build acknowledgment based on what we extracted
+    # Build warm acknowledgment based on what we extracted
     if extracted_issue and extracted_city:
-        ack = f"Okay— {extracted_issue} issue in {extracted_city}."
+        ack = f"Oh I hear ya! So {extracted_issue} issue in {extracted_city} - let me get you taken care of!"
     elif extracted_issue:
-        ack = f"Okay— {extracted_issue} issue."
+        ack = f"Oh no, {extracted_issue} trouble! That's no fun, especially in this weather!"
     elif extracted_city:
-        ack = f"Okay— {extracted_city}."
+        ack = f"Alrighty, {extracted_city}! Let me see what we can do for ya!"
     else:
         ack = random.choice(INTERRUPTION_PHRASES)
     
-    redirect = REDIRECT_PROMPTS.get(stage, "What do you need.")
+    redirect = REDIRECT_PROMPTS.get(stage, "How can I help you today, hon?")
     
     return f"{ack} {redirect}"
 
