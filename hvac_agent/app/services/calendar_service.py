@@ -18,6 +18,12 @@ from sqlalchemy.orm import Session
 
 from app.models.db_models import Location, Appointment
 from app.utils.logging import get_logger
+from app.services.notification_service import (
+    AppointmentDetails,
+    send_booking_confirmation,
+    send_cancellation_notification,
+    send_reschedule_notification,
+)
 
 logger = get_logger("calendar")
 
@@ -186,8 +192,10 @@ def create_booking(
     issue: str,
     location_code: str,
     phone: Optional[str] = None,
+    email: Optional[str] = None,
     call_sid: Optional[str] = None,
     priority: int = 3,
+    send_confirmation: bool = True,
 ) -> Dict[str, Any]:
     """
     Create a new appointment booking.
@@ -228,6 +236,7 @@ def create_booking(
     appt = Appointment(
         customer_name=name.strip(),
         customer_phone=phone,
+        customer_email=email,
         date=d,
         time=t,
         issue=issue.strip(),
@@ -247,11 +256,31 @@ def create_booking(
             name, date_str, time_str, loc.name
         )
         
+        # Send confirmation notifications
+        if send_confirmation and (phone or email):
+            try:
+                details = AppointmentDetails(
+                    customer_name=name.strip(),
+                    customer_phone=phone,
+                    customer_email=email,
+                    appointment_date=d,
+                    appointment_time=t,
+                    location_name=loc.name,
+                    location_address=loc.address or "",
+                    issue=issue.strip(),
+                    confirmation_id=appt.id,
+                )
+                notification_result = send_booking_confirmation(details)
+                logger.info("Confirmation sent: %s", notification_result)
+            except Exception as e:
+                logger.warning("Failed to send confirmation: %s", str(e))
+        
         return {
             "status": "success",
             "message": f"Booking confirmed for {date_str} at {time_str} at {loc.name}.",
             "appointment_id": appt.id,
             "confirmation": f"Your confirmation number is {appt.id:05d}.",
+            "confirmation_sent": bool(phone or email),
         }
     except Exception as e:
         db.rollback()

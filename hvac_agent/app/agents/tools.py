@@ -82,6 +82,7 @@ def tool_create_booking(
     issue: str,
     location_code: str,
     phone: Optional[str] = None,
+    email: Optional[str] = None,
     call_sid: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -94,15 +95,16 @@ def tool_create_booking(
         time: Time in HH:MM format
         issue: Description of HVAC issue
         location_code: Location code
-        phone: Customer phone (optional)
+        phone: Customer phone for SMS confirmation (optional)
+        email: Customer email for email confirmation (optional)
         call_sid: Twilio CallSid (optional)
         
     Returns:
-        Booking result
+        Booking result with confirmation_sent status
     """
     logger.info(
-        "Tool called: create_booking name=%s date=%s time=%s location=%s",
-        name, date, time, location_code
+        "Tool called: create_booking name=%s date=%s time=%s location=%s phone=%s email=%s",
+        name, date, time, location_code, phone, email
     )
     return create_booking(
         db=db,
@@ -112,6 +114,7 @@ def tool_create_booking(
         issue=issue,
         location_code=location_code,
         phone=phone,
+        email=email,
         call_sid=call_sid,
     )
 
@@ -318,6 +321,14 @@ def get_tools_schema() -> List[Dict[str, Any]]:
                         "location_code": {
                             "type": "string",
                             "description": "Location code"
+                        },
+                        "phone": {
+                            "type": "string",
+                            "description": "Customer phone number for SMS confirmation (optional)"
+                        },
+                        "email": {
+                            "type": "string",
+                            "description": "Customer email for email confirmation (optional)"
                         },
                     },
                     "required": ["name", "date", "time", "issue", "location_code"],

@@ -86,6 +86,7 @@ class Appointment(Base):
     id: int = Column(Integer, primary_key=True, index=True)
     customer_name: str = Column(String(100), nullable=False)
     customer_phone: Optional[str] = Column(String(20), nullable=True)
+    customer_email: Optional[str] = Column(String(255), nullable=True)
     date: date = Column(Date, nullable=False)
     time: time = Column(Time, nullable=False)
     issue: str = Column(String(500), nullable=False)
