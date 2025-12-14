@@ -14,7 +14,8 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
-
+from dotenv import load_dotenv
+load_dotenv()
 import httpx
 from openai import OpenAI
 from sqlalchemy.orm import Session

@@ -15,7 +15,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
+from dotenv import load_dotenv
+load_dotenv() 
 from app.services.db import init_db, check_db_health
 from app.routers import (
     health_router,
@@ -27,6 +28,7 @@ from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
 
 logger = get_logger("main")
+
 
 # Configuration
 APP_NAME = os.getenv("APP_NAME", "HVAC Voice Agent")
@@ -69,7 +71,8 @@ app = FastAPI(
     version=APP_VERSION,
     description="Production-ready HVAC AI Voice Agent with Twilio and OpenAI integration",
     lifespan=lifespan,
-    docs_url="/docs" if DEBUG else None,
+    # docs_url="/docs" if DEBUG else None,
+    docs_url="/docs",
     redoc_url="/redoc" if DEBUG else None,
 )
 
