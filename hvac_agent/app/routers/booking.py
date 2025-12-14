@@ -27,6 +27,8 @@ from app.services.calendar_service import (
 from app.models.db_models import Appointment, Location, EmergencyLog
 from app.utils.logging import get_logger
 
+
+
 router = APIRouter(prefix="/debug", tags=["debug"])
 logger = get_logger("booking")
 

@@ -26,7 +26,8 @@ from app.routers import (
 )
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
-
+from app.middleware.logging_middleware import log_requests
+from app.middleware.twilio_auth_middleware import validate_twilio_request
 logger = get_logger("main")
 
 
@@ -85,7 +86,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+app.middleware("http")(validate_twilio_request)
+app.middleware("http")(log_requests) # Logging middleware
+ 
 # Global exception handler
 @app.exception_handler(HVACAgentError)
 async def hvac_error_handler(request: Request, exc: HVACAgentError):
