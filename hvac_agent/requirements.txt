@@ -28,7 +28,11 @@ gunicorn>=21.0.0
 
 # PostgreSQL driver (for production)
 # Uncomment if using PostgreSQL:
-# psycopg2-binary>=2.9.9
+psycopg2-binary>=2.9.9
+
+
+python-multipart==0.0.20
+twilio==9.8.8
 
 # Development dependencies (optional)
 # pytest>=8.0.0

@@ -24,7 +24,11 @@ image = (
         "sqlalchemy>=2.0.0",
         "websockets>=12.0",
         "httpx>=0.27.0",
+        "psycopg2-binary>=2.9.9",
+        "python-multipart==0.0.20",
+        "twilio==9.8.8",
     )
+    .add_local_dir("app", remote_path="/root/app")
 )
 
 # Create Modal app
@@ -33,8 +37,8 @@ app = modal.App("hvac-voice-agent", image=image)
 
 @app.function(
     secrets=[modal.Secret.from_name("hvac-agent-secrets")],
-    allow_concurrent_inputs=100,
-    container_idle_timeout=300,
+    scaledown_window=300,
+    
 )
 @modal.asgi_app()
 def fastapi_app():
