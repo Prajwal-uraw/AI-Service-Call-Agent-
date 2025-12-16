@@ -204,12 +204,12 @@ def _twiml_error(voice: str = "Polly.Kendra") -> str:
 @router.post("/twilio/voice")
 async def twilio_voice(
     request: Request,
-    CallSid: str = Form(...),
-    From: str = Form(...),
-    To: str = Form(...),
-    SpeechResult: Optional[str] = Form(None),
-    Digits: Optional[str] = Form(None),
-    CallStatus: Optional[str] = Form(None),
+    # CallSid: Optional[str] = Form(None),
+    # From: Optional[str] = Form(None),
+    # To: Optional[str] = Form(None),
+    # SpeechResult: Optional[str] = Form(None),
+    # Digits: Optional[str] = Form(None),
+    # CallStatus: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -222,6 +222,14 @@ async def twilio_voice(
     
     Returns TwiML response for Twilio to execute.
     """
+    form = getattr(request.state, "twilio_form", await request.form())
+    CallSid = form.get("CallSid")
+    From = form.get("From")
+    To = form.get("To")
+    SpeechResult = form.get("SpeechResult")
+    Digits = form.get("Digits")
+    CallStatus = form.get("CallStatus")
+
     state: CallState = call_state_store.get(CallSid)
     voice = DEFAULT_VOICE.voice
     
