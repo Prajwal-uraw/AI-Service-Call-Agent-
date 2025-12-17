@@ -37,6 +37,7 @@ psycopg2-binary>=2.9.9
 python-multipart==0.0.20
 twilio==9.8.8
 
+alembic>=1.13.0
 # Redis (optional - for persistent state in multi-instance deployments)
 # Uncomment to enable Redis state management:
 # redis>=5.0.0
