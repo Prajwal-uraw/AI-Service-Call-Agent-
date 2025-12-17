@@ -405,7 +405,7 @@ async def twilio_elevenlabs_stream(ws: WebSocket):
             pass
 
 
-@router.get("/twilio/elevenlabs/twiml")
+@router.post("/twilio/elevenlabs/twiml")
 async def elevenlabs_twiml():
     """
     Return TwiML for connecting to the ElevenLabs streaming endpoint.
