@@ -30,6 +30,10 @@ gunicorn>=21.0.0
 # Uncomment if using PostgreSQL:
 # psycopg2-binary>=2.9.9
 
+# Redis (optional - for persistent state in multi-instance deployments)
+# Uncomment to enable Redis state management:
+# redis>=5.0.0
+
 # Development dependencies (optional)
 # pytest>=8.0.0
 # pytest-asyncio>=0.23.0

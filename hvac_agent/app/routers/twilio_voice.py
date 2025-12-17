@@ -73,10 +73,10 @@ BOOKING_FILLERS = [
     "One moment.",
 ]
 
-# Voice configuration
-DEFAULT_VOICE = get_voice_config(VoiceTone.FRIENDLY)
-EMERGENCY_VOICE = get_voice_config(VoiceTone.URGENT)
-EMPATHETIC_VOICE = get_voice_config(VoiceTone.EMPATHETIC)
+# Voice configuration - using neural voices for better quality
+DEFAULT_VOICE = get_voice_config(VoiceTone.FRIENDLY)  # Polly.Joanna (Neural)
+EMERGENCY_VOICE = get_voice_config(VoiceTone.URGENT)  # Polly.Matthew (Neural)
+EMPATHETIC_VOICE = get_voice_config(VoiceTone.EMPATHETIC)  # Polly.Ruth (Neural)
 
 
 def _escape_xml(text: str) -> str:

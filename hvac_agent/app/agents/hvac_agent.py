@@ -48,13 +48,15 @@ from app.utils.error_handler import (
     get_user_friendly_error,
     HVACAgentError,
 )
+from app.utils.context_manager import get_context_efficient_history
 
 logger = get_logger("hvac_agent")
 
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 HVAC_COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+# Upgraded to gpt-4o for significantly better conversation quality and context retention
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "5"))
 
 # Initialize OpenAI client with timeout
@@ -287,32 +289,44 @@ class HVACAgent:
         return text
     
     def _build_messages(self, user_text: str, state: CallState) -> List[Dict[str, Any]]:
-        """Build message list for OpenAI - optimized for low latency."""
+        """Build message list for OpenAI - optimized for context retention and natural conversation."""
         # Compact state context (only essential fields)
         ctx = {
             "name": state.name,
             "loc": state.location_code,
-            "issue": state.issue[:50] if state.issue else None,
+            "issue": state.issue,  # Don't truncate - full context needed
             "appt": f"{state.appointment_date} {state.appointment_time}" if state.has_appointment else None,
         }
         ctx_str = json.dumps({k: v for k, v in ctx.items() if v}, separators=(',', ':'))
-        
+
         messages = [
             {"role": "system", "content": f"{SYSTEM_PROMPT}\nState:{ctx_str}"},
         ]
-        
-        # Add only last 3 turns (truncated to 100 chars each) for speed
-        if state.conversation_history:
-            for turn in state.conversation_history[-3:]:
-                content = turn.content[:100] + "..." if len(turn.content) > 100 else turn.content
-                messages.append({
-                    "role": turn.role,
-                    "content": content
-                })
-        
+
+        # Get context-efficient history (with optional summarization for very long calls)
+        summary, recent_turns = get_context_efficient_history(
+            state.conversation_history,
+            include_summary=True,
+            max_recent_turns=15  # Last 15 turns in full detail
+        )
+
+        # Add conversation summary if available (for calls > 15 turns)
+        if summary:
+            messages.append({
+                "role": "system",
+                "content": f"EARLIER CONVERSATION SUMMARY:\n{summary}"
+            })
+
+        # Add recent conversation turns in full detail
+        for turn in recent_turns:
+            messages.append({
+                "role": turn.role,
+                "content": turn.content  # Full content for proper context
+            })
+
         # Add current user message
         messages.append({"role": "user", "content": user_text})
-        
+
         return messages
     
     def _get_completion(self, messages: List[Dict], state: CallState) -> str:
@@ -324,8 +338,8 @@ class HVACAgent:
                 model=OPENAI_MODEL,
                 messages=messages,
                 tools=tools,
-                temperature=0.2,  # Lower for faster, more deterministic responses
-                max_tokens=80,    # Voice responses should be SHORT
+                temperature=0.7,  # Higher for natural, varied, human-like responses
+                max_tokens=150,   # Allow complete thoughts and natural phrasing
             )
         except httpx.TimeoutException:
             self.logger.warning("OpenAI timeout - returning fallback")
@@ -389,8 +403,8 @@ class HVACAgent:
             follow_up = client.chat.completions.create(
                 model=OPENAI_MODEL,
                 messages=messages,
-                temperature=0.2,
-                max_tokens=80,  # Keep voice responses short
+                temperature=0.7,  # Natural, varied responses
+                max_tokens=150,   # Complete thoughts
             )
             return follow_up.choices[0].message.content.strip()
         except httpx.TimeoutException:
