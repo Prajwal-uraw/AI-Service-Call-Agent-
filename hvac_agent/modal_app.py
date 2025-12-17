@@ -38,9 +38,6 @@ app = modal.App("hvac-voice-agent", image=image)
 
 
 @app.function(
-    secrets=[modal.Secret.from_name("hvac-agent-secrets")],
-    scaledown_window=300,
-    
     secrets=[
         modal.Secret.from_name("hvac-agent-secrets"),
         modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
