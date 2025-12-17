@@ -8,6 +8,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,10 +30,21 @@ jobs:
           MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
-          modal token set \
-            --token-id "$MODAL_TOKEN_ID" \
-            --token-secret "$MODAL_TOKEN_SECRET"
+          alembic upgrade head
 
-      - name: Deploy HVAC Agent
-        working-directory: hvac_agent
-        run: modal deploy modal_app.py
+      # Run tests
+      - name: Run tests
+        working-directory: ./hvac_agent
+        run: |
+          pytest
+
+      # Build Docker image
+      - name: Build Docker image
+        working-directory: ./hvac_agent
+        run: |
+          docker build -t hvac-agent:latest .
+
+      # Run container for smoke test
+      - name: Run container for smoke test
+        run: |
+          docker run -d -p 8000:8000 hvac-agent:latest

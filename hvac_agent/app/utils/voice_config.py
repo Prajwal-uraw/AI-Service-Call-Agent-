@@ -61,71 +61,95 @@ class VoiceConfig:
     soft_mode: bool = False
     
     def get_ssml_prosody(self) -> str:
-        """Get SSML prosody attributes."""
-        rate_map = {"slow": "90%", "medium": "100%", "fast": "110%"}
-        return f'rate="{rate_map.get(self.speaking_rate, "100%")}" pitch="{self.pitch}"'
+        """Get SSML prosody attributes optimized for natural, human-like speech."""
+        # Natural speaking rates - conversational pace (not too fast)
+        rate_map = {
+            "slow": "90%",      # Measured and clear
+            "medium": "100%",   # Natural conversational pace
+            "fast": "110%"      # Brisk but still natural
+        }
+
+        # Add volume for emphasis in certain tones
+        volume = ""
+        if self.soft_mode:
+            volume = ' volume="medium"'
+
+        return f'rate="{rate_map.get(self.speaking_rate, "100%")}" pitch="{self.pitch}"{volume}'
     
     def wrap_ssml(self, text: str, add_pause: bool = True) -> str:
         """
-        Wrap text in SSML tags for enhanced speech.
-        
+        Wrap text in SSML tags with natural, conversational pausing.
+
         Args:
             text: Text to wrap
             add_pause: Whether to add pause at end
-            
+
         Returns:
-            SSML-wrapped text
+            SSML-wrapped text with natural prosody
         """
         prosody = self.get_ssml_prosody()
-        
+
+        # Natural, conversational pauses
+        if '<break' not in text:
+            # Questions - natural pause for response
+            text = text.replace('?', '? <break time="450ms"/>')
+
+            # Periods - natural sentence boundary
+            text = text.replace('. ', '. <break time="400ms"/>')
+
+            # Commas - natural breath
+            text = text.replace(', ', ', <break time="200ms"/>')
+
+        # Build final SSML with prosody wrapper
         ssml = f'<speak><prosody {prosody}>{text}</prosody>'
-        
-        if add_pause:
-            ssml += f'<break time="{self.pause_between_sentences}ms"/>'
-        
+
+        # Add natural final pause
+        if add_pause and not text.rstrip().endswith('/>'):
+            ssml += f'<break time="300ms"/>'
+
         ssml += '</speak>'
-        
+
         return ssml
 
 
-# Tone-specific configurations - Using Kendra for warmer Texas feel
+# Tone-specific configurations - Optimized for natural, enterprise-quality voice
 TONE_CONFIGS = {
     VoiceTone.PROFESSIONAL: VoiceConfig(
-        voice="Polly.Kendra",  # Warmer than Joanna
+        voice="Polly.Joanna",  # Neural voice - natural and clear
         tone=VoiceTone.PROFESSIONAL,
         speaking_rate="medium",
         pitch="medium",
-        pause_between_sentences=250,
+        pause_between_sentences=300,
     ),
     VoiceTone.FRIENDLY: VoiceConfig(
-        voice="Polly.Kendra",  # Texas-friendly voice
+        voice="Polly.Joanna",  # Neural - warm and natural
         tone=VoiceTone.FRIENDLY,
         speaking_rate="medium",
         pitch="medium",
         pause_between_sentences=300,
     ),
     VoiceTone.EMPATHETIC: VoiceConfig(
-        voice="Polly.Kendra",  # Warm and caring
+        voice="Polly.Joanna",  # Maintain natural tone
         tone=VoiceTone.EMPATHETIC,
-        speaking_rate="slow",
-        pitch="low",
-        pause_between_sentences=400,
+        speaking_rate="medium",
+        pitch="medium",
+        pause_between_sentences=350,
         soft_mode=True,
     ),
     VoiceTone.URGENT: VoiceConfig(
-        voice="Polly.Matthew",  # Male voice for urgency contrast
+        voice="Polly.Matthew",  # Neural male - clear
         tone=VoiceTone.URGENT,
         speaking_rate="fast",
-        pitch="high",
-        pause_between_sentences=200,
+        pitch="medium",
+        pause_between_sentences=250,
     ),
     VoiceTone.CALM: VoiceConfig(
-        voice="Polly.Kendra",
+        voice="Polly.Joanna",  # Natural and calm
         tone=VoiceTone.CALM,
-        speaking_rate="slow",
-        pitch="low",
+        speaking_rate="medium",
+        pitch="medium",
         pause_between_sentences=350,
-        soft_mode=True,
+        soft_mode=False,
     ),
 }
 

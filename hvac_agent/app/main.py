@@ -23,6 +23,7 @@ from app.routers import (
     booking_router,
     twilio_voice_router,
     twilio_stream_router,
+    twilio_elevenlabs_router,
 )
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
@@ -118,6 +119,7 @@ app.include_router(health_router)
 app.include_router(booking_router)
 app.include_router(twilio_voice_router)
 app.include_router(twilio_stream_router)
+app.include_router(twilio_elevenlabs_router)
 
 
 # Root endpoint
@@ -132,6 +134,7 @@ async def root():
             "health": "/health",
             "twilio_voice": "/twilio/voice",
             "twilio_stream": "/twilio/stream",
+            "twilio_elevenlabs_stream": "/twilio/elevenlabs/stream",
             "debug_locations": "/debug/locations",
             "debug_appointments": "/debug/appointments",
             "docs": "/docs" if DEBUG else "disabled",
