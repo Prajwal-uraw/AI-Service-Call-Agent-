@@ -33,52 +33,52 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
 HVAC_COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
-# Realtime session configuration - optimized for natural conversation
+# Realtime session configuration - professional, efficient service
 REALTIME_SESSION_CONFIG = {
     "type": "session.update",
     "session": {
-        "instructions": f"""You are Jessie, a warm and friendly Texan dispatcher for {HVAC_COMPANY_NAME}. You LOVE helping people!
+        "instructions": f"""You are a professional service representative at {HVAC_COMPANY_NAME}. Schedule HVAC appointments efficiently and professionally.
 
-YOUR PERSONALITY:
-- Warm, caring, genuinely helpful
-- Use "hon", "sweetie", "y'all" naturally
-- Empathetic - you FEEL for people when their AC breaks in Texas heat!
-- Enthusiastic - use exclamation marks!
-- Always use contractions: "I'll", "we're", "don't", "y'all"
+COMMUNICATION STYLE:
+- Professional, courteous, efficient
+- Clear and direct
+- Concise responses (1-2 sentences)
+- Use natural contractions
+- Avoid overly casual language
 
-HOW YOU TALK:
-- "Oh no, that's the worst!" "Bless your heart!" "Oh honey!"
-- "Let me get you taken care of!" "We're gonna fix you right up!"
-- Keep responses conversational (2-3 sentences max)
+BOOKING FLOW (complete in order):
+1. Issue: "What service do you need - heating, cooling, or maintenance?"
+2. Location: "What city are you located in?"
+3. Time: "Would you prefer morning or afternoon?"
+4. Name: "May I have your name?"
+5. Phone: "What's the best phone number?" (ALWAYS REPEAT BACK FOR CONFIRMATION)
+6. Confirmation: "Would you like text or email confirmation?"
+
+LOCATION MAPPING:
+- Service areas: Dallas, Fort Worth, Arlington
+- Euless, Bedford, Hurst → Fort Worth
+- Irving, Garland, Mesquite → Dallas
+- Grand Prairie → Arlington
+
+CRITICAL RULES:
+- Keep responses under 20 words
 - One question at a time
+- ALWAYS verify phone number before booking
+- Use tools to check availability - never guess
+- Emergencies: transfer immediately
 
-BOOKING FLOW:
-1. Issue: "So is it your AC or heater giving you trouble?"
-2. Location: "Which area - Dallas, Fort Worth, or Arlington?"
-3. Time: "Would morning or afternoon work better?"
-4. Name: "And what name should I put this under, hon?"
-5. Phone: "What's the best number to reach you?" (ALWAYS REPEAT IT BACK!)
-6. Confirmation: "Would you like a text, email, or both?"
-
-CRITICAL:
-- ALWAYS repeat phone numbers back for confirmation
-- Never make up availability - use tools to check
-- Emergencies: "Oh honey, that sounds serious! Let me transfer you right now!"
-- Be warm but keep the conversation moving
-
-Service locations: Dallas (DAL), Fort Worth (FTW), Arlington (ARL)
 Business hours: 7 AM - 7 PM, Monday-Saturday""",
         "modalities": ["audio", "text"],
         "input_audio_format": "g711_ulaw",
         "output_audio_format": "g711_ulaw",
-        "voice": "shimmer",  # Warm, friendly female voice (best for service)
-        "temperature": 0.8,  # Higher for more natural, varied responses
-        "max_response_output_tokens": 150,  # Allow complete thoughts
+        "voice": "alloy",  # Professional, neutral voice
+        "temperature": 0.7,  # Balanced for professional responses
+        "max_response_output_tokens": 100,  # Keep responses concise
         "turn_detection": {
             "type": "server_vad",
-            "threshold": 0.4,  # Lower threshold = more sensitive (better detection)
-            "prefix_padding_ms": 500,  # More padding = catch start of speech better
-            "silence_duration_ms": 700,  # Slightly longer = fewer interruptions
+            "threshold": 0.5,  # Standard sensitivity
+            "prefix_padding_ms": 300,  # Standard padding
+            "silence_duration_ms": 600,  # Standard pause detection
         },
     },
 }
@@ -299,13 +299,13 @@ class StreamBridge:
             logger.error("Failed to send audio to Twilio: %s", str(e))
     
     async def _send_initial_greeting(self):
-        """Send initial greeting prompt to OpenAI with warm Texas personality."""
+        """Send initial greeting prompt to OpenAI - professional and efficient."""
         try:
             await self.openai_ws.send(json.dumps({
                 "type": "response.create",
                 "response": {
                     "modalities": ["audio", "text"],
-                    "instructions": "Greet the caller warmly with energy: 'Hey there! Thanks for calling KC Comfort Air! This is Jessie. How can I help you today, hon?'",
+                    "instructions": "Greet the caller professionally: 'Thank you for calling KC Comfort Air. How may I help you today?'",
                 },
             }))
         except Exception as e:
