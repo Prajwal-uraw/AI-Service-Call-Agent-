@@ -107,17 +107,17 @@ def is_multi_topic(text: str) -> bool:
 # =============================================================================
 
 INTERRUPTION_PHRASES = [
-    "Oh I hear ya, hon!",
-    "I totally understand!",
-    "Oh bless your heart!",
-    "I know, that's so frustrating!",
+    "I understand.",
+    "Understood.",
+    "I see.",
+    "Got it.",
 ]
 
 REDIRECT_PROMPTS = {
-    BookingStage.ISSUE: "So is it your AC or your heater that's giving you trouble?",
-    BookingStage.CITY: "And which area are you in - Dallas, Fort Worth, or Arlington?",
-    BookingStage.TIME: "Would morning or afternoon work better for you?",
-    BookingStage.NAME: "And what name should I put this under, hon?",
+    BookingStage.ISSUE: "What service do you need - heating, cooling, or maintenance?",
+    BookingStage.CITY: "What city are you in?",
+    BookingStage.TIME: "Would you prefer morning or afternoon?",
+    BookingStage.NAME: "May I have your name?",
 }
 
 
@@ -127,27 +127,30 @@ def get_interruption_response(
     extracted_city: str = None,
 ) -> str:
     """
-    Get warm, friendly interruption + redirect for current stage.
-    
+    Get professional interruption + redirect for current stage.
+
     Pattern:
-    - Warm acknowledgment (show you heard them)
-    - Gentle redirect to next question
-    - Always caring, never robotic
+    - Brief acknowledgment
+    - Direct redirect to next question
+    - Professional and efficient
     """
     import random
-    
-    # Build warm acknowledgment based on what we extracted
+    from app.utils.location_mapping import get_service_area_name
+
+    # Build brief acknowledgment based on what we extracted
     if extracted_issue and extracted_city:
-        ack = f"Oh I hear ya! So {extracted_issue} issue in {extracted_city} - let me get you taken care of!"
+        city_name = get_service_area_name(extracted_city) if extracted_city else extracted_city
+        ack = f"Understood. {extracted_issue.capitalize()} service in {city_name}."
     elif extracted_issue:
-        ack = f"Oh no, {extracted_issue} trouble! That's no fun, especially in this weather!"
+        ack = f"Understood. {extracted_issue.capitalize()} service."
     elif extracted_city:
-        ack = f"Alrighty, {extracted_city}! Let me see what we can do for ya!"
+        city_name = get_service_area_name(extracted_city) if extracted_city else extracted_city
+        ack = f"Understood. {city_name}."
     else:
         ack = random.choice(INTERRUPTION_PHRASES)
-    
-    redirect = REDIRECT_PROMPTS.get(stage, "How can I help you today, hon?")
-    
+
+    redirect = REDIRECT_PROMPTS.get(stage, "How may I help you?")
+
     return f"{ack} {redirect}"
 
 
@@ -187,20 +190,37 @@ def extract_issue_type(text: str) -> Optional[str]:
 
 
 def extract_city(text: str) -> Optional[str]:
-    """Extract city from caller speech."""
+    """
+    Extract city from caller speech using comprehensive location mapping.
+
+    Now supports all DFW area cities including Euless, Bedford, Irving, etc.
+    """
+    from app.utils.location_mapping import map_city_to_service_area
+
     text_lower = text.lower()
-    
-    cities = {
-        "dallas": "DAL",
-        "fort worth": "FTW",
-        "fortworth": "FTW",
-        "arlington": "ARL",
-    }
-    
-    for city_name, code in cities.items():
-        if city_name in text_lower:
-            return code
-    
+
+    # Try direct city name extraction
+    # Check for multi-word cities first (e.g., "Fort Worth", "Grand Prairie")
+    multi_word_cities = [
+        "fort worth", "grand prairie", "north richland hills",
+        "haltom city", "farmers branch", "university park",
+        "highland park", "white settlement", "dalworthington gardens",
+        "forest hill", "cedar hill", "richland hills", "river oaks"
+    ]
+
+    for city in multi_word_cities:
+        if city in text_lower:
+            return map_city_to_service_area(city)
+
+    # Then check single-word cities
+    words = text_lower.split()
+    for word in words:
+        # Clean up punctuation
+        word = word.strip(",.!?;:")
+        area_code = map_city_to_service_area(word)
+        if area_code:
+            return area_code
+
     return None
 
 

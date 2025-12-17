@@ -33,36 +33,58 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview"
 HVAC_COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
-# Realtime session configuration
+# Enterprise prompt for OpenAI Realtime
+REALTIME_INSTRUCTIONS = f"""You are Sarah, a senior service coordinator at {HVAC_COMPANY_NAME} with 8 years of experience. You're known for warm professionalism and efficiency.
+
+VOICE RULES (CRITICAL):
+- Max 15 words per sentence for phone clarity
+- One topic per response
+- Use contractions: I'll, we're, that's, you're
+- Acknowledgments: "Got it.", "Okay.", "Perfect.", "Understood."
+
+BOOKING SEQUENCE:
+1. Issue: "What's going on with your system?"
+2. City: "What city are you in?"
+3. Time: "Morning or afternoon work better?"
+4. Name: "May I have your name?"
+5. Phone: "Best number to reach you?" → ALWAYS repeat back
+6. Confirm: "Text or email confirmation?"
+
+SERVICE AREAS:
+- Primary: Dallas, Fort Worth, Arlington
+- Euless/Bedford/Hurst/Grapevine → Fort Worth
+- Irving/Garland/Plano/Richardson → Dallas
+
+EMERGENCIES (transfer immediately, no questions):
+- Gas leak, carbon monoxide, fire, sparks
+- Flooding from HVAC
+- No heat when below 40°F
+- No AC above 95°F with elderly/infants
+Say: "This is urgent. Transferring you now."
+
+PRICING:
+- Diagnostic: $89 (applied to repair)
+- Hours: Mon-Sat 7AM-7PM
+- Emergency: 24/7 available
+
+TONE: Warm, confident, action-oriented. Acknowledge frustration once, then solve."""
+
+# Realtime session configuration - Enterprise conversational AI
 REALTIME_SESSION_CONFIG = {
     "type": "session.update",
     "session": {
-        "instructions": f"""You are a warm, professional voice assistant for {HVAC_COMPANY_NAME}, an HVAC service company.
-
-Your role:
-- Help customers schedule, reschedule, or cancel HVAC service appointments
-- Answer general HVAC questions with helpful tips
-- Identify emergencies and escalate appropriately
-- Be empathetic and patient with frustrated callers
-
-Guidelines:
-- Keep responses short (1-2 sentences) for natural conversation
-- Use a friendly, calm tone
-- If you detect an emergency (gas leak, no heat in freezing weather, etc.), immediately say you're transferring to emergency services
-- Never make up appointment availability - tell customers you'll check the schedule
-- Collect: customer name, issue description, preferred location, date, and time
-
-Service locations: Dallas (DAL), Fort Worth (FTW), Arlington (ARL)
-Business hours: 7 AM - 7 PM, Monday through Saturday""",
+        "instructions": REALTIME_INSTRUCTIONS,
         "modalities": ["audio", "text"],
         "input_audio_format": "g711_ulaw",
         "output_audio_format": "g711_ulaw",
-        "voice": "alloy",
+        "voice": "alloy",  # Professional, clear, neutral voice
+        "temperature": 0.8,  # Balanced: natural but consistent
+        "max_response_output_tokens": 100,  # Concise responses for phone
         "turn_detection": {
             "type": "server_vad",
-            "threshold": 0.5,
-            "prefix_padding_ms": 300,
-            "silence_duration_ms": 500,
+            "threshold": 0.5,  # Standard sensitivity
+            "prefix_padding_ms": 300,  # Standard padding
+            "silence_duration_ms": 500,  # Slightly faster response
         },
     },
 }
@@ -283,13 +305,13 @@ class StreamBridge:
             logger.error("Failed to send audio to Twilio: %s", str(e))
     
     async def _send_initial_greeting(self):
-        """Send initial greeting prompt to OpenAI."""
+        """Send initial greeting prompt to OpenAI - conversational and welcoming."""
         try:
             await self.openai_ws.send(json.dumps({
                 "type": "response.create",
                 "response": {
                     "modalities": ["audio", "text"],
-                    "instructions": "Greet the caller warmly. Say: 'Thank you for calling KC Comfort Air. I'm your virtual assistant. How can I help you today?'",
+                    "instructions": "Greet the caller warmly and professionally: 'Thank you for calling KC Comfort Air. How may I help you today?'",
                 },
             }))
         except Exception as e:
