@@ -15,6 +15,7 @@ import modal
 # Define the Modal image with dependencies
 image = (
     modal.Image.debian_slim(python_version="3.11")
+    .apt_install("ffmpeg")  # Required for ElevenLabs audio conversion
     .pip_install(
         "fastapi>=0.109.0",
         "uvicorn[standard]>=0.27.0",
@@ -24,6 +25,7 @@ image = (
         "sqlalchemy>=2.0.0",
         "websockets>=12.0",
         "httpx>=0.27.0",
+        "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
     )
 )
 
@@ -32,7 +34,10 @@ app = modal.App("hvac-voice-agent", image=image)
 
 
 @app.function(
-    secrets=[modal.Secret.from_name("hvac-agent-secrets")],
+    secrets=[
+        modal.Secret.from_name("hvac-agent-secrets"),
+        modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
+    ],
     allow_concurrent_inputs=100,
     container_idle_timeout=300,
 )
@@ -45,6 +50,9 @@ def fastapi_app():
     - OPENAI_API_KEY
     - DATABASE_URL (optional, defaults to SQLite)
     - HVAC_COMPANY_NAME (optional)
+    - ELEVENLABS_API_KEY (optional, for natural voice)
+    - ELEVENLABS_VOICE_ID (optional)
+    - USE_ELEVENLABS (optional, set to "true" to enable)
     """
     from app.main import app
     return app
