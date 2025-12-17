@@ -61,95 +61,95 @@ class VoiceConfig:
     soft_mode: bool = False
     
     def get_ssml_prosody(self) -> str:
-        """Get SSML prosody attributes for professional, efficient speech."""
-        # Professional speaking rates - normal to brisk pace
+        """Get SSML prosody attributes optimized for natural, human-like speech."""
+        # Natural speaking rates - conversational pace (not too fast)
         rate_map = {
-            "slow": "100%",     # Clear and measured
-            "medium": "110%",   # Professional, efficient pace
-            "fast": "120%"      # Quick but clear
+            "slow": "90%",      # Measured and clear
+            "medium": "100%",   # Natural conversational pace
+            "fast": "110%"      # Brisk but still natural
         }
 
         # Add volume for emphasis in certain tones
         volume = ""
         if self.soft_mode:
-            volume = ' volume="medium"'  # Not too soft, maintain clarity
+            volume = ' volume="medium"'
 
-        return f'rate="{rate_map.get(self.speaking_rate, "110%")}" pitch="{self.pitch}"{volume}'
+        return f'rate="{rate_map.get(self.speaking_rate, "100%")}" pitch="{self.pitch}"{volume}'
     
     def wrap_ssml(self, text: str, add_pause: bool = True) -> str:
         """
-        Wrap text in SSML tags with professional, efficient pauses.
+        Wrap text in SSML tags with natural, conversational pausing.
 
         Args:
             text: Text to wrap
             add_pause: Whether to add pause at end
 
         Returns:
-            SSML-wrapped text with professional prosody
+            SSML-wrapped text with natural prosody
         """
         prosody = self.get_ssml_prosody()
 
-        # Minimal, professional pauses - keep conversation moving
+        # Natural, conversational pauses
         if '<break' not in text:
-            # Questions - brief pause for response
-            text = text.replace('?', '? <break time="350ms"/>')
+            # Questions - natural pause for response
+            text = text.replace('?', '? <break time="450ms"/>')
 
-            # Periods - quick sentence boundary
-            text = text.replace('. ', '. <break time="250ms"/>')
+            # Periods - natural sentence boundary
+            text = text.replace('. ', '. <break time="400ms"/>')
 
-            # Commas - minimal pause
-            text = text.replace(', ', ', <break time="150ms"/>')
+            # Commas - natural breath
+            text = text.replace(', ', ', <break time="200ms"/>')
 
         # Build final SSML with prosody wrapper
         ssml = f'<speak><prosody {prosody}>{text}</prosody>'
 
-        # Add minimal final pause
+        # Add natural final pause
         if add_pause and not text.rstrip().endswith('/>'):
-            ssml += f'<break time="200ms"/>'
+            ssml += f'<break time="300ms"/>'
 
         ssml += '</speak>'
 
         return ssml
 
 
-# Tone-specific configurations - Optimized for professional, efficient service
+# Tone-specific configurations - Optimized for natural, enterprise-quality voice
 TONE_CONFIGS = {
     VoiceTone.PROFESSIONAL: VoiceConfig(
-        voice="Polly.Joanna",  # Neural voice - clear and professional
+        voice="Polly.Joanna",  # Neural voice - natural and clear
         tone=VoiceTone.PROFESSIONAL,
         speaking_rate="medium",
         pitch="medium",
-        pause_between_sentences=200,
+        pause_between_sentences=300,
     ),
     VoiceTone.FRIENDLY: VoiceConfig(
-        voice="Polly.Joanna",  # Neural - professional with warmth
+        voice="Polly.Joanna",  # Neural - warm and natural
         tone=VoiceTone.FRIENDLY,
         speaking_rate="medium",
         pitch="medium",
-        pause_between_sentences=200,
+        pause_between_sentences=300,
     ),
     VoiceTone.EMPATHETIC: VoiceConfig(
-        voice="Polly.Joanna",  # Maintain professional tone even when empathetic
+        voice="Polly.Joanna",  # Maintain natural tone
         tone=VoiceTone.EMPATHETIC,
-        speaking_rate="medium",  # Not too slow
+        speaking_rate="medium",
         pitch="medium",
-        pause_between_sentences=250,
+        pause_between_sentences=350,
         soft_mode=True,
     ),
     VoiceTone.URGENT: VoiceConfig(
-        voice="Polly.Matthew",  # Neural male - clear urgency
+        voice="Polly.Matthew",  # Neural male - clear
         tone=VoiceTone.URGENT,
         speaking_rate="fast",
         pitch="medium",
-        pause_between_sentences=200,
+        pause_between_sentences=250,
     ),
     VoiceTone.CALM: VoiceConfig(
-        voice="Polly.Joanna",  # Professional and calm
+        voice="Polly.Joanna",  # Natural and calm
         tone=VoiceTone.CALM,
         speaking_rate="medium",
         pitch="medium",
-        pause_between_sentences=250,
-        soft_mode=False,  # Keep professional
+        pause_between_sentences=350,
+        soft_mode=False,
     ),
 }
 
