@@ -67,23 +67,22 @@ TEXAS_FILLERS = {
     ],
 }
 
-# Warm Texas greetings - friendly, welcoming, still guides the call
+# Professional greetings - courteous, efficient
 GREETINGS = [
-    "Hey there! Thanks for calling KC Comfort Air! This is Jessie. How can I help you today, hon?",
-    "Hi! You've reached KC Comfort Air, this is Jessie speaking! What can I do for ya?",
-    "Hey y'all! KC Comfort Air, Jessie here. What's going on with your system today?",
-    "Good to hear from ya! This is Jessie at KC Comfort. How can I help?",
+    "Thank you for calling KC Comfort Air. How may I help you?",
+    "KC Comfort Air, how may I assist you today?",
+    "Thank you for calling KC Comfort Air. What can I help you with?",
 ]
 
-# Time-based greetings for extra warmth
+# Time-based greetings (professional)
 MORNING_GREETINGS = [
-    "Good morning! Thanks for calling KC Comfort Air! This is Jessie. How can I help you today?",
-    "Mornin'! KC Comfort Air, Jessie speaking. What can I do for ya this fine morning?",
+    "Good morning, thank you for calling KC Comfort Air. How may I help you?",
+    "Good morning, KC Comfort Air. How may I assist you?",
 ]
 
 AFTERNOON_GREETINGS = [
-    "Good afternoon! KC Comfort Air, this is Jessie. How can I help you today, hon?",
-    "Hey there! Afternoon! Jessie here at KC Comfort. What's going on?",
+    "Good afternoon, thank you for calling KC Comfort Air. How may I help you?",
+    "Good afternoon, KC Comfort Air. How may I assist you today?",
 ]
 
 # Personalized greetings (when we know the name) - extra warm
@@ -101,13 +100,11 @@ BOOKING_CONFIRMATIONS = [
     "Wonderful! {date} at {time} it is! You're gonna love our team!",
 ]
 
-# Warm goodbyes - friendly and caring
+# Professional closings
 GOODBYES = [
-    "Thanks so much for calling! Y'all take care now!",
-    "Have a wonderful day, hon! We'll see you soon!",
-    "Thanks for choosing KC Comfort! Stay cool out there!",
-    "Alrighty, you take care now! Bye bye!",
-    "Thanks for calling! Don't hesitate to call back if you need anything!",
+    "Thank you for calling KC Comfort Air. Have a good day.",
+    "Thank you. Have a great day.",
+    "Thank you for calling. Goodbye.",
 ]
 
 # Enthusiastic affirmatives - warm and positive
@@ -143,13 +140,11 @@ THANK_YOU_RESPONSES = [
     "You're so sweet! Anything else on your mind?",
 ]
 
-# Clarification requests - friendly and apologetic
+# Professional clarification requests
 CLARIFICATION_REQUESTS = [
-    "I'm so sorry hon, could you say that one more time for me?",
-    "Oops, I didn't quite catch that! Mind repeating?",
-    "Sorry about that! Could you say that again?",
-    "My ears must be playing tricks on me! One more time?",
-    "I want to make sure I get this right - could you repeat that for me?",
+    "Could you please repeat that?",
+    "I didn't catch that. Could you say that again?",
+    "Could you clarify that for me?",
 ]
 
 # Weather acknowledgment - empathetic and relatable
@@ -297,63 +292,53 @@ def personalize_response(response: str, caller_name: Optional[str] = None) -> st
 
 def get_quick_response_texas(user_text: str, caller_name: Optional[str] = None) -> Optional[str]:
     """
-    Get instant warm Texas responses for common phrases.
+    Get instant professional responses for common phrases.
     Returns None if no quick response available.
-    
-    These are <300ms responses - friendly and helpful.
+
+    These are <300ms responses - professional and efficient.
     """
     text = user_text.lower().strip().rstrip("?!.")
-    name_suffix = f", {caller_name}" if caller_name else ""
-    
+
     # Greetings
     if text in ["hello", "hi", "hey", "howdy"]:
         return get_greeting(caller_name)
-    
-    # Thank you - warm and genuine
+
+    # Thank you
     if any(t in text for t in ["thank you", "thanks", "appreciate"]):
-        return get_thank_you_response()
-    
-    # Affirmatives - friendly follow-up
+        return "You're welcome. Is there anything else I can help you with?"
+
+    # Affirmatives
     if text in ["yes", "yeah", "yep", "sure", "okay", "ok", "yup", "uh huh"]:
-        responses = [
-            f"Great{name_suffix}! So is it your AC or your heater that's giving you trouble?",
-            f"Awesome{name_suffix}! What's going on with your system - cooling or heating issue?",
-            f"Perfect! Tell me what's happening{name_suffix} - is it not cooling or not heating?",
-        ]
-        return random.choice(responses)
-    
-    # Negatives / Done - warm goodbye
+        return "What service do you need - heating, cooling, or maintenance?"
+
+    # Negatives / Done
     if text in ["no", "nope", "nah", "i'm good", "that's all", "nothing else"]:
         return get_goodbye(caller_name)
-    
-    # Hours question - friendly and helpful
+
+    # Hours question
     if any(w in text for w in ["hours", "open", "close"]):
-        return f"We're here Monday through Friday 8 to 6, and Saturdays 9 to 2{name_suffix}! Would you like to schedule something?"
-    
-    # Location question - helpful
+        return "We're open Monday through Friday 8 to 6, and Saturdays 9 to 2. Would you like to schedule an appointment?"
+
+    # Location question
     if any(w in text for w in ["where", "location", "address", "located"]):
-        return f"We serve Dallas, Fort Worth, and Arlington{name_suffix}! Which area are you in?"
-    
-    # Emergency question - caring but efficient
+        return "We serve Dallas, Fort Worth, and Arlington. What city are you in?"
+
+    # Emergency question
     if "emergency" in text and "?" in user_text:
-        return f"Oh absolutely{name_suffix}! We have 24/7 emergency service. Is this an urgent situation?"
-    
-    # Cost question - friendly and transparent
+        return "Yes, we have 24/7 emergency service. Is this an urgent situation?"
+
+    # Cost question
     if any(w in text for w in ["cost", "price", "how much", "charge"]):
-        return f"Great question{name_suffix}! Service calls start at just $89, and our tech will give you a full quote on site before any work. Want me to get you scheduled?"
-    
-    # "What" questions - helpful
+        return "Service calls are $89, and our technician will provide a full quote before any work. Would you like to schedule an appointment?"
+
+    # "What" questions
     if text.startswith("what") and len(text) < 20:
-        return f"I can help you schedule an appointment or answer any questions you have{name_suffix}! What do you need?"
-    
-    # How are you - friendly response
+        return "I can help you schedule a service appointment. What do you need?"
+
+    # How are you
     if text in ["how are you", "how's it going", "how you doing"]:
-        responses = [
-            f"I'm doing great{name_suffix}, thanks for asking! How can I help you today?",
-            f"Wonderful{name_suffix}! Thanks for asking! What can I do for ya?",
-        ]
-        return random.choice(responses)
-    
+        return "I'm well, thank you. How may I help you today?"
+
     return None
 
 
