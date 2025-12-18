@@ -4,5 +4,5 @@ from app.routers.booking import router as booking_router
 from app.routers.twilio_voice import router as twilio_voice_router
 from app.routers.twilio_stream import router as twilio_stream_router
 from app.routers.twilio_elevenlabs_stream import router as twilio_elevenlabs_router
-from app.routers.twilio_gather import router as twilio_gather
-from app.routers.twilio_elevenlabs_agent import router as twilio_elevenlabs_agent_router  # noqa: F401
+from app.routers.twilio_gather import router as twilio_gather_router
+from app.routers.audio import router as audio_router
