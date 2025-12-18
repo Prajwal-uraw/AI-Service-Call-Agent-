@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.1-gather-fix"
+_VERSION = "1.0.3-fix-form"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -472,9 +472,17 @@ async def gather_incoming(request: Request):
     Entry point for incoming calls.
     Returns initial greeting with Gather.
     """
-    form = await request.form()
-    call_sid = form.get("CallSid", "unknown")
-    caller = form.get("From", "unknown")
+    # Get form data - try cached first (from middleware), then parse fresh
+    if hasattr(request.state, 'twilio_form_data'):
+        form_dict = request.state.twilio_form_data
+    else:
+        form = await request.form()
+        form_dict = dict(form)
+    
+    logger.info("INCOMING FORM DATA: %s", form_dict)
+    
+    call_sid = form_dict.get("CallSid", "unknown")
+    caller = form_dict.get("From", "unknown")
     
     logger.info("Incoming call [v%s]: CallSid=%s, From=%s", _VERSION, call_sid, caller)
     
@@ -507,10 +515,18 @@ async def gather_respond(request: Request):
     Handle speech input from Gather.
     Process through state machine and return next prompt.
     """
-    form = await request.form()
-    call_sid = form.get("CallSid", "unknown")
-    speech_result = form.get("SpeechResult", "")
-    confidence = form.get("Confidence", "0")
+    # Get form data - try cached first (from middleware), then parse fresh
+    if hasattr(request.state, 'twilio_form_data'):
+        form_dict = request.state.twilio_form_data
+    else:
+        form = await request.form()
+        form_dict = dict(form)
+    
+    logger.info("RESPOND FORM DATA: %s", form_dict)
+    
+    call_sid = form_dict.get("CallSid", "unknown")
+    speech_result = form_dict.get("SpeechResult", "")
+    confidence = form_dict.get("Confidence", "0")
     
     logger.info("Speech received: CallSid=%s, Speech='%s', Confidence=%s", 
                call_sid, speech_result[:100] if speech_result else "(empty)", confidence)
