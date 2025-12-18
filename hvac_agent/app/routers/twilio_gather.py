@@ -573,9 +573,14 @@ PROMPTS = {
         "Sure thing! Let me get you scheduled. What's your name?",
         "Absolutely, I'll set that up. Can I get your name?",
     ],
-    ConversationState.COLLECT_PHONE: [
-        "Thanks {name}! What's the best phone number to reach you?",
-        "Got it, {name}. And your phone number?",
+    ConversationState.COLLECT_AREA_CODE: [
+        "Thanks {name}! Now for your phone number. What's your area code? Just the 3 digits.",
+    ],
+    ConversationState.COLLECT_PHONE_PREFIX: [
+        "Got it. And the next 3 digits?",
+    ],
+    ConversationState.COLLECT_PHONE_LINE: [
+        "And the last 4 digits?",
     ],
     ConversationState.COLLECT_ADDRESS: [
         "Great. What's the service address?",
