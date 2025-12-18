@@ -20,6 +20,7 @@ import json
 import os
 import asyncio
 import base64
+import time
 from typing import Optional, Set
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -27,6 +28,9 @@ from enum import Enum
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import Response
 from starlette.websockets import WebSocketState
+
+# Diagnostic mode - set VOICE_DIAGNOSTIC_MODE=true to enable verbose logging
+DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 from app.utils.logging import get_logger
 from app.utils.audio import validate_base64_audio, encode_audio
@@ -111,9 +115,16 @@ class ElevenLabsStreamBridge:
         self._last_speech_time: float = 0  # Time of last user speech
         self._last_agent_speech_time: float = 0  # Time agent finished speaking
         self._reprompt_count: int = 0  # Number of reprompts sent
-        self._max_reprompts: int = 2  # Max reprompts before giving up
-        self._reprompt_timeout: float = 6.0  # Seconds to wait before reprompt
+        self._max_reprompts: int = 3  # Max reprompts before giving up
+        self._reprompt_timeout: float = 5.0  # Seconds to wait before reprompt
         self._keepalive_task: Optional[asyncio.Task] = None  # Keepalive task
+        
+        # Audio queue for single-writer pattern
+        self._audio_queue: asyncio.Queue = asyncio.Queue()
+        self._audio_sender_task: Optional[asyncio.Task] = None
+        
+        # Frame counter for diagnostics
+        self._frames_sent: int = 0
     
     @property
     def is_running(self) -> bool:
@@ -219,6 +230,38 @@ class ElevenLabsStreamBridge:
         task.add_done_callback(self._active_tasks.discard)
         return task
     
+    def _start_audio_sender(self):
+        """Start the single audio sender task.
+        
+        INVARIANT: Only this task writes to the Twilio WebSocket.
+        All audio (TTS + keepalive) flows through _audio_queue.
+        """
+        if self._audio_sender_task and not self._audio_sender_task.done():
+            return
+        self._audio_sender_task = self._create_task(self._audio_sender_loop())
+    
+    async def _audio_sender_loop(self):
+        """Single writer loop for Twilio WebSocket.
+        
+        This is the ONLY coroutine that sends audio to Twilio.
+        """
+        logger.info("Audio sender loop started")
+        
+        try:
+            while not self.is_closing:
+                try:
+                    # Wait for audio with timeout to allow checking is_closing
+                    frame = await asyncio.wait_for(self._audio_queue.get(), timeout=0.1)
+                    await self._send_frame_to_twilio(frame)
+                except asyncio.TimeoutError:
+                    continue
+                except asyncio.CancelledError:
+                    break
+        except Exception as e:
+            logger.error("Audio sender loop error: %s", str(e))
+        finally:
+            logger.info("Audio sender loop ended")
+    
     def _start_keepalive(self):
         """Start the keepalive task to prevent Twilio timeout."""
         if self._keepalive_task and not self._keepalive_task.done():
@@ -226,9 +269,11 @@ class ElevenLabsStreamBridge:
         self._keepalive_task = self._create_task(self._keepalive_loop())
     
     async def _keepalive_loop(self):
-        """Send silence frames periodically to keep Twilio stream alive."""
-        import time
-        KEEPALIVE_INTERVAL = 2.0  # Send keepalive every 2 seconds
+        """Send silence frames periodically to keep Twilio stream alive.
+        
+        Sends silence through the audio queue (single writer pattern).
+        """
+        KEEPALIVE_INTERVAL = 1.0  # Send keepalive every 1 second (more frequent)
         SILENCE_FRAME = b"\x7f" * 160  # 20ms of μ-law silence
         
         logger.info("Keepalive loop started")
@@ -240,10 +285,11 @@ class ElevenLabsStreamBridge:
                 if self.is_closing:
                     break
                 
-                # Only send keepalive if not currently speaking
-                if not self._is_speaking:
-                    await self._send_audio_chunk(SILENCE_FRAME)
-                    logger.debug("Sent keepalive silence frame")
+                # Always send keepalive, even while speaking (Twilio needs continuous audio)
+                await self._queue_audio(SILENCE_FRAME)
+                
+                if DIAGNOSTIC_MODE:
+                    logger.debug("Queued keepalive frame, queue size: %d", self._audio_queue.qsize())
                     
         except asyncio.CancelledError:
             logger.debug("Keepalive loop cancelled")
@@ -254,11 +300,10 @@ class ElevenLabsStreamBridge:
     
     async def _reprompt_monitor(self):
         """Monitor for user silence and send reprompts."""
-        import time
-        
         REPROMPT_MESSAGES = [
             "Are you still there? How can I help you today?",
             "I'm here to help with your HVAC needs. What can I do for you?",
+            "If you need assistance, just let me know. Otherwise, have a great day!",
         ]
         
         logger.info("Reprompt monitor started")
@@ -272,17 +317,23 @@ class ElevenLabsStreamBridge:
                 
                 # Skip if agent is speaking or user is speaking
                 if self._is_speaking or self._user_speaking:
+                    if DIAGNOSTIC_MODE:
+                        logger.debug("Reprompt check: skipping (speaking=%s, user_speaking=%s)", 
+                                   self._is_speaking, self._user_speaking)
                     continue
                 
                 # Check if we need to reprompt
                 current_time = time.time()
                 time_since_agent_spoke = current_time - self._last_agent_speech_time
-                time_since_user_spoke = current_time - self._last_speech_time
+                
+                if DIAGNOSTIC_MODE:
+                    logger.debug("Reprompt check: time_since_agent=%.1fs, last_agent_time=%.1f, reprompt_count=%d",
+                               time_since_agent_spoke, self._last_agent_speech_time, self._reprompt_count)
                 
                 # Only reprompt if:
-                # 1. Agent spoke recently (within last 30 seconds)
-                # 2. User hasn't spoken since agent finished
-                # 3. Enough time has passed since agent finished
+                # 1. Agent has spoken at least once
+                # 2. Enough time has passed since agent finished
+                # 3. User hasn't spoken since agent finished
                 # 4. Haven't exceeded max reprompts
                 if (self._last_agent_speech_time > 0 and
                     time_since_agent_spoke >= self._reprompt_timeout and
@@ -292,9 +343,9 @@ class ElevenLabsStreamBridge:
                     self._reprompt_count += 1
                     reprompt_msg = REPROMPT_MESSAGES[min(self._reprompt_count - 1, len(REPROMPT_MESSAGES) - 1)]
                     
-                    logger.info("Sending reprompt #%d: %s", self._reprompt_count, reprompt_msg[:50])
+                    logger.info(">>> SENDING REPROMPT #%d: %s", self._reprompt_count, reprompt_msg[:50])
                     await self._speak(reprompt_msg)
-                    self._last_agent_speech_time = time.time()
+                    # Note: _last_agent_speech_time is set in _speak's finally block
                     
         except asyncio.CancelledError:
             logger.debug("Reprompt monitor cancelled")
@@ -356,19 +407,22 @@ class ElevenLabsStreamBridge:
             self.stream_sid, self.call_sid
         )
         
+        # Start audio sender (single writer pattern)
+        self._start_audio_sender()
+        
         # Start keepalive task to prevent Twilio timeout
         self._start_keepalive()
         
-        # Send initial greeting
-        await self._speak("Thank you for calling KC Comfort Air. How may I help you today?")
-        
-        # Mark time for reprompt logic
-        import time
-        self._last_agent_speech_time = time.time()
-        self._reprompt_count = 0
-        
-        # Start reprompt monitoring
+        # Start reprompt monitoring BEFORE greeting so it's ready
         self._create_task(self._reprompt_monitor())
+        
+        # Send initial greeting
+        logger.info(">>> SENDING INITIAL GREETING")
+        await self._speak("Thank you for calling KC Comfort Air. How may I help you today?")
+        # Note: _last_agent_speech_time is set in _speak's finally block
+        
+        logger.info(">>> GREETING COMPLETE, reprompt will fire in %.1f seconds if no user speech", 
+                   self._reprompt_timeout)
     
     async def _handle_media(self, msg: dict):
         """Handle incoming audio from Twilio."""
@@ -645,60 +699,75 @@ class ElevenLabsStreamBridge:
             # Track when agent finished speaking for reprompt logic
             self._last_agent_speech_time = time.time()
     
-    async def _send_audio_chunk(self, audio_bytes: bytes):
-        """Send audio chunk to Twilio in proper 160-byte frames.
+    async def _queue_audio(self, audio_bytes: bytes):
+        """Queue audio for sending through the single writer.
         
-        Twilio requires μ-law audio in 160-byte frames (20ms @ 8kHz).
-        Guards against sending after WebSocket close.
+        Breaks audio into 160-byte frames before queueing.
         """
-        # Guard: Check stream_sid exists
-        if not self.stream_sid:
-            logger.warning("No stream_sid, cannot send audio")
+        if self.is_closing or not self.stream_sid:
             return
         
-        # Guard: Check if we're closing
-        if self.is_closing:
-            logger.debug("Stream closing, skipping audio send")
-            return
-        
-        # Guard: Check WebSocket state before sending
-        if self.twilio_ws.client_state != WebSocketState.CONNECTED:
-            logger.warning("WebSocket not connected (state=%s), skipping audio send", self.twilio_ws.client_state)
-            return
-        
-        # Twilio requires 160-byte frames (20ms @ 8kHz μ-law)
         FRAME_SIZE = 160
-        ULAW_SILENCE = b"\x7f"  # μ-law silence byte
+        ULAW_SILENCE = b"\x7f"
         
-        frames_sent = 0
-        try:
-            # Send audio in 160-byte frames
-            for i in range(0, len(audio_bytes), FRAME_SIZE):
-                if self.is_closing:
-                    break
-                    
-                chunk = audio_bytes[i:i + FRAME_SIZE]
-                
-                # Pad undersized frames with μ-law silence
-                if len(chunk) < FRAME_SIZE:
-                    chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
-                
-                payload = base64.b64encode(chunk).decode("ascii")
-                await self.twilio_ws.send_text(json.dumps({
-                    "event": "media",
-                    "streamSid": self.stream_sid,
-                    "media": {
-                        "payload": payload,
-                    },
-                }))
-                frames_sent += 1
+        # Break into 160-byte frames and queue each
+        for i in range(0, len(audio_bytes), FRAME_SIZE):
+            if self.is_closing:
+                break
             
-            if frames_sent > 0:
-                logger.info("Sent %d Twilio media frames (%d bytes total)", frames_sent, len(audio_bytes))
+            chunk = audio_bytes[i:i + FRAME_SIZE]
+            
+            # Pad undersized frames
+            if len(chunk) < FRAME_SIZE:
+                chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
+            
+            await self._audio_queue.put(chunk)
+    
+    async def _send_frame_to_twilio(self, frame: bytes):
+        """Send a single 160-byte frame to Twilio.
+        
+        INVARIANT: Only called from _audio_sender_loop.
+        """
+        if self.is_closing or not self.stream_sid:
+            return
+        
+        if self.twilio_ws.client_state != WebSocketState.CONNECTED:
+            if DIAGNOSTIC_MODE:
+                logger.warning("WebSocket not connected, dropping frame")
+            return
+        
+        try:
+            payload = base64.b64encode(frame).decode("ascii")
+            await self.twilio_ws.send_text(json.dumps({
+                "event": "media",
+                "streamSid": self.stream_sid,
+                "media": {
+                    "payload": payload,
+                },
+            }))
+            self._frames_sent += 1
+            
+            if DIAGNOSTIC_MODE and self._frames_sent % 50 == 0:
+                logger.info("Total frames sent: %d (streamSid=%s)", self._frames_sent, self.stream_sid[:20])
+                
         except Exception as e:
-            # Don't log errors during teardown - expected
             if not self.is_closing:
-                logger.error("Failed to send audio to Twilio: %s", str(e))
+                logger.error("Failed to send frame to Twilio: %s", str(e))
+    
+    async def _send_audio_chunk(self, audio_bytes: bytes):
+        """Send audio chunk to Twilio via the audio queue.
+        
+        This is the callback used by ElevenLabs TTS.
+        Audio is queued and sent by the single writer task.
+        """
+        if self.is_closing or not self.stream_sid:
+            return
+        
+        await self._queue_audio(audio_bytes)
+        
+        if DIAGNOSTIC_MODE:
+            frames_queued = (len(audio_bytes) + 159) // 160
+            logger.info("Queued %d frames (%d bytes) for Twilio", frames_queued, len(audio_bytes))
 
 
 @router.websocket("/twilio/elevenlabs/stream")
