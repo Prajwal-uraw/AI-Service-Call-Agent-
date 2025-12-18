@@ -8,6 +8,8 @@ Modal provides serverless deployment with:
 - GPU support (if needed)
 - Easy secrets management
 - WebSocket support
+
+Deployment version: 2.0.1-queue-based (forces cache invalidation)
 """
 
 import modal
