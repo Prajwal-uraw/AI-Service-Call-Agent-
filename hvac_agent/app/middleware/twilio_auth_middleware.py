@@ -2,38 +2,24 @@ import os
 from fastapi import Request
 from fastapi.responses import PlainTextResponse
 from twilio.request_validator import RequestValidator
-from starlette.datastructures import FormData
 
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+# Set to "true" to skip signature validation (for debugging)
+SKIP_TWILIO_VALIDATION = os.getenv("SKIP_TWILIO_VALIDATION", "true").lower() == "true"
 
 
 async def validate_twilio_request(request: Request, call_next):
     """
     Middleware to validate incoming Twilio webhook requests.
     
-    IMPORTANT: We read the body and cache it so endpoints can read it again.
+    Parses form data and caches it on request.state for endpoints to use.
     """
 
-    # Only protect Twilio endpoints
+    # Only process Twilio endpoints
     if request.url.path.startswith("/twilio"):
-        if not TWILIO_AUTH_TOKEN:
-            # Skip validation if no auth token configured (dev mode)
-            return await call_next(request)
-
-        validator = RequestValidator(TWILIO_AUTH_TOKEN)
-
-        # Twilio signature header
-        signature = request.headers.get("X-Twilio-Signature")
-        if not signature:
-            return PlainTextResponse("Missing Twilio signature", status_code=403)
-
-        # Full URL Twilio requested
-        url = str(request.url)
-
-        # Read body and cache it for later use by endpoints
+        # Read and parse form data
         body = await request.body()
         
-        # Parse form data manually
         from urllib.parse import parse_qs
         params = {}
         if body:
@@ -43,6 +29,24 @@ async def validate_twilio_request(request: Request, call_next):
         
         # Cache the parsed form data on the request state
         request.state.twilio_form_data = params
+        
+        # Skip validation if disabled or no auth token
+        if SKIP_TWILIO_VALIDATION or not TWILIO_AUTH_TOKEN:
+            return await call_next(request)
+
+        validator = RequestValidator(TWILIO_AUTH_TOKEN)
+
+        # Twilio signature header
+        signature = request.headers.get("X-Twilio-Signature")
+        if not signature:
+            return PlainTextResponse("Missing Twilio signature", status_code=403)
+
+        # Full URL Twilio requested (use X-Forwarded headers for proxied requests)
+        scheme = request.headers.get("X-Forwarded-Proto", request.url.scheme)
+        host = request.headers.get("X-Forwarded-Host", request.headers.get("Host", request.url.netloc))
+        url = f"{scheme}://{host}{request.url.path}"
+        if request.url.query:
+            url += f"?{request.url.query}"
 
         # Validate request
         is_valid = validator.validate(url, params, signature)
