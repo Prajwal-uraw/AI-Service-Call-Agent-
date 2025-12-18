@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.3.0-intelligent-agent"
+_VERSION = "3.4.0-robust-error-handling"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -137,7 +137,12 @@ HVAC_ISSUES = {
     "heat pump": "Heat pumps can be tricky, but our certified technicians know them inside and out.",
     "cold air": "Getting cold air when you expect heat? That's a common issue we fix regularly.",
     
-    # Cooling issues
+    # Cooling issues - AC keywords
+    "ac is broken": "I'm sorry to hear your AC is broken. Our technicians can definitely fix that.",
+    "ac broken": "I'm sorry to hear your AC is broken. Our technicians can definitely fix that.",
+    "my ac": "I can help with your AC. Our technicians service all makes and models.",
+    "a c ": "I can help with your AC. Our technicians service all makes and models.",
+    "a.c.": "I can help with your AC. Our technicians service all makes and models.",
     "no cooling": "No cooling in this weather is no fun. We'll get your AC back up and running.",
     "not cooling": "If your system isn't cooling, our technicians can find and fix the problem.",
     "ac not working": "AC troubles? We service all makes and models and can usually fix it same-day.",
@@ -1050,15 +1055,23 @@ async def process_state(
             return ConversationState.FAQ, faq_answer, slots
         
         # Check if they're describing an HVAC issue - give smart response
-        for issue_keyword in HVAC_ISSUES.keys():
-            if issue_keyword in speech_lower:
-                smart_response = get_smart_issue_response(speech)
-                return ConversationState.COLLECT_NAME, f"{smart_response.replace('Would you like to schedule a service appointment?', '')} Let me get you scheduled. May I have your name please?", slots
+        try:
+            for issue_keyword in HVAC_ISSUES.keys():
+                if issue_keyword in speech_lower:
+                    smart_response = get_smart_issue_response(speech)
+                    logger.info("HVAC issue detected: %s -> %s", issue_keyword, smart_response[:50])
+                    return ConversationState.COLLECT_NAME, f"{smart_response.replace('Would you like to schedule a service appointment?', '')} Let me get you scheduled. May I have your name please?", slots
+        except Exception as e:
+            logger.error("Error in HVAC issue detection: %s", str(e))
         
         # For anything else unrecognized, use smart GPT to respond naturally
         # This handles general conversation, off-topic, and complex queries
-        smart_response = await smart_gpt_response(speech, "greeting", session)
-        return current_state, smart_response, slots
+        try:
+            smart_response = await smart_gpt_response(speech, "greeting", session)
+            return current_state, smart_response, slots
+        except Exception as e:
+            logger.error("Error in smart GPT response: %s", str(e))
+            return current_state, "I can help you schedule an HVAC service appointment. Would you like to do that?", slots
     
     # =========================================================================
     # NAME COLLECTION (simplified - no spelling required for common names)
@@ -1647,10 +1660,26 @@ async def gather_respond(request: Request):
     except Exception as e:
         # Catch-all error handler - never let the call fail silently
         logger.error("Error processing speech: %s", str(e), exc_info=True)
+        # Try to use ElevenLabs for error message too
+        error_msg = "I apologize, I'm having a brief technical issue. Let me try again. Are you calling to schedule a service appointment?"
+        try:
+            error_audio = await generate_audio_url(error_msg, host)
+            if error_audio:
+                twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="5" speechTimeout="auto" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
+        <Play>{error_audio}</Play>
+    </Gather>
+</Response>"""
+                return Response(content=twiml, media_type="application/xml")
+        except:
+            pass
+        # Last resort Polly fallback
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna-Neural">I apologize, I'm having a technical issue. Let me connect you with someone who can help.</Say>
-    <Redirect>/twilio/gather/transfer</Redirect>
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="5" speechTimeout="auto" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
+        <Say voice="Polly.Joanna-Neural">I apologize, I'm having a brief issue. Are you calling to schedule a service appointment?</Say>
+    </Gather>
 </Response>"""
         return Response(content=twiml, media_type="application/xml")
 
