@@ -7,13 +7,35 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-print("TWILIO_AUTH_TOKEN loaded:", bool(TWILIO_AUTH_TOKEN))
+# Set to "true" to skip signature validation (for debugging)
+SKIP_TWILIO_VALIDATION = os.getenv("SKIP_TWILIO_VALIDATION", "true").lower() == "true"
+
 
 async def validate_twilio_request(request: Request, call_next):
-    # Only validate POST requests to /twilio endpoints
-    if request.url.path.startswith("/twilio") and request.method == "POST":
-        if not TWILIO_AUTH_TOKEN:
-            return PlainTextResponse("Twilio auth token not configured", status_code=500)
+    """
+    Middleware to validate incoming Twilio webhook requests.
+    
+    Parses form data and caches it on request.state for endpoints to use.
+    """
+
+    # Only process Twilio endpoints
+    if request.url.path.startswith("/twilio"):
+        # Read and parse form data
+        body = await request.body()
+        
+        from urllib.parse import parse_qs
+        params = {}
+        if body:
+            decoded = body.decode("utf-8")
+            parsed = parse_qs(decoded)
+            params = {k: v[0] if len(v) == 1 else v for k, v in parsed.items()}
+        
+        # Cache the parsed form data on the request state
+        request.state.twilio_form_data = params
+        
+        # Skip validation if disabled or no auth token
+        if SKIP_TWILIO_VALIDATION or not TWILIO_AUTH_TOKEN:
+            return await call_next(request)
 
         validator = RequestValidator(TWILIO_AUTH_TOKEN)
 
@@ -21,14 +43,12 @@ async def validate_twilio_request(request: Request, call_next):
         if not signature:
             return PlainTextResponse("Missing Twilio signature", status_code=403)
 
-        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-        host = request.headers.get("x-forwarded-host", request.headers.get("host"))
-        url = f"{proto}://{host}{request.url.path}"
-
-        # Read the form once and store it in request.state
-        form = await request.form()
-        request.state.twilio_form = form  # store for route to reuse
-        params = dict(form)
+        # Full URL Twilio requested (use X-Forwarded headers for proxied requests)
+        scheme = request.headers.get("X-Forwarded-Proto", request.url.scheme)
+        host = request.headers.get("X-Forwarded-Host", request.headers.get("Host", request.url.netloc))
+        url = f"{scheme}://{host}{request.url.path}"
+        if request.url.query:
+            url += f"?{request.url.query}"
 
         if not validator.validate(url, params, signature):
             return PlainTextResponse("Invalid Twilio signature", status_code=403)

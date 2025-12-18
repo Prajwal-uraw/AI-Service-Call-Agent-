@@ -17,7 +17,7 @@ import asyncio
 from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 import websockets
 from websockets.exceptions import ConnectionClosed
 
@@ -356,17 +356,22 @@ async def twilio_stream(ws: WebSocket):
             pass
 
 
-@router.get("/twilio/stream/twiml")
-async def stream_twiml():
+@router.api_route("/twilio/stream/twiml", methods=["GET", "POST"])
+async def stream_twiml(request: Request):
     """
     Return TwiML for connecting to the streaming endpoint.
     
     Use this endpoint as your Twilio webhook to enable streaming.
+    Accepts both GET and POST - Twilio sends POST requests.
     """
     from fastapi.responses import Response
     
-    # Get the host from environment or use placeholder
-    stream_url = os.getenv("STREAM_WEBSOCKET_URL", "wss://YOUR_DOMAIN/twilio/stream")
+    # Build WebSocket URL dynamically from request host
+    host = request.headers.get("host", "")
+    if host:
+        stream_url = f"wss://{host}/twilio/stream"
+    else:
+        stream_url = os.getenv("STREAM_WEBSOCKET_URL", "wss://YOUR_DOMAIN/twilio/stream")
     
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -374,7 +379,6 @@ async def stream_twiml():
     <Connect>
         <Stream url="{stream_url}" />
     </Connect>
-</Response>
-""".strip()
+</Response>"""
     
-    return Response(content=twiml, media_type="application/xml")
+    return Response(content=twiml.strip(), media_type="application/xml")
