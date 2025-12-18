@@ -41,8 +41,51 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "2.0.5-direct-send"
+_STREAM_VERSION = "3.0.0-rebuild"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
+
+# =============================================================================
+# FRAME BUILDER - THE ONLY WAY TO CREATE TWILIO FRAMES
+# =============================================================================
+FRAME_SIZE = 160  # Twilio requires exactly 160 bytes per frame (20ms @ 8kHz)
+ULAW_SILENCE = b"\x7f"  # μ-law silence byte for padding
+
+
+def ulaw_to_frames(ulaw_bytes: bytes) -> list:
+    """
+    Convert raw μ-law bytes to a list of exactly 160-byte frames.
+    
+    THIS IS THE ONLY FUNCTION ALLOWED TO CREATE TWILIO FRAMES.
+    
+    Rules:
+    - Output frames are ALWAYS exactly 160 bytes
+    - Final frame is padded with 0x7f (μ-law silence)
+    - Assertion enforced before returning
+    
+    Args:
+        ulaw_bytes: Raw μ-law audio bytes of any length
+        
+    Returns:
+        List of 160-byte frames ready for Twilio
+    """
+    if not ulaw_bytes:
+        return []
+    
+    frames = []
+    
+    for i in range(0, len(ulaw_bytes), FRAME_SIZE):
+        chunk = ulaw_bytes[i:i + FRAME_SIZE]
+        
+        # Pad undersized final frame
+        if len(chunk) < FRAME_SIZE:
+            chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
+        
+        # HARD ASSERTION - crash if violated
+        assert len(chunk) == FRAME_SIZE, f"FATAL: Frame size {len(chunk)} != {FRAME_SIZE}"
+        
+        frames.append(chunk)
+    
+    return frames
 
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -64,86 +107,246 @@ class StreamState(Enum):
     CLOSED = "closed"
 
 
+# =============================================================================
+# CALL CONTEXT - PER-CALL STATE CONTAINER
+# =============================================================================
+class CallContext:
+    """
+    Per-call state container. Nothing outside this object may touch call state.
+    
+    All call-scoped resources are owned here:
+    - WebSocket connection
+    - Audio queue (160-byte frames ONLY)
+    - Background tasks
+    - Speaking/conversation state
+    """
+    
+    def __init__(self, ws: WebSocket):
+        # Connection
+        self.ws = ws
+        self.stream_sid: Optional[str] = None
+        self.call_sid: Optional[str] = None
+        self.closed = False
+        
+        # Audio queue - ONLY accepts 160-byte frames
+        self.audio_queue: asyncio.Queue = asyncio.Queue()
+        
+        # Tasks
+        self.audio_sender_task: Optional[asyncio.Task] = None
+        self.keepalive_task: Optional[asyncio.Task] = None
+        self.reprompt_task: Optional[asyncio.Task] = None
+        
+        # TTS
+        self.tts: Optional[ElevenLabsTTS] = None
+        self.is_speaking = False
+        
+        # Conversation
+        self.conversation_history = []
+        self.last_speech_time: float = 0
+        self.last_agent_speech_time: float = 0
+        self.reprompt_count: int = 0
+        
+        # STT buffers
+        self.input_buffer = bytearray()
+        self.user_speaking = False
+        self.silence_frames = 0
+        self.speech_frames = 0
+        
+        # Diagnostics
+        self.frames_sent: int = 0
+
+
+# =============================================================================
+# AUDIO SENDER - SOLE WRITER TO TWILIO WEBSOCKET
+# =============================================================================
+async def audio_sender(ctx: CallContext):
+    """
+    Dedicated Twilio audio sender. This is the ONLY coroutine that sends audio.
+    
+    Pulls 160-byte frames from ctx.audio_queue and sends to Twilio.
+    Stops when ctx.closed == True.
+    """
+    logger.info("Audio sender started")
+    
+    try:
+        while not ctx.closed:
+            try:
+                # Wait for frame with timeout to check closed flag
+                frame = await asyncio.wait_for(ctx.audio_queue.get(), timeout=0.1)
+                
+                # HARD ASSERTION - only 160-byte frames allowed
+                assert len(frame) == FRAME_SIZE, f"FATAL: Dequeued frame size {len(frame)} != {FRAME_SIZE}"
+                
+                if ctx.closed or not ctx.stream_sid:
+                    continue
+                
+                if ctx.ws.client_state != WebSocketState.CONNECTED:
+                    logger.warning("WebSocket disconnected, dropping frame")
+                    continue
+                
+                # Send to Twilio
+                payload = base64.b64encode(frame).decode("ascii")
+                await ctx.ws.send_text(json.dumps({
+                    "event": "media",
+                    "streamSid": ctx.stream_sid,
+                    "media": {"payload": payload},
+                }))
+                ctx.frames_sent += 1
+                
+                # Log every 50 frames
+                if ctx.frames_sent % 50 == 0:
+                    logger.info("Frames sent: %d (each 160 bytes)", ctx.frames_sent)
+                    
+            except asyncio.TimeoutError:
+                continue
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                if not ctx.closed:
+                    logger.error("Audio sender error: %s", str(e))
+                    
+    finally:
+        logger.info("Audio sender stopped, total frames: %d", ctx.frames_sent)
+
+
+# =============================================================================
+# ENQUEUE FRAMES - THE ONLY WAY TO SEND AUDIO
+# =============================================================================
+async def enqueue_audio(ctx: CallContext, ulaw_bytes: bytes):
+    """
+    Convert μ-law bytes to 160-byte frames and enqueue for sending.
+    
+    THIS IS THE ONLY FUNCTION ALLOWED TO PUT AUDIO IN THE QUEUE.
+    
+    Args:
+        ctx: Call context
+        ulaw_bytes: Raw μ-law audio bytes
+    """
+    if ctx.closed or not ctx.stream_sid:
+        return
+    
+    # Convert to exactly 160-byte frames
+    frames = ulaw_to_frames(ulaw_bytes)
+    
+    # Enqueue each frame
+    for frame in frames:
+        # HARD ASSERTION before enqueue
+        assert len(frame) == FRAME_SIZE, f"FATAL: Enqueue frame size {len(frame)} != {FRAME_SIZE}"
+        await ctx.audio_queue.put(frame)
+    
+    if frames:
+        logger.info("Enqueued %d frames (%d bytes total, each 160 bytes)", 
+                   len(frames), len(frames) * FRAME_SIZE)
+
+
+# =============================================================================
+# KEEPALIVE LOOP
+# =============================================================================
+async def keepalive_loop(ctx: CallContext):
+    """
+    Send silence frames every 2 seconds to keep Twilio stream alive.
+    Pauses while agent is speaking.
+    """
+    KEEPALIVE_INTERVAL = 2.0
+    SILENCE_FRAME = ULAW_SILENCE * FRAME_SIZE  # Exactly 160 bytes
+    
+    logger.info("Keepalive loop started")
+    
+    try:
+        while not ctx.closed:
+            await asyncio.sleep(KEEPALIVE_INTERVAL)
+            
+            if ctx.closed:
+                break
+            
+            # Only send keepalive if not speaking
+            if not ctx.is_speaking:
+                await enqueue_audio(ctx, SILENCE_FRAME)
+                logger.info("Sent keepalive frame")
+                
+    except asyncio.CancelledError:
+        pass
+    finally:
+        logger.info("Keepalive loop stopped")
+
+
+# =============================================================================
+# REPROMPT LOOP
+# =============================================================================
+async def reprompt_loop(ctx: CallContext, speak_func):
+    """
+    Monitor for user silence and send reprompts.
+    
+    Args:
+        ctx: Call context
+        speak_func: Async function to speak text
+    """
+    REPROMPT_MESSAGES = [
+        "Are you still there? How can I help you today?",
+        "I'm here to help with your HVAC needs. What can I do for you?",
+    ]
+    MAX_REPROMPTS = 2
+    REPROMPT_TIMEOUT = 5.0
+    
+    logger.info("Reprompt loop started")
+    
+    try:
+        while not ctx.closed:
+            await asyncio.sleep(1.0)
+            
+            if ctx.closed:
+                break
+            
+            # Skip if speaking
+            if ctx.is_speaking or ctx.user_speaking:
+                continue
+            
+            # Check if reprompt needed
+            if ctx.last_agent_speech_time > 0:
+                time_since_agent = time.time() - ctx.last_agent_speech_time
+                user_spoke_after = ctx.last_speech_time > ctx.last_agent_speech_time
+                
+                if (time_since_agent >= REPROMPT_TIMEOUT and 
+                    not user_spoke_after and 
+                    ctx.reprompt_count < MAX_REPROMPTS):
+                    
+                    ctx.reprompt_count += 1
+                    msg = REPROMPT_MESSAGES[min(ctx.reprompt_count - 1, len(REPROMPT_MESSAGES) - 1)]
+                    logger.info(">>> REPROMPT #%d: %s", ctx.reprompt_count, msg[:40])
+                    await speak_func(msg)
+                    
+    except asyncio.CancelledError:
+        pass
+    finally:
+        logger.info("Reprompt loop stopped")
+
+
+# =============================================================================
+# STREAM BRIDGE - MAIN HANDLER
+# =============================================================================
 class ElevenLabsStreamBridge:
     """
     Bridge between Twilio Media Streams and ElevenLabs TTS.
-    
-    Handles:
-    - Audio input from Twilio (μ-law 8kHz)
-    - Speech-to-text via OpenAI Whisper
-    - Conversation via OpenAI GPT
-    - Text-to-speech via ElevenLabs (streamed back to Twilio)
-    - Barge-in detection and handling
-    
-    Lifecycle guarantees:
-    - Stream close does NOT trigger app shutdown
-    - All tasks are cancelled on stream end
-    - No pending coroutines after cleanup
-    - aiohttp sessions are properly closed
+    Uses CallContext for all per-call state.
     """
     
     def __init__(self, twilio_ws: WebSocket):
-        self.twilio_ws = twilio_ws
-        self.stream_sid: Optional[str] = None
-        self.call_sid: Optional[str] = None
+        self.ctx = CallContext(twilio_ws)
         
-        # Lifecycle state - use enum for clarity
-        self._state = StreamState.INITIALIZING
+        # Thresholds for speech detection
+        self._silence_threshold = 80
+        self._min_speech_frames = 25
+        self._speech_threshold = 40
         
-        # Audio buffers
-        self._input_buffer = bytearray()
-        self._input_lock = asyncio.Lock()
-        
-        # TTS state
-        self._tts: Optional[ElevenLabsTTS] = None
-        self._is_speaking = False
-        
-        # Conversation state
-        self._conversation_history = []
-        self._user_speaking = False
-        self._silence_frames = 0
-        self._speech_frames = 0
-        
-        # Thresholds - tuned to avoid false positives
-        self._silence_threshold = 80  # frames of silence to trigger processing
-        self._min_speech_frames = 25  # minimum frames to consider as speech
-        self._speech_threshold = 40  # variance threshold for speech detection
-        
-        # Task management - track all spawned tasks for cleanup
-        self._active_tasks: Set[asyncio.Task] = set()
-        
-        # Utterance processing lock - prevents concurrent _process_utterance calls
+        # Utterance lock
         self._utterance_lock = asyncio.Lock()
-        
-        # Conversational turn management
-        self._last_speech_time: float = 0  # Time of last user speech
-        self._last_agent_speech_time: float = 0  # Time agent finished speaking
-        self._reprompt_count: int = 0  # Number of reprompts sent
-        self._max_reprompts: int = 3  # Max reprompts before giving up
-        self._reprompt_timeout: float = 5.0  # Seconds to wait before reprompt
-        self._keepalive_task: Optional[asyncio.Task] = None  # Keepalive task
-        
-        # Frame counter for diagnostics
-        self._frames_sent: int = 0
     
-    @property
-    def is_running(self) -> bool:
-        """Check if stream is active."""
-        return self._state == StreamState.ACTIVE
-    
-    @property
-    def is_closing(self) -> bool:
-        """Check if stream is in teardown."""
-        return self._state in (StreamState.CLOSING, StreamState.CLOSED)
-        
     async def start(self):
         """Start the stream bridge."""
         try:
-            self._state = StreamState.ACTIVE
-            
             # Initialize ElevenLabs TTS if available
             if is_elevenlabs_available():
-                self._tts = ElevenLabsTTS()
+                self.ctx.tts = ElevenLabsTTS()
                 logger.info("ElevenLabs TTS initialized")
             else:
                 logger.warning("ElevenLabs not available, will use TwiML fallback")
@@ -155,176 +358,51 @@ class ElevenLabsStreamBridge:
             logger.info("Stream bridge cancelled")
         except Exception as e:
             logger.error("Stream bridge error: %s", str(e))
-        finally:
-            # Cleanup is handled in _cleanup() which is called explicitly
-            pass
-    
-    async def stop(self):
-        """Stop the stream bridge gracefully."""
-        if self._state == StreamState.CLOSED:
-            return
-        
-        self._state = StreamState.CLOSING
-        
-        # Cancel TTS if speaking
-        if self._tts:
-            self._tts.cancel_speech()
-        
-        # Cancel and await all active tasks
-        await self._cancel_all_tasks()
-        
-        self._state = StreamState.CLOSED
-    
-    async def _cancel_all_tasks(self):
-        """Cancel all active tasks and wait for them to complete."""
-        if not self._active_tasks:
-            return
-        
-        logger.debug("Cancelling %d active tasks", len(self._active_tasks))
-        
-        for task in self._active_tasks:
-            if not task.done():
-                task.cancel()
-        
-        # Wait for all tasks to complete with timeout
-        if self._active_tasks:
-            try:
-                await asyncio.wait_for(
-                    asyncio.gather(*self._active_tasks, return_exceptions=True),
-                    timeout=2.0
-                )
-            except asyncio.TimeoutError:
-                logger.warning("Some tasks did not complete within timeout")
-        
-        self._active_tasks.clear()
     
     async def _cleanup(self):
         """Clean up all resources. Called on stream end."""
-        logger.debug("Cleaning up stream bridge for call_sid=%s", self.call_sid)
+        logger.info("Cleaning up call_sid=%s", self.ctx.call_sid)
         
-        # Mark as closing to stop processing
-        self._state = StreamState.CLOSING
+        # Mark as closed to stop all loops
+        self.ctx.closed = True
         
-        # Cancel all pending tasks
-        await self._cancel_all_tasks()
+        # Cancel tasks
+        tasks_to_cancel = [
+            self.ctx.audio_sender_task,
+            self.ctx.keepalive_task,
+            self.ctx.reprompt_task,
+        ]
+        for task in tasks_to_cancel:
+            if task and not task.done():
+                task.cancel()
+        
+        # Wait for tasks to finish
+        for task in tasks_to_cancel:
+            if task:
+                try:
+                    await asyncio.wait_for(asyncio.shield(task), timeout=1.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
         
         # Close TTS session
-        if self._tts:
+        if self.ctx.tts:
             try:
-                await self._tts.close()
+                await self.ctx.tts.close()
             except Exception as e:
                 logger.warning("Error closing TTS: %s", str(e))
-            self._tts = None
+            self.ctx.tts = None
         
         # Clear buffers
-        self._input_buffer.clear()
-        self._conversation_history.clear()
+        self.ctx.input_buffer.clear()
+        self.ctx.conversation_history.clear()
         
-        self._state = StreamState.CLOSED
-        logger.debug("Stream bridge cleanup complete for call_sid=%s", self.call_sid)
-    
-    def _create_task(self, coro) -> asyncio.Task:
-        """Create a tracked task that will be cleaned up on stream end."""
-        task = asyncio.create_task(coro)
-        self._active_tasks.add(task)
-        task.add_done_callback(self._active_tasks.discard)
-        return task
-    
-    
-    def _start_keepalive(self):
-        """Start the keepalive task to prevent Twilio timeout."""
-        if self._keepalive_task and not self._keepalive_task.done():
-            return  # Already running
-        self._keepalive_task = self._create_task(self._keepalive_loop())
-    
-    async def _keepalive_loop(self):
-        """Send silence frames periodically to keep Twilio stream alive."""
-        KEEPALIVE_INTERVAL = 1.0  # Send keepalive every 1 second
-        SILENCE_FRAME = b"\x7f" * 160  # 20ms of μ-law silence (exactly 160 bytes)
-        
-        logger.info("Keepalive loop started")
-        
-        try:
-            while not self.is_closing:
-                await asyncio.sleep(KEEPALIVE_INTERVAL)
-                
-                if self.is_closing:
-                    break
-                
-                # Only send keepalive if not currently speaking (TTS sends its own frames)
-                if not self._is_speaking:
-                    await self._send_audio_chunk(SILENCE_FRAME)
-                    logger.info("Sent keepalive silence frame")
-                    
-        except asyncio.CancelledError:
-            logger.debug("Keepalive loop cancelled")
-        except Exception as e:
-            logger.error("Keepalive loop error: %s", str(e))
-        finally:
-            logger.info("Keepalive loop ended")
-    
-    async def _reprompt_monitor(self):
-        """Monitor for user silence and send reprompts."""
-        REPROMPT_MESSAGES = [
-            "Are you still there? How can I help you today?",
-            "I'm here to help with your HVAC needs. What can I do for you?",
-            "If you need assistance, just let me know. Otherwise, have a great day!",
-        ]
-        
-        logger.info("Reprompt monitor started")
-        
-        try:
-            while not self.is_closing:
-                await asyncio.sleep(1.0)  # Check every second
-                
-                if self.is_closing:
-                    break
-                
-                # Skip if agent is speaking or user is speaking
-                if self._is_speaking or self._user_speaking:
-                    if DIAGNOSTIC_MODE:
-                        logger.debug("Reprompt check: skipping (speaking=%s, user_speaking=%s)", 
-                                   self._is_speaking, self._user_speaking)
-                    continue
-                
-                # Check if we need to reprompt
-                current_time = time.time()
-                time_since_agent_spoke = current_time - self._last_agent_speech_time
-                
-                if DIAGNOSTIC_MODE:
-                    logger.debug("Reprompt check: time_since_agent=%.1fs, last_agent_time=%.1f, reprompt_count=%d",
-                               time_since_agent_spoke, self._last_agent_speech_time, self._reprompt_count)
-                
-                # Only reprompt if:
-                # 1. Agent has spoken at least once
-                # 2. Enough time has passed since agent finished
-                # 3. User hasn't spoken since agent finished
-                # 4. Haven't exceeded max reprompts
-                if (self._last_agent_speech_time > 0 and
-                    time_since_agent_spoke >= self._reprompt_timeout and
-                    (self._last_speech_time == 0 or self._last_speech_time < self._last_agent_speech_time) and
-                    self._reprompt_count < self._max_reprompts):
-                    
-                    self._reprompt_count += 1
-                    reprompt_msg = REPROMPT_MESSAGES[min(self._reprompt_count - 1, len(REPROMPT_MESSAGES) - 1)]
-                    
-                    logger.info(">>> SENDING REPROMPT #%d: %s", self._reprompt_count, reprompt_msg[:50])
-                    await self._speak(reprompt_msg)
-                    # Note: _last_agent_speech_time is set in _speak's finally block
-                    
-        except asyncio.CancelledError:
-            logger.debug("Reprompt monitor cancelled")
-        except Exception as e:
-            logger.error("Reprompt monitor error: %s", str(e))
-        finally:
-            logger.info("Reprompt monitor ended")
+        logger.info("Cleanup complete for call_sid=%s", self.ctx.call_sid)
     
     async def _process_twilio_messages(self):
         """Process incoming messages from Twilio."""
         try:
-            async for raw_msg in self.twilio_ws.iter_text():
-                # Check if we should stop processing
-                if self.is_closing:
+            async for raw_msg in self.ctx.ws.iter_text():
+                if self.ctx.closed:
                     break
                 
                 try:
@@ -341,14 +419,12 @@ class ElevenLabsStreamBridge:
                     await self._handle_start(msg)
                 
                 elif event == "media":
-                    # Don't process media if closing
-                    if not self.is_closing:
+                    if not self.ctx.closed:
                         await self._handle_media(msg)
                 
                 elif event == "stop":
                     logger.info("Twilio stream stopped")
-                    # Mark as closing BEFORE breaking to prevent further processing
-                    self._state = StreamState.CLOSING
+                    self.ctx.closed = True
                     break
                     
         except WebSocketDisconnect:
@@ -358,89 +434,79 @@ class ElevenLabsStreamBridge:
         except Exception as e:
             logger.error("Error processing Twilio messages: %s", str(e))
         finally:
-            # Always cleanup on exit - this is call-scoped, NOT app-scoped
             await self._cleanup()
     
     async def _handle_start(self, msg: dict):
         """Handle stream start event."""
         start_data = msg.get("start", {})
-        self.stream_sid = start_data.get("streamSid")
-        self.call_sid = start_data.get("callSid")
+        self.ctx.stream_sid = start_data.get("streamSid")
+        self.ctx.call_sid = start_data.get("callSid")
         
         logger.info(
             "Stream started [v%s]: stream_sid=%s, call_sid=%s",
-            _STREAM_VERSION, self.stream_sid, self.call_sid
+            _STREAM_VERSION, self.ctx.stream_sid, self.ctx.call_sid
         )
         
+        # Start audio sender task (SOLE writer to Twilio)
+        self.ctx.audio_sender_task = asyncio.create_task(audio_sender(self.ctx))
         
-        # Start keepalive task to prevent Twilio timeout
-        self._start_keepalive()
+        # Start keepalive task
+        self.ctx.keepalive_task = asyncio.create_task(keepalive_loop(self.ctx))
         
-        # Start reprompt monitoring BEFORE greeting so it's ready
-        self._create_task(self._reprompt_monitor())
+        # Start reprompt task
+        self.ctx.reprompt_task = asyncio.create_task(reprompt_loop(self.ctx, self._speak))
         
         # Send initial greeting
         logger.info(">>> SENDING INITIAL GREETING")
         await self._speak("Thank you for calling KC Comfort Air. How may I help you today?")
-        # Note: _last_agent_speech_time is set in _speak's finally block
         
-        logger.info(">>> GREETING COMPLETE, reprompt will fire in %.1f seconds if no user speech", 
-                   self._reprompt_timeout)
+        logger.info(">>> GREETING COMPLETE, reprompt will fire in 5.0 seconds if no user speech")
     
     async def _handle_media(self, msg: dict):
         """Handle incoming audio from Twilio."""
-        # Guard: Don't process if closing
-        if self.is_closing:
+        if self.ctx.closed:
             return
         
         payload = msg.get("media", {}).get("payload")
         if not payload or not validate_base64_audio(payload):
             return
         
-        # Decode audio
         audio_bytes = base64.b64decode(payload)
         
-        # CRITICAL: Don't process audio while agent is speaking
-        # This prevents the agent's own speech from being transcribed
-        if self._is_speaking:
-            # Only check for strong barge-in (user interrupting)
-            if self._detect_speech(audio_bytes, threshold=60):  # Higher threshold for barge-in
+        # Don't process audio while agent is speaking (prevents echo)
+        if self.ctx.is_speaking:
+            # Check for barge-in
+            if self._detect_speech(audio_bytes, threshold=60):
                 logger.debug("Barge-in detected, cancelling speech")
-                if self._tts:
-                    self._tts.cancel_speech()
-                self._is_speaking = False
-                # Clear buffer to avoid processing agent's speech
-                async with self._input_lock:
-                    self._input_buffer.clear()
-                    self._speech_frames = 0
-                    self._silence_frames = 0
-            return  # Don't buffer audio while speaking
+                if self.ctx.tts:
+                    self.ctx.tts.cancel_speech()
+                self.ctx.is_speaking = False
+                self.ctx.input_buffer.clear()
+                self.ctx.speech_frames = 0
+                self.ctx.silence_frames = 0
+            return
         
-        # Buffer audio for STT (only when agent is NOT speaking)
-        async with self._input_lock:
-            self._input_buffer.extend(audio_bytes)
+        # Buffer audio for STT
+        self.ctx.input_buffer.extend(audio_bytes)
+        
+        if self._detect_speech(audio_bytes, threshold=self._speech_threshold):
+            self.ctx.speech_frames += 1
+            self.ctx.silence_frames = 0
+            self.ctx.user_speaking = True
+        else:
+            self.ctx.silence_frames += 1
             
-            # Detect speech/silence with higher threshold
-            if self._detect_speech(audio_bytes, threshold=self._speech_threshold):
-                self._speech_frames += 1
-                self._silence_frames = 0
-                self._user_speaking = True
-            else:
-                self._silence_frames += 1
+            # If we had speech and now silence, process the utterance
+            if (self.ctx.user_speaking and 
+                self.ctx.silence_frames >= self._silence_threshold and
+                self.ctx.speech_frames >= self._min_speech_frames):
                 
-                # If we had speech and now silence, process the utterance
-                if (self._user_speaking and 
-                    self._silence_frames >= self._silence_threshold and
-                    self._speech_frames >= self._min_speech_frames):
-                    
-                    # Process accumulated audio
-                    audio_data = bytes(self._input_buffer)
-                    self._input_buffer.clear()
-                    self._user_speaking = False
-                    self._speech_frames = 0
-                    
-                    # Process in background using tracked task
-                    self._create_task(self._process_utterance(audio_data))
+                audio_data = bytes(self.ctx.input_buffer)
+                self.ctx.input_buffer.clear()
+                self.ctx.user_speaking = False
+                self.ctx.speech_frames = 0
+                
+                asyncio.create_task(self._process_utterance(audio_data))
     
     def _detect_speech(self, audio_bytes: bytes, threshold: int = 40) -> bool:
         """
@@ -464,48 +530,34 @@ class ElevenLabsStreamBridge:
         return variance > threshold
     
     async def _process_utterance(self, audio_data: bytes):
-        """Process a complete user utterance.
-        
-        Uses a lock to prevent concurrent execution which causes
-        'coroutine already executing' errors.
-        """
-        import time
-        
-        # Guard: Don't process during teardown
-        if self.is_closing:
-            logger.debug("Ignoring utterance during teardown")
+        """Process a complete user utterance."""
+        if self.ctx.closed:
             return
         
-        # Guard: Prevent concurrent utterance processing
         if self._utterance_lock.locked():
             logger.debug("Utterance processing already in progress, skipping")
             return
         
         async with self._utterance_lock:
             try:
-                # Double-check we're still active after acquiring lock
-                if self.is_closing:
+                if self.ctx.closed:
                     return
                 
-                # Convert to text using OpenAI Whisper
                 text = await self._transcribe(audio_data)
                 if not text or not text.strip():
                     return
                 
-                # Guard: Ignore STT results during teardown
-                if self.is_closing:
-                    logger.debug("Ignoring STT result during teardown: %s", text[:50])
+                if self.ctx.closed:
                     return
                 
                 # Track user speech time and reset reprompt counter
-                self._last_speech_time = time.time()
-                self._reprompt_count = 0  # Reset reprompts when user speaks
+                self.ctx.last_speech_time = time.time()
+                self.ctx.reprompt_count = 0
                 
                 logger.info("User said: %s", text[:100])
                 
-                # Get response from GPT
                 response = await self._get_response(text)
-                if response and not self.is_closing:
+                if response and not self.ctx.closed:
                     logger.info("Agent response: %s", response[:100])
                     await self._speak(response)
                     
@@ -592,18 +644,18 @@ class ElevenLabsStreamBridge:
             client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
             
             # Add to conversation history
-            self._conversation_history.append({
+            self.ctx.conversation_history.append({
                 "role": "user",
                 "content": user_text
             })
             
             # Keep history manageable
-            if len(self._conversation_history) > 20:
-                self._conversation_history = self._conversation_history[-20:]
+            if len(self.ctx.conversation_history) > 20:
+                self.ctx.conversation_history = self.ctx.conversation_history[-20:]
             
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                *self._conversation_history
+                *self.ctx.conversation_history
             ]
             
             response = await client.chat.completions.create(
@@ -616,7 +668,7 @@ class ElevenLabsStreamBridge:
             assistant_message = response.choices[0].message.content
             
             # Add to history
-            self._conversation_history.append({
+            self.ctx.conversation_history.append({
                 "role": "assistant",
                 "content": assistant_message
             })
@@ -629,28 +681,24 @@ class ElevenLabsStreamBridge:
     
     async def _speak(self, text: str):
         """Speak text using ElevenLabs TTS."""
-        import time
-        
         if not text or not text.strip():
             return
         
-        # Guard: Don't speak if closing
-        if self.is_closing:
+        if self.ctx.closed:
             return
         
-        self._is_speaking = True
+        self.ctx.is_speaking = True
         logger.info("Starting speech for: %s", text[:50])
         
         try:
-            if self._tts:
-                # Stream ElevenLabs audio to Twilio
-                result = await self._tts.stream_to_twilio(
+            if self.ctx.tts:
+                # Stream ElevenLabs audio to Twilio via enqueue_audio
+                result = await self.ctx.tts.stream_to_twilio(
                     text,
                     self._send_audio_chunk
                 )
                 logger.info("TTS stream_to_twilio completed with result: %s", result)
             else:
-                # Fallback: Can't stream without ElevenLabs in this mode
                 logger.warning("No TTS available for streaming")
                 
         except asyncio.CancelledError:
@@ -658,62 +706,20 @@ class ElevenLabsStreamBridge:
         except Exception as e:
             logger.error("TTS error: %s", str(e))
         finally:
-            self._is_speaking = False
-            # Track when agent finished speaking for reprompt logic
-            self._last_agent_speech_time = time.time()
+            self.ctx.is_speaking = False
+            self.ctx.last_agent_speech_time = time.time()
     
     async def _send_audio_chunk(self, audio_bytes: bytes):
-        """Send audio chunk to Twilio as exactly 160-byte frames.
+        """Send audio chunk to Twilio via the audio queue.
         
-        CRITICAL: Every frame MUST be exactly 160 bytes.
+        Uses enqueue_audio which enforces 160-byte frames.
         This is the callback used by ElevenLabs TTS.
         """
-        if self.is_closing or not self.stream_sid:
+        if self.ctx.closed or not self.ctx.stream_sid:
             return
         
-        if self.twilio_ws.client_state != WebSocketState.CONNECTED:
-            logger.warning("WebSocket not connected, cannot send audio")
-            return
-        
-        FRAME_SIZE = 160
-        ULAW_SILENCE = b"\x7f"
-        frames_sent = 0
-        
-        try:
-            # Break into exactly 160-byte frames
-            for i in range(0, len(audio_bytes), FRAME_SIZE):
-                if self.is_closing:
-                    break
-                
-                chunk = audio_bytes[i:i + FRAME_SIZE]
-                
-                # CRITICAL: Pad undersized frames to exactly 160 bytes
-                if len(chunk) < FRAME_SIZE:
-                    chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
-                
-                # ASSERTION: Frame must be exactly 160 bytes
-                assert len(chunk) == FRAME_SIZE, f"Frame size {len(chunk)} != {FRAME_SIZE}"
-                
-                # Send frame directly to Twilio
-                payload = base64.b64encode(chunk).decode("ascii")
-                await self.twilio_ws.send_text(json.dumps({
-                    "event": "media",
-                    "streamSid": self.stream_sid,
-                    "media": {
-                        "payload": payload,
-                    },
-                }))
-                frames_sent += 1
-                self._frames_sent += 1
-            
-            if frames_sent > 0:
-                logger.info("Sent %d frames (each 160 bytes) to Twilio, total: %d", frames_sent, self._frames_sent)
-                
-        except AssertionError as e:
-            logger.error("FRAME SIZE VIOLATION: %s", str(e))
-        except Exception as e:
-            if not self.is_closing:
-                logger.error("Failed to send audio to Twilio: %s", str(e))
+        # Use the centralized enqueue function (enforces 160-byte frames)
+        await enqueue_audio(self.ctx, audio_bytes)
 
 
 @router.websocket("/twilio/elevenlabs/stream")
