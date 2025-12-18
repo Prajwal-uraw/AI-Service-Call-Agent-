@@ -21,7 +21,7 @@ import base64
 from typing import Optional
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import Response
 
 from app.utils.logging import get_logger
@@ -405,22 +405,29 @@ async def twilio_elevenlabs_stream(ws: WebSocket):
             pass
 
 
-@router.get("/twilio/elevenlabs/twiml")
-async def elevenlabs_twiml():
+@router.api_route("/twilio/elevenlabs/twiml", methods=["GET", "POST"])
+async def elevenlabs_twiml(request: Request):
     """
     Return TwiML for connecting to the ElevenLabs streaming endpoint.
+    
+    Accepts both GET and POST - Twilio sends POST requests.
     """
-    stream_url = os.getenv("STREAM_WEBSOCKET_URL", "wss://YOUR_DOMAIN/twilio/elevenlabs/stream")
+    host = request.headers.get("host", "")
+    
+    # Build WebSocket URL dynamically from request host
+    if host:
+        stream_url = f"wss://{host}/twilio/elevenlabs/stream"
+    else:
+        stream_url = os.getenv("STREAM_WEBSOCKET_URL", "wss://YOUR_DOMAIN/twilio/elevenlabs/stream")
     
     # Use ElevenLabs stream if available, otherwise fall back to regular stream
     if is_elevenlabs_available():
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Connect>
-        <Stream url="{stream_url.replace('/twilio/stream', '/twilio/elevenlabs/stream')}" />
+        <Stream url="{stream_url}" />
     </Connect>
-</Response>
-""".strip()
+</Response>"""
     else:
         # Fallback to Polly voice
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -429,7 +436,6 @@ async def elevenlabs_twiml():
     <Connect>
         <Stream url="{stream_url}" />
     </Connect>
-</Response>
-""".strip()
+</Response>"""
     
-    return Response(content=twiml, media_type="application/xml")
+    return Response(content=twiml.strip(), media_type="application/xml")
