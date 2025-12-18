@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.0.0-enterprise-complete"
+_VERSION = "3.1.0-proactive-greeting"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -100,6 +100,13 @@ OFF_TOPIC_PHRASES = [
     "weather", "sports", "news", "joke", "sing", "play music",
     "what time is it", "who are you", "are you a robot", "are you real",
     "tell me a story", "what's your name"
+]
+
+# Greeting/small talk phrases (should respond naturally, not start booking)
+SMALL_TALK_PHRASES = [
+    "how are you", "how you doing", "how's it going", "what's up",
+    "good morning", "good afternoon", "good evening", "hello", "hi there",
+    "hey", "howdy", "how do you do", "nice to meet you"
 ]
 
 # Filler phrases for natural conversation flow
@@ -563,7 +570,7 @@ def clear_session(call_sid: str):
 # =============================================================================
 PROMPTS = {
     ConversationState.GREETING: [
-        f"Thanks for calling {COMPANY_NAME}! This call may be recorded for quality purposes. I'm your scheduling assistant. How can I help you today?",
+        f"Thanks for calling {COMPANY_NAME}! This call may be recorded for quality purposes. Are you calling to schedule a service appointment today?",
     ],
     ConversationState.IDENTIFY_NEED: [
         "Got it. Are you looking to schedule a service appointment, or do you have a question I can help with?",
@@ -881,6 +888,17 @@ async def process_state(
     
     # FAST PATH: Check for common FAQ questions (skip GPT)
     if current_state == ConversationState.GREETING:
+        # Handle small talk naturally - don't jump to booking
+        if any(phrase in speech_lower for phrase in SMALL_TALK_PHRASES):
+            return current_state, "I'm doing great, thank you for asking! Are you calling to schedule a service appointment, or do you have a question about your HVAC system?", slots
+        
+        # Handle yes/no responses to "Are you calling to schedule?"
+        if any(word in speech_lower for word in ["yes", "yeah", "yep", "sure", "please", "i am", "i do", "that's right"]):
+            return ConversationState.COLLECT_NAME, "Great! Let me get you scheduled. May I have your name please?", slots
+        
+        if any(word in speech_lower for word in ["no", "nope", "not really", "actually"]):
+            return current_state, "No problem! Do you have a question about your HVAC system, or is there something else I can help with?", slots
+        
         faq_answer = quick_faq_check(speech)
         if faq_answer:
             logger.info("Fast FAQ match for: %s", speech[:30])
