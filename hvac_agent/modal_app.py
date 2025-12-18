@@ -12,7 +12,7 @@ Modal provides serverless deployment with:
 
 import modal
 
-# Define the Modal image with dependencies
+# Define the Modal image with dependencies and local app source
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")  # Required for ElevenLabs audio conversion
@@ -27,6 +27,7 @@ image = (
         "httpx>=0.27.0",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
     )
+    .add_local_python_source("app")  # Include the app package
 )
 
 # Create Modal app
@@ -38,9 +39,9 @@ app = modal.App("hvac-voice-agent", image=image)
         modal.Secret.from_name("hvac-agent-secrets"),
         modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
     ],
-    allow_concurrent_inputs=100,
-    container_idle_timeout=300,
+    scaledown_window=300,
 )
+@modal.concurrent(max_inputs=100)
 @modal.asgi_app()
 def fastapi_app():
     """
