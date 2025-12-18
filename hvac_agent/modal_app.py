@@ -20,6 +20,7 @@ image = (
         "fastapi>=0.109.0",
         "uvicorn[standard]>=0.27.0",
         "python-dotenv>=1.0.0",
+        "python-multipart>=0.0.6",  # Required for form data (Twilio webhooks)
         "openai>=1.50.0",
         "pydantic>=2.7.0",
         "sqlalchemy>=2.0.0",
@@ -27,6 +28,7 @@ image = (
         "websockets>=12.0",
         "httpx>=0.27.0",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
+        "twilio>=8.0.0",  # Twilio SDK for request validation
     )
     .add_local_python_source("app")  # Include the app package
 )
