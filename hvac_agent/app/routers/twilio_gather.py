@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "2.1.0-production"
+_VERSION = "2.2.0-enterprise"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -79,22 +79,67 @@ MAX_RETRIES = 3  # Max retries before escalation
 # =============================================================================
 import re
 
+# Word-to-digit mapping for spoken numbers
+WORD_TO_DIGIT = {
+    "zero": "0", "oh": "0", "o": "0",
+    "one": "1", "won": "1",
+    "two": "2", "to": "2", "too": "2",
+    "three": "3", "tree": "3",
+    "four": "4", "for": "4", "fore": "4",
+    "five": "5", "fife": "5",
+    "six": "6", "sicks": "6",
+    "seven": "7",
+    "eight": "8", "ate": "8",
+    "nine": "9", "niner": "9",
+}
+
+
+def convert_spoken_to_digits(text: str) -> str:
+    """
+    Convert spoken number words to digits.
+    Handles: "five five five one two three four five six seven" -> "5551234567"
+    """
+    result = []
+    words = text.lower().split()
+    
+    for word in words:
+        # Clean punctuation
+        clean_word = re.sub(r'[^a-z0-9]', '', word)
+        
+        # Check if it's already a digit
+        if clean_word.isdigit():
+            result.append(clean_word)
+        # Check word mapping
+        elif clean_word in WORD_TO_DIGIT:
+            result.append(WORD_TO_DIGIT[clean_word])
+        # Check for compound numbers like "fifty" -> skip, we want individual digits
+    
+    return ''.join(result)
+
+
 def validate_phone(phone_input: str) -> Tuple[bool, str, str]:
     """
-    Validate and format phone number.
+    Validate and format phone number from speech.
+    
+    Handles:
+    - "5551234567" (digits)
+    - "555-123-4567" (formatted)
+    - "five five five one two three four five six seven" (spoken words)
+    - "555 123 4567" (spaced)
     
     Returns: (is_valid, formatted_number, spoken_format)
     """
-    # Extract digits only
+    # First try to extract digits directly
     digits = re.sub(r'\D', '', phone_input)
     
-    # Handle common spoken formats
-    # "five five five one two three four" -> already extracted as digits by Twilio
+    # If not enough digits, try converting spoken words
+    if len(digits) < 10:
+        digits = convert_spoken_to_digits(phone_input)
     
+    # Validate
     if len(digits) == 10:
-        # Format as (XXX) XXX-XXXX
         formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        # Spoken format: "5 5 5, 1 2 3, 4 5 6 7"
+        # Natural spoken format with pauses
         spoken = f"{digits[0]} {digits[1]} {digits[2]}, {digits[3]} {digits[4]} {digits[5]}, {digits[6]} {digits[7]} {digits[8]} {digits[9]}"
         return True, formatted, spoken
     elif len(digits) == 11 and digits[0] == '1':
@@ -104,7 +149,6 @@ def validate_phone(phone_input: str) -> Tuple[bool, str, str]:
         spoken = f"{digits[0]} {digits[1]} {digits[2]}, {digits[3]} {digits[4]} {digits[5]}, {digits[6]} {digits[7]} {digits[8]} {digits[9]}"
         return True, formatted, spoken
     elif len(digits) >= 7:
-        # Partial number - might be missing area code
         return False, digits, "incomplete"
     else:
         return False, digits, "invalid"
@@ -455,10 +499,25 @@ async def process_state(
     
     # FAST PATH: Simple slot extraction for collection states (skip GPT)
     if current_state == ConversationState.COLLECT_NAME:
-        # Just use what they said as the name
-        name = speech.strip().title()
-        slots["name"] = name
-        return ConversationState.COLLECT_PHONE, f"Thanks {name}! What's the best phone number to reach you?", slots
+        # Clean up the name - remove filler words
+        name = speech.strip()
+        # Remove common filler phrases
+        filler_phrases = ["my name is", "this is", "i'm", "im", "i am", "it's", "its", "call me"]
+        name_lower = name.lower()
+        for filler in filler_phrases:
+            if name_lower.startswith(filler):
+                name = name[len(filler):].strip()
+                break
+        
+        # Capitalize properly
+        name = name.title()
+        
+        # Validate - name should have at least 2 characters
+        if len(name) >= 2:
+            slots["name"] = name
+            return ConversationState.COLLECT_PHONE, f"Thanks {name}! What's the best phone number to reach you?", slots
+        else:
+            return current_state, "I didn't catch your name. Could you please tell me your name?", slots
     
     if current_state == ConversationState.COLLECT_PHONE:
         # Validate phone number
@@ -771,38 +830,34 @@ async def gather_respond(request: Request):
             
             if session["retries"] >= MAX_RETRIES:
                 logger.warning("Max retries reached for CallSid=%s, transferring", call_sid)
-                twiml = """<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="Polly.Joanna-Neural">I'm having trouble hearing you. Let me transfer you to someone who can help.</Say>
-    <Redirect>/twilio/gather/transfer</Redirect>
-</Response>"""
+                transfer_msg = "I'm having trouble hearing you. Let me transfer you to someone who can help."
+                twiml = await generate_twiml(transfer_msg, ConversationState.TRANSFER, call_sid, host)
                 return Response(content=twiml, media_type="application/xml")
             
-            # Friendly reprompt based on retry count
-            if session["retries"] == 1:
-                reprompt = "I didn't catch that. Could you please repeat?"
+            # Context-aware reprompt based on current state
+            current_state = ConversationState(session.get("state", "greeting"))
+            if current_state == ConversationState.COLLECT_NAME:
+                reprompt = "I didn't catch your name. Could you tell me your name please?"
+            elif current_state == ConversationState.COLLECT_PHONE:
+                reprompt = "I need your phone number. Please say it slowly, like: 5 5 5, 1 2 3, 4 5 6 7."
+            elif current_state == ConversationState.COLLECT_ADDRESS:
+                reprompt = "What's the street address where you need service?"
+            elif current_state in [ConversationState.VERIFY_PHONE, ConversationState.VERIFY_ADDRESS, ConversationState.CONFIRM]:
+                reprompt = "I just need a yes or no. Is that correct?"
             else:
-                reprompt = "I'm still here. Take your time - what can I help you with?"
+                reprompt = "I'm still here. What can I help you with today?"
             
-            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
-        <Say voice="Polly.Joanna-Neural">{reprompt}</Say>
-    </Gather>
-    <Redirect>/twilio/gather/transfer</Redirect>
-</Response>"""
+            twiml = await generate_twiml(reprompt, current_state, call_sid, host, action_url=action_url)
             return Response(content=twiml, media_type="application/xml")
         
-        # Handle very low confidence speech (likely background noise or unclear)
-        if confidence < 0.3 and len(speech_result) < 10:
-            logger.info("Low confidence speech (%.2f), asking for clarification", confidence)
-            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
-        <Say voice="Polly.Joanna-Neural">I didn't quite catch that. Could you speak a little louder or clearer?</Say>
-    </Gather>
-    <Redirect>/twilio/gather/transfer</Redirect>
-</Response>"""
+        # Handle very low confidence - but still try to process it
+        # Names especially can have low confidence but still be correct
+        if confidence < 0.2 and len(speech_result) < 5:
+            logger.info("Very low confidence speech (%.2f): '%s'", confidence, speech_result)
+            session["retries"] = session.get("retries", 0) + 1
+            current_state = ConversationState(session.get("state", "greeting"))
+            reprompt = "I didn't quite catch that. Could you please repeat?"
+            twiml = await generate_twiml(reprompt, current_state, call_sid, host, action_url=action_url)
             return Response(content=twiml, media_type="application/xml")
         
         # Reset retries on successful speech
