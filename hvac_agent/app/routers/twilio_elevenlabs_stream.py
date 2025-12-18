@@ -106,6 +106,14 @@ class ElevenLabsStreamBridge:
         
         # Utterance processing lock - prevents concurrent _process_utterance calls
         self._utterance_lock = asyncio.Lock()
+        
+        # Conversational turn management
+        self._last_speech_time: float = 0  # Time of last user speech
+        self._last_agent_speech_time: float = 0  # Time agent finished speaking
+        self._reprompt_count: int = 0  # Number of reprompts sent
+        self._max_reprompts: int = 2  # Max reprompts before giving up
+        self._reprompt_timeout: float = 6.0  # Seconds to wait before reprompt
+        self._keepalive_task: Optional[asyncio.Task] = None  # Keepalive task
     
     @property
     def is_running(self) -> bool:
@@ -211,6 +219,90 @@ class ElevenLabsStreamBridge:
         task.add_done_callback(self._active_tasks.discard)
         return task
     
+    def _start_keepalive(self):
+        """Start the keepalive task to prevent Twilio timeout."""
+        if self._keepalive_task and not self._keepalive_task.done():
+            return  # Already running
+        self._keepalive_task = self._create_task(self._keepalive_loop())
+    
+    async def _keepalive_loop(self):
+        """Send silence frames periodically to keep Twilio stream alive."""
+        import time
+        KEEPALIVE_INTERVAL = 2.0  # Send keepalive every 2 seconds
+        SILENCE_FRAME = b"\x7f" * 160  # 20ms of μ-law silence
+        
+        logger.info("Keepalive loop started")
+        
+        try:
+            while not self.is_closing:
+                await asyncio.sleep(KEEPALIVE_INTERVAL)
+                
+                if self.is_closing:
+                    break
+                
+                # Only send keepalive if not currently speaking
+                if not self._is_speaking:
+                    await self._send_audio_chunk(SILENCE_FRAME)
+                    logger.debug("Sent keepalive silence frame")
+                    
+        except asyncio.CancelledError:
+            logger.debug("Keepalive loop cancelled")
+        except Exception as e:
+            logger.error("Keepalive loop error: %s", str(e))
+        finally:
+            logger.info("Keepalive loop ended")
+    
+    async def _reprompt_monitor(self):
+        """Monitor for user silence and send reprompts."""
+        import time
+        
+        REPROMPT_MESSAGES = [
+            "Are you still there? How can I help you today?",
+            "I'm here to help with your HVAC needs. What can I do for you?",
+        ]
+        
+        logger.info("Reprompt monitor started")
+        
+        try:
+            while not self.is_closing:
+                await asyncio.sleep(1.0)  # Check every second
+                
+                if self.is_closing:
+                    break
+                
+                # Skip if agent is speaking or user is speaking
+                if self._is_speaking or self._user_speaking:
+                    continue
+                
+                # Check if we need to reprompt
+                current_time = time.time()
+                time_since_agent_spoke = current_time - self._last_agent_speech_time
+                time_since_user_spoke = current_time - self._last_speech_time
+                
+                # Only reprompt if:
+                # 1. Agent spoke recently (within last 30 seconds)
+                # 2. User hasn't spoken since agent finished
+                # 3. Enough time has passed since agent finished
+                # 4. Haven't exceeded max reprompts
+                if (self._last_agent_speech_time > 0 and
+                    time_since_agent_spoke >= self._reprompt_timeout and
+                    (self._last_speech_time == 0 or self._last_speech_time < self._last_agent_speech_time) and
+                    self._reprompt_count < self._max_reprompts):
+                    
+                    self._reprompt_count += 1
+                    reprompt_msg = REPROMPT_MESSAGES[min(self._reprompt_count - 1, len(REPROMPT_MESSAGES) - 1)]
+                    
+                    logger.info("Sending reprompt #%d: %s", self._reprompt_count, reprompt_msg[:50])
+                    await self._speak(reprompt_msg)
+                    self._last_agent_speech_time = time.time()
+                    
+        except asyncio.CancelledError:
+            logger.debug("Reprompt monitor cancelled")
+        except Exception as e:
+            logger.error("Reprompt monitor error: %s", str(e))
+        finally:
+            logger.info("Reprompt monitor ended")
+    
     async def _process_twilio_messages(self):
         """Process incoming messages from Twilio."""
         try:
@@ -264,15 +356,19 @@ class ElevenLabsStreamBridge:
             self.stream_sid, self.call_sid
         )
         
-        # Send a test tone to verify Twilio audio path works
-        # μ-law silence is 0xFF, a tone alternates between values
-        logger.info("Sending test tone to verify Twilio audio path...")
-        test_tone = bytes([0x00, 0xFF] * 800)  # 200ms of alternating tone at 8kHz
-        await self._send_audio_chunk(test_tone)
-        logger.info("Test tone sent")
+        # Start keepalive task to prevent Twilio timeout
+        self._start_keepalive()
         
         # Send initial greeting
         await self._speak("Thank you for calling KC Comfort Air. How may I help you today?")
+        
+        # Mark time for reprompt logic
+        import time
+        self._last_agent_speech_time = time.time()
+        self._reprompt_count = 0
+        
+        # Start reprompt monitoring
+        self._create_task(self._reprompt_monitor())
     
     async def _handle_media(self, msg: dict):
         """Handle incoming audio from Twilio."""
@@ -356,6 +452,8 @@ class ElevenLabsStreamBridge:
         Uses a lock to prevent concurrent execution which causes
         'coroutine already executing' errors.
         """
+        import time
+        
         # Guard: Don't process during teardown
         if self.is_closing:
             logger.debug("Ignoring utterance during teardown")
@@ -381,6 +479,10 @@ class ElevenLabsStreamBridge:
                 if self.is_closing:
                     logger.debug("Ignoring STT result during teardown: %s", text[:50])
                     return
+                
+                # Track user speech time and reset reprompt counter
+                self._last_speech_time = time.time()
+                self._reprompt_count = 0  # Reset reprompts when user speaks
                 
                 logger.info("User said: %s", text[:100])
                 
@@ -510,6 +612,8 @@ class ElevenLabsStreamBridge:
     
     async def _speak(self, text: str):
         """Speak text using ElevenLabs TTS."""
+        import time
+        
         if not text or not text.strip():
             return
         
@@ -538,6 +642,8 @@ class ElevenLabsStreamBridge:
             logger.error("TTS error: %s", str(e))
         finally:
             self._is_speaking = False
+            # Track when agent finished speaking for reprompt logic
+            self._last_agent_speech_time = time.time()
     
     async def _send_audio_chunk(self, audio_bytes: bytes):
         """Send audio chunk to Twilio in proper 160-byte frames.
