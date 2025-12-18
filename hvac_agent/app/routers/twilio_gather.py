@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.4-skip-validation"
+_VERSION = "1.0.5-polly-fallback"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -376,13 +376,17 @@ async def process_state(
         return current_state, "Morning or afternoon?", slots
     
     elif current_state == ConversationState.CONFIRM:
-        if intent == "confirm":
-            # TODO: Actually create the booking in database
+        # Check for yes/no in speech directly (more reliable than GPT for simple responses)
+        speech_lower = speech.lower().strip()
+        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "sure", "okay", "ok", "confirm", "that's right", "sounds good"]):
             logger.info("BOOKING CONFIRMED: %s", slots)
             return ConversationState.COMPLETE, get_prompt(ConversationState.COMPLETE, slots), slots
-        elif intent == "deny":
+        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect", "not right", "change", "start over"]):
+            # Clear slots and start over
+            slots = {}
             return ConversationState.COLLECT_NAME, "No problem, let's start over. What's your name?", slots
-        return current_state, "Just to confirm - is everything correct? Yes or no?", slots
+        # If unclear, ask again more explicitly
+        return current_state, "I need a yes or no. Is this information correct?", slots
     
     elif current_state == ConversationState.COMPLETE:
         if intent in ["deny", "other"]:
@@ -403,7 +407,7 @@ async def process_state(
 # =============================================================================
 # TWIML GENERATION
 # =============================================================================
-async def generate_twiml(
+def generate_twiml_sync(
     text: str,
     next_state: ConversationState,
     call_sid: str,
@@ -414,27 +418,14 @@ async def generate_twiml(
     """
     Generate TwiML response with Gather or Say.
     
-    Uses ElevenLabs for natural voice when available, falls back to Polly.
+    Uses Polly Neural voice for reliable, natural speech.
+    ElevenLabs integration disabled until credits are added.
     """
     action = action_url or f"https://{host}/twilio/gather/respond"
     
-    # Try ElevenLabs first for natural voice
-    use_elevenlabs = is_elevenlabs_available()
-    voice_element = f'<Say voice="Polly.Joanna-Neural">{text}</Say>'
-    
-    if use_elevenlabs:
-        try:
-            audio_bytes = await generate_speech(text)
-            if audio_bytes:
-                # Use base64 audio with Play - Twilio supports this format
-                import base64
-                audio_b64 = base64.b64encode(audio_bytes).decode('ascii')
-                # For now, use Polly as ElevenLabs requires hosting audio files
-                # TODO: Add audio file hosting for ElevenLabs Play URLs
-                voice_element = f'<Say voice="Polly.Joanna-Neural">{text}</Say>'
-                logger.debug("ElevenLabs audio generated, using Polly for TwiML compatibility")
-        except Exception as e:
-            logger.warning("ElevenLabs failed, using Polly: %s", str(e))
+    # Use Polly Neural voice - reliable and sounds good
+    # ElevenLabs disabled due to quota issues
+    voice = "Polly.Joanna-Neural"
     
     # For terminal states, no gather needed
     if next_state in [ConversationState.GOODBYE, ConversationState.EMERGENCY, ConversationState.TRANSFER]:
@@ -590,7 +581,7 @@ async def gather_respond(request: Request):
     # Generate TwiML
     host = request.headers.get("host", "")
     action_url = f"https://{host}/twilio/gather/respond"
-    twiml = await generate_twiml(response_text, next_state, call_sid, action_url=action_url, host=host)
+    twiml = generate_twiml_sync(response_text, next_state, call_sid, action_url=action_url, host=host)
     
     return Response(content=twiml, media_type="application/xml")
 
