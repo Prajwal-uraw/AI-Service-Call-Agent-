@@ -264,6 +264,13 @@ class ElevenLabsStreamBridge:
             self.stream_sid, self.call_sid
         )
         
+        # Send a test tone to verify Twilio audio path works
+        # μ-law silence is 0xFF, a tone alternates between values
+        logger.info("Sending test tone to verify Twilio audio path...")
+        test_tone = bytes([0x00, 0xFF] * 800)  # 200ms of alternating tone at 8kHz
+        await self._send_audio_chunk(test_tone)
+        logger.info("Test tone sent")
+        
         # Send initial greeting
         await self._speak("Thank you for calling KC Comfort Air. How may I help you today?")
     
@@ -511,14 +518,16 @@ class ElevenLabsStreamBridge:
             return
         
         self._is_speaking = True
+        logger.info("Starting speech for: %s", text[:50])
         
         try:
             if self._tts:
                 # Stream ElevenLabs audio to Twilio
-                await self._tts.stream_to_twilio(
+                result = await self._tts.stream_to_twilio(
                     text,
                     self._send_audio_chunk
                 )
+                logger.info("TTS stream_to_twilio completed with result: %s", result)
             else:
                 # Fallback: Can't stream without ElevenLabs in this mode
                 logger.warning("No TTS available for streaming")
@@ -537,15 +546,17 @@ class ElevenLabsStreamBridge:
         """
         # Guard: Check stream_sid exists
         if not self.stream_sid:
+            logger.warning("No stream_sid, cannot send audio")
             return
         
         # Guard: Check if we're closing
         if self.is_closing:
+            logger.debug("Stream closing, skipping audio send")
             return
         
         # Guard: Check WebSocket state before sending
         if self.twilio_ws.client_state != WebSocketState.CONNECTED:
-            logger.debug("WebSocket not connected, skipping audio send")
+            logger.warning("WebSocket not connected (state=%s), skipping audio send", self.twilio_ws.client_state)
             return
         
         try:
@@ -557,6 +568,7 @@ class ElevenLabsStreamBridge:
                     "payload": payload,
                 },
             }))
+            logger.debug("Sent audio chunk to Twilio: %d bytes", len(audio_bytes))
         except Exception as e:
             # Don't log errors during teardown - expected
             if not self.is_closing:
