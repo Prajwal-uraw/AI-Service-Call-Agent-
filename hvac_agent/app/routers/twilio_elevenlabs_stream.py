@@ -40,8 +40,9 @@ logger = get_logger("twilio.elevenlabs")
 # Diagnostic mode - enables verbose logging
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
-# Version marker for deployment verification
-_STREAM_VERSION = "2.0.1-queue-based"
+# Version marker for deployment verification - MUST appear in logs
+_STREAM_VERSION = "2.0.4-fixed"
+print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
