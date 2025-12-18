@@ -39,13 +39,17 @@ ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "DLsHlh26Ugcm6ELvS0qi")  
 ELEVENLABS_MODEL = "eleven_turbo_v2_5"
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
 
-# Voice settings optimized for phone calls
+# Voice settings optimized for phone calls (8kHz μ-law)
+# Lower stability = more expressive, higher similarity = more consistent
 VOICE_SETTINGS = {
-    "stability": 0.40,
-    "similarity_boost": 0.70,
-    "style": 0.15,
-    "use_speaker_boost": True
+    "stability": 0.50,           # Balanced for phone clarity
+    "similarity_boost": 0.75,    # High consistency
+    "style": 0.0,                 # No style exaggeration for phone
+    "use_speaker_boost": True     # Enhance voice presence
 }
+
+# Output format optimized for Twilio (phone quality)
+OUTPUT_FORMAT = "mp3_22050_32"  # 22kHz, 32kbps - good for phone, small files
 
 # Cache settings
 CACHE_TTL_SECONDS = 3600  # 1 hour
@@ -166,7 +170,8 @@ async def generate_audio(text: str) -> Optional[Tuple[str, bytes]]:
         payload = {
             "text": text,
             "model_id": ELEVENLABS_MODEL,
-            "voice_settings": VOICE_SETTINGS
+            "voice_settings": VOICE_SETTINGS,
+            "output_format": OUTPUT_FORMAT
         }
         
         async with httpx.AsyncClient(timeout=15.0) as client:

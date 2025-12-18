@@ -34,7 +34,7 @@ image = (
         "httpx>=0.27.0",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
         "twilio>=8.0.0",  # Twilio SDK for request validation
-        "elevenlabs>=1.0.0",  # ElevenLabs SDK for Conversational AI
+        # elevenlabs SDK removed - using direct API calls for TTS only
     )
     .add_local_python_source("app")  # Include the app package
 )
