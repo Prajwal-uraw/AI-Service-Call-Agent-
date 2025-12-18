@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.5-fix-speech"
+_STREAM_VERSION = "3.0.6-debug-media"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -495,43 +495,35 @@ class ElevenLabsStreamBridge:
         
         audio_bytes = base64.b64decode(payload)
         
+        # Log first few media events to debug
+        if not hasattr(self, '_media_count'):
+            self._media_count = 0
+        self._media_count += 1
+        if self._media_count <= 3:
+            # Check audio characteristics
+            avg_val = sum(audio_bytes) / len(audio_bytes) if audio_bytes else 0
+            variance = self._calculate_variance(audio_bytes)
+            logger.info(">>> INBOUND MEDIA #%d: %d bytes, avg=%.1f, variance=%.1f", 
+                       self._media_count, len(audio_bytes), avg_val, variance)
+        
         # Don't process audio while agent is speaking (prevents echo)
         if self.ctx.is_speaking:
-            # Check for barge-in
-            if self._detect_speech(audio_bytes, threshold=60):
-                logger.debug("Barge-in detected, cancelling speech")
-                if self.ctx.tts:
-                    self.ctx.tts.cancel_speech()
-                self.ctx.is_speaking = False
-                self.ctx.input_buffer.clear()
-                self.ctx.speech_frames = 0
-                self.ctx.silence_frames = 0
-            return
+            return  # Skip all processing while speaking
         
-        # Buffer audio for STT
+        # TEMPORARILY DISABLED: Speech detection causing false positives
+        # Just buffer audio, don't set user_speaking
         self.ctx.input_buffer.extend(audio_bytes)
+        self.ctx.silence_frames += 1
         
-        if self._detect_speech(audio_bytes, threshold=self._speech_threshold):
-            self.ctx.speech_frames += 1
-            self.ctx.silence_frames = 0
-            self.ctx.user_speaking = True
-        else:
-            self.ctx.silence_frames += 1
-            
-            # Reset user_speaking after enough silence (prevents false positive blocking reprompt)
-            if self.ctx.silence_frames >= 20:  # ~400ms of silence
-                self.ctx.user_speaking = False
-            
-            # If we had speech and now silence, process the utterance
-            if (self.ctx.speech_frames >= self._min_speech_frames and
-                self.ctx.silence_frames >= self._silence_threshold):
-                
-                audio_data = bytes(self.ctx.input_buffer)
-                self.ctx.input_buffer.clear()
-                self.ctx.user_speaking = False
-                self.ctx.speech_frames = 0
-                
-                asyncio.create_task(self._process_utterance(audio_data))
+        # Always keep user_speaking = False to allow reprompt
+        self.ctx.user_speaking = False
+    
+    def _calculate_variance(self, audio_bytes: bytes) -> float:
+        """Calculate variance from silence values."""
+        if not audio_bytes:
+            return 0
+        silence_low = 0x7F
+        return sum(abs(b - silence_low) for b in audio_bytes) / len(audio_bytes)
     
     def _detect_speech(self, audio_bytes: bytes, threshold: int = 40) -> bool:
         """
