@@ -540,8 +540,9 @@ class ElevenLabsStreamBridge:
             self._is_speaking = False
     
     async def _send_audio_chunk(self, audio_bytes: bytes):
-        """Send audio chunk to Twilio.
+        """Send audio chunk to Twilio in proper 160-byte frames.
         
+        Twilio requires μ-law audio in 160-byte frames (20ms @ 8kHz).
         Guards against sending after WebSocket close.
         """
         # Guard: Check stream_sid exists
@@ -559,16 +560,35 @@ class ElevenLabsStreamBridge:
             logger.warning("WebSocket not connected (state=%s), skipping audio send", self.twilio_ws.client_state)
             return
         
+        # Twilio requires 160-byte frames (20ms @ 8kHz μ-law)
+        FRAME_SIZE = 160
+        ULAW_SILENCE = b"\x7f"  # μ-law silence byte
+        
+        frames_sent = 0
         try:
-            payload = base64.b64encode(audio_bytes).decode("utf-8")
-            await self.twilio_ws.send_text(json.dumps({
-                "event": "media",
-                "streamSid": self.stream_sid,
-                "media": {
-                    "payload": payload,
-                },
-            }))
-            logger.debug("Sent audio chunk to Twilio: %d bytes", len(audio_bytes))
+            # Send audio in 160-byte frames
+            for i in range(0, len(audio_bytes), FRAME_SIZE):
+                if self.is_closing:
+                    break
+                    
+                chunk = audio_bytes[i:i + FRAME_SIZE]
+                
+                # Pad undersized frames with μ-law silence
+                if len(chunk) < FRAME_SIZE:
+                    chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
+                
+                payload = base64.b64encode(chunk).decode("ascii")
+                await self.twilio_ws.send_text(json.dumps({
+                    "event": "media",
+                    "streamSid": self.stream_sid,
+                    "media": {
+                        "payload": payload,
+                    },
+                }))
+                frames_sent += 1
+            
+            if frames_sent > 0:
+                logger.info("Sent %d Twilio media frames (%d bytes total)", frames_sent, len(audio_bytes))
         except Exception as e:
             # Don't log errors during teardown - expected
             if not self.is_closing:
