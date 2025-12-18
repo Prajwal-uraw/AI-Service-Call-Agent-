@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.1.0-proactive-greeting"
+_VERSION = "3.2.0-smart-hvac-agent"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -95,6 +95,22 @@ HELP_PHRASES = ["help", "help me", "i need help", "what can you do", "options"]
 START_OVER_PHRASES = ["start over", "begin again", "restart", "from the beginning", "start again"]
 GO_BACK_PHRASES = ["go back", "previous", "back", "undo", "wait"]
 
+# Comprehensive YES synonyms (used throughout for confirmations)
+YES_WORDS = [
+    "yes", "yeah", "yep", "yup", "sure", "okay", "ok", "correct", "right", 
+    "that's right", "that's correct", "affirmative", "absolutely", "definitely",
+    "of course", "please", "go ahead", "sounds good", "perfect", "exactly",
+    "uh huh", "mm hmm", "indeed", "certainly", "you got it", "that works",
+    "i do", "i am", "i would", "i'd like", "let's do it"
+]
+
+# Comprehensive NO synonyms
+NO_WORDS = [
+    "no", "nope", "nah", "not really", "negative", "wrong", "incorrect",
+    "that's wrong", "that's not right", "i don't think so", "not quite",
+    "actually no", "no thanks", "not today", "never mind", "cancel"
+]
+
 # Off-topic detection
 OFF_TOPIC_PHRASES = [
     "weather", "sports", "news", "joke", "sing", "play music",
@@ -108,6 +124,73 @@ SMALL_TALK_PHRASES = [
     "good morning", "good afternoon", "good evening", "hello", "hi there",
     "hey", "howdy", "how do you do", "nice to meet you"
 ]
+
+# =============================================================================
+# HVAC-SPECIFIC ISSUE DETECTION AND SMART RESPONSES
+# =============================================================================
+HVAC_ISSUES = {
+    # Heating issues
+    "no heat": "No heat can be frustrating, especially in cold weather. Our technicians are experts at diagnosing heating issues.",
+    "not heating": "I understand your system isn't heating properly. Our technicians can diagnose and fix that.",
+    "furnace": "Furnace issues are one of our specialties. We'll get your home warm again.",
+    "heater": "We can definitely help with your heater. Our technicians handle all types of heating systems.",
+    "heat pump": "Heat pumps can be tricky, but our certified technicians know them inside and out.",
+    "cold air": "Getting cold air when you expect heat? That's a common issue we fix regularly.",
+    
+    # Cooling issues
+    "no cooling": "No cooling in this weather is no fun. We'll get your AC back up and running.",
+    "not cooling": "If your system isn't cooling, our technicians can find and fix the problem.",
+    "ac not working": "AC troubles? We service all makes and models and can usually fix it same-day.",
+    "air conditioner": "Air conditioner issues are our bread and butter. We'll take care of it.",
+    "ac unit": "We work on all types of AC units. Let's get you scheduled.",
+    "warm air": "Getting warm air from your AC? That's definitely something we can fix.",
+    "not cold": "If your AC isn't blowing cold, there are several things it could be. We'll diagnose it.",
+    
+    # Thermostat issues
+    "thermostat": "Thermostat issues can affect your whole system. We can repair or replace it.",
+    "temperature": "Temperature control problems? We'll check your thermostat and system.",
+    "won't turn on": "If your system won't turn on, it could be electrical or mechanical. We'll find out.",
+    "won't turn off": "A system that won't turn off can run up your bills. Let's get that fixed.",
+    
+    # Airflow issues
+    "no air": "No airflow could be a blower issue or ductwork problem. We'll check it out.",
+    "weak airflow": "Weak airflow often means a filter or blower issue. Easy fixes for us.",
+    "air flow": "Airflow problems can have several causes. Our technicians will diagnose it.",
+    
+    # Noise issues
+    "loud noise": "Strange noises from your HVAC? That's definitely worth checking out before it gets worse.",
+    "making noise": "Unusual noises often indicate a part that needs attention. Good call getting it checked.",
+    "strange sound": "Strange sounds can mean different things. We'll identify and fix the source.",
+    "banging": "Banging noises can indicate a serious issue. Let's get a technician out there.",
+    "squealing": "Squealing usually means a belt or motor issue. We can fix that.",
+    
+    # Smell issues
+    "bad smell": "Bad smells from your HVAC should definitely be checked. Could be mold or electrical.",
+    "burning smell": "A burning smell needs immediate attention. Let's get someone out right away.",
+    "musty": "Musty smells often indicate mold in the system. We can clean and treat that.",
+    
+    # General issues
+    "broken": "We'll get your system back up and running. Our technicians are highly trained.",
+    "not working": "Whatever the issue, our technicians can diagnose and repair it.",
+    "needs repair": "We handle all types of HVAC repairs. Let's get you scheduled.",
+    "maintenance": "Regular maintenance is smart! It prevents bigger problems down the road.",
+    "tune up": "A tune-up is a great idea. It keeps your system running efficiently.",
+    "inspection": "We offer thorough inspections. Great for peace of mind.",
+}
+
+def get_smart_issue_response(speech: str) -> str:
+    """
+    Generate a smart, contextual response based on the HVAC issue mentioned.
+    Returns an empathetic, knowledgeable response.
+    """
+    speech_lower = speech.lower()
+    
+    for issue_keyword, response in HVAC_ISSUES.items():
+        if issue_keyword in speech_lower:
+            return f"{response} Would you like to schedule a service appointment?"
+    
+    # Default response for unrecognized issues
+    return "I understand you're having an issue with your system. Our technicians are trained to handle all types of HVAC problems. Would you like to schedule a service appointment?"
 
 # Filler phrases for natural conversation flow
 FILLER_PHRASES = [
@@ -893,16 +976,22 @@ async def process_state(
             return current_state, "I'm doing great, thank you for asking! Are you calling to schedule a service appointment, or do you have a question about your HVAC system?", slots
         
         # Handle yes/no responses to "Are you calling to schedule?"
-        if any(word in speech_lower for word in ["yes", "yeah", "yep", "sure", "please", "i am", "i do", "that's right"]):
+        if any(word in speech_lower for word in YES_WORDS):
             return ConversationState.COLLECT_NAME, "Great! Let me get you scheduled. May I have your name please?", slots
         
-        if any(word in speech_lower for word in ["no", "nope", "not really", "actually"]):
+        if any(word in speech_lower for word in NO_WORDS):
             return current_state, "No problem! Do you have a question about your HVAC system, or is there something else I can help with?", slots
         
         faq_answer = quick_faq_check(speech)
         if faq_answer:
             logger.info("Fast FAQ match for: %s", speech[:30])
             return ConversationState.FAQ, faq_answer, slots
+        
+        # Check if they're describing an HVAC issue - give smart response
+        for issue_keyword in HVAC_ISSUES.keys():
+            if issue_keyword in speech_lower:
+                smart_response = get_smart_issue_response(speech)
+                return ConversationState.COLLECT_NAME, f"{smart_response.replace('Would you like to schedule a service appointment?', '')} Let me get you scheduled. May I have your name please?", slots
     
     # =========================================================================
     # NAME COLLECTION (2-step: say name → spell to confirm)
@@ -928,7 +1017,7 @@ async def process_state(
     
     if current_state == ConversationState.SPELL_NAME:
         # Check if they said "yes" or "correct" (accepting what we heard)
-        if any(word in speech_lower for word in ["yes", "yeah", "correct", "right", "that's right", "that's correct"]):
+        if any(word in speech_lower for word in YES_WORDS):
             slots["name"] = slots.get("name_heard", "")
             return ConversationState.COLLECT_AREA_CODE, f"Great, {slots['name']}! Now for your phone number. What's your area code? Just the 3 digits.", slots
         
@@ -947,10 +1036,10 @@ async def process_state(
             return current_state, "I didn't catch that. Please spell your name letter by letter.", slots
     
     if current_state == ConversationState.VERIFY_NAME:
-        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+        if any(word in speech_lower for word in YES_WORDS):
             slots["name"] = slots.get("name_spelled", slots.get("name_heard", ""))
             return ConversationState.COLLECT_AREA_CODE, f"Perfect, {slots['name']}! Now for your phone number. What's your area code? Just the 3 digits.", slots
-        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+        elif any(word in speech_lower for word in NO_WORDS):
             return ConversationState.SPELL_NAME, "No problem. Please spell your name again, letter by letter.", slots
         return current_state, f"Is {slots.get('name_spelled', 'that')} correct? Yes or no?", slots
     
@@ -992,9 +1081,9 @@ async def process_state(
             return current_state, "I need the last 4 digits of your phone number.", slots
     
     if current_state == ConversationState.VERIFY_PHONE:
-        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+        if any(word in speech_lower for word in YES_WORDS):
             return ConversationState.COLLECT_ADDRESS, "Great! What's the service address?", slots
-        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+        elif any(word in speech_lower for word in NO_WORDS):
             slots["area_code"] = None
             slots["phone_prefix"] = None
             slots["phone_line"] = None
@@ -1013,15 +1102,21 @@ async def process_state(
     
     if current_state == ConversationState.VERIFY_ADDRESS:
         # Check yes/no for address verification
-        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+        if any(word in speech_lower for word in YES_WORDS):
             return ConversationState.COLLECT_ISSUE, "Perfect! What's going on with your system? Just a quick description.", slots
-        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+        elif any(word in speech_lower for word in NO_WORDS):
             slots["address"] = None
             return ConversationState.COLLECT_ADDRESS, "Let me get that again. What's the service address?", slots
         return current_state, f"Is {slots.get('address', 'that address')} correct? Yes or no?", slots
     
     if current_state == ConversationState.COLLECT_ISSUE:
+        # Store the issue and give a smart, contextual response
         slots["issue"] = speech.strip()
+        smart_response = get_smart_issue_response(speech)
+        # If they already said yes to scheduling, go to date
+        if "would you like to schedule" in smart_response.lower():
+            # They described an issue, acknowledge it smartly and ask about scheduling
+            return ConversationState.COLLECT_DATE, f"{smart_response.replace('Would you like to schedule a service appointment?', '')} {PROGRESS_MESSAGES['issue_done']} When would you like us to come out? We're available Monday through Saturday.", slots
         return ConversationState.COLLECT_DATE, f"{PROGRESS_MESSAGES['issue_done']} When would you like us to come out? We're available Monday through Saturday.", slots
     
     if current_state == ConversationState.COLLECT_DATE:
@@ -1122,8 +1217,8 @@ async def process_state(
         return current_state, "Morning or afternoon?", slots
     
     elif current_state == ConversationState.CONFIRM:
-        # Check for yes/no in speech directly (more reliable than GPT for simple responses)
-        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "sure", "okay", "ok", "confirm", "that's right", "sounds good"]):
+        # Check for yes/no in speech directly using comprehensive word lists
+        if any(word in speech_lower for word in YES_WORDS):
             logger.info("BOOKING CONFIRMED: %s", slots)
             
             # Try to send SMS confirmation (stub)
@@ -1140,7 +1235,7 @@ async def process_state(
                           f"We'll call {slots.get('phone_spoken', slots.get('phone'))} if anything changes. " \
                           f"Thanks for choosing {COMPANY_NAME}!"
             return ConversationState.COMPLETE, complete_msg, slots
-        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect", "not right", "change"]):
+        elif any(word in speech_lower for word in NO_WORDS):
             # Partial correction flow - ask what to change
             return ConversationState.PARTIAL_CORRECTION, "No problem! What would you like to change? You can say name, phone, address, issue, or appointment time.", slots
         elif "start over" in speech_lower:
@@ -1223,7 +1318,10 @@ async def generate_twiml(
     """
     action = action_url or f"https://{host}/twilio/gather/respond"
     
-    # Try ElevenLabs first
+    # Try ElevenLabs first - ALWAYS try to use ElevenLabs
+    import html
+    safe_text = html.escape(text)
+    
     audio_url = None
     if is_elevenlabs_available():
         try:
@@ -1231,18 +1329,53 @@ async def generate_twiml(
             if audio_url:
                 logger.info("ElevenLabs audio URL: %s", audio_url)
         except Exception as e:
-            logger.warning("ElevenLabs failed, using Polly: %s", str(e))
+            logger.error("ElevenLabs failed: %s - retrying once", str(e))
+            # Retry once
+            try:
+                audio_url = await generate_audio_url(text, host)
+            except Exception as e2:
+                logger.error("ElevenLabs retry failed: %s", str(e2))
     
-    # Fallback voice element
-    import html
-    safe_text = html.escape(text)
-    polly_voice = "Polly.Joanna-Neural"
-    
-    # Build the voice element (Play or Say)
+    # Build voice element - ElevenLabs Play is strongly preferred
     if audio_url:
         voice_element = f'<Play>{audio_url}</Play>'
     else:
-        voice_element = f'<Say voice="{polly_voice}">{safe_text}</Say>'
+        # Last resort fallback - should rarely happen
+        logger.warning("FALLBACK TO POLLY - ElevenLabs unavailable for: %s", text[:50])
+        voice_element = f'<Say voice="Polly.Joanna-Neural">{safe_text}</Say>'
+    
+    # Generate fallback audio URLs for timeout messages (use ElevenLabs)
+    fallback_msg1 = "I didn't catch that. Could you please repeat?"
+    fallback_msg2 = "I'm still here. Are you calling to schedule a service?"
+    fallback_msg3 = "I'm having trouble hearing you. Let me connect you with someone who can help."
+    
+    fallback_audio1 = None
+    fallback_audio2 = None
+    fallback_audio3 = None
+    
+    if is_elevenlabs_available():
+        try:
+            fallback_audio1 = await generate_audio_url(fallback_msg1, host)
+            fallback_audio2 = await generate_audio_url(fallback_msg2, host)
+            fallback_audio3 = await generate_audio_url(fallback_msg3, host)
+        except Exception as e:
+            logger.warning("Failed to generate fallback audio: %s", str(e))
+    
+    # Build fallback voice elements
+    if fallback_audio1:
+        fallback_element1 = f'<Play>{fallback_audio1}</Play>'
+    else:
+        fallback_element1 = f'<Say voice="Polly.Joanna-Neural">{html.escape(fallback_msg1)}</Say>'
+    
+    if fallback_audio2:
+        fallback_element2 = f'<Play>{fallback_audio2}</Play>'
+    else:
+        fallback_element2 = f'<Say voice="Polly.Joanna-Neural">{html.escape(fallback_msg2)}</Say>'
+    
+    if fallback_audio3:
+        fallback_element3 = f'<Play>{fallback_audio3}</Play>'
+    else:
+        fallback_element3 = f'<Say voice="Polly.Joanna-Neural">{html.escape(fallback_msg3)}</Say>'
     
     # For terminal states, no gather needed
     if next_state in [ConversationState.GOODBYE, ConversationState.EMERGENCY, ConversationState.TRANSFER]:
@@ -1265,11 +1398,11 @@ async def generate_twiml(
     <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
         {voice_element}
     </Gather>
-    <Say voice="{polly_voice}">I didn't catch that. Could you please repeat?</Say>
+    {fallback_element1}
     <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
-        <Say voice="{polly_voice}">I'm still here. How can I help you?</Say>
+        {fallback_element2}
     </Gather>
-    <Say voice="{polly_voice}">I'm having trouble hearing you. Let me connect you with someone who can help.</Say>
+    {fallback_element3}
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
 
