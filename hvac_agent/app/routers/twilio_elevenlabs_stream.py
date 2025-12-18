@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.0-rebuild"
+_STREAM_VERSION = "3.0.1-debug"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -299,12 +299,17 @@ async def reprompt_loop(ctx: CallContext, speak_func):
             
             # Skip if speaking
             if ctx.is_speaking or ctx.user_speaking:
+                logger.info("Reprompt: skipping (is_speaking=%s, user_speaking=%s)", 
+                           ctx.is_speaking, ctx.user_speaking)
                 continue
             
             # Check if reprompt needed
             if ctx.last_agent_speech_time > 0:
                 time_since_agent = time.time() - ctx.last_agent_speech_time
                 user_spoke_after = ctx.last_speech_time > ctx.last_agent_speech_time
+                
+                logger.info("Reprompt check: time_since=%.1fs, user_spoke_after=%s, count=%d/%d",
+                           time_since_agent, user_spoke_after, ctx.reprompt_count, MAX_REPROMPTS)
                 
                 if (time_since_agent >= REPROMPT_TIMEOUT and 
                     not user_spoke_after and 
@@ -314,6 +319,9 @@ async def reprompt_loop(ctx: CallContext, speak_func):
                     msg = REPROMPT_MESSAGES[min(ctx.reprompt_count - 1, len(REPROMPT_MESSAGES) - 1)]
                     logger.info(">>> REPROMPT #%d: %s", ctx.reprompt_count, msg[:40])
                     await speak_func(msg)
+            else:
+                logger.info("Reprompt: waiting for agent to speak first (last_agent_speech_time=%.1f)", 
+                           ctx.last_agent_speech_time)
                     
     except asyncio.CancelledError:
         pass
