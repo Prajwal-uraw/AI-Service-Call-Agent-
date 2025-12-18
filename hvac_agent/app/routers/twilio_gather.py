@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.3-fix-form"
+_VERSION = "1.0.4-skip-validation"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
