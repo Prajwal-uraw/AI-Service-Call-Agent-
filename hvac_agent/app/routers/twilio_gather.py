@@ -31,6 +31,7 @@ import os
 import json
 import hashlib
 import asyncio
+import random
 from enum import Enum
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
@@ -51,7 +52,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.4.0-robust-error-handling"
+_VERSION = "3.5.0-thinking-sound"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -1397,6 +1398,7 @@ async def generate_twiml(
     call_sid: str,
     host: str,
     action_url: str = None,
+    include_thinking_sound: bool = False,
 ) -> str:
     """
     Generate TwiML response with ElevenLabs <Play> or Polly <Say> fallback.
@@ -1411,12 +1413,25 @@ async def generate_twiml(
     Features:
     - bargeIn="true" allows user to interrupt
     - Enhanced speech recognition for phone calls
+    - Optional thinking sound for latency masking
     """
     action = action_url or f"https://{host}/twilio/gather/respond"
     
     # Try ElevenLabs first - ALWAYS try to use ElevenLabs
     import html
     safe_text = html.escape(text)
+    
+    # Generate thinking/acknowledgment sound if requested
+    thinking_element = ""
+    if include_thinking_sound:
+        thinking_phrases = ["Okay.", "Got it.", "Alright.", "Sure.", "Mm-hmm."]
+        thinking_text = random.choice(thinking_phrases)
+        try:
+            thinking_audio = await generate_audio_url(thinking_text, host)
+            if thinking_audio:
+                thinking_element = f'<Play>{thinking_audio}</Play>'
+        except:
+            pass
     
     audio_url = None
     if is_elevenlabs_available():
@@ -1489,8 +1504,10 @@ async def generate_twiml(
 </Response>"""
     
     # Standard gather response with barge-in enabled
+    # Include thinking sound before main response if provided
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+    {thinking_element}
     <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
         {voice_element}
     </Gather>
@@ -1633,10 +1650,6 @@ async def gather_respond(request: Request):
             "timestamp": datetime.now().isoformat()
         })
         
-        # Play a brief acknowledgment sound while processing (reduces perceived latency)
-        # This is a soft "thinking" indicator
-        processing_ack = random.choice(["Okay.", "Got it.", "Alright.", "Sure."])
-        
         # Process through state machine
         next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
         
@@ -1652,8 +1665,8 @@ async def gather_respond(request: Request):
         logger.info("State transition: %s -> %s, Response: %s", 
                    session.get("state"), next_state, response_text[:50])
         
-        # Generate TwiML with ElevenLabs
-        twiml = await generate_twiml(response_text, next_state, call_sid, host, action_url=action_url)
+        # Generate TwiML with ElevenLabs and thinking sound
+        twiml = await generate_twiml(response_text, next_state, call_sid, host, action_url=action_url, include_thinking_sound=True)
         
         return Response(content=twiml, media_type="application/xml")
         
