@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.5-polly-fallback"
+_VERSION = "1.0.7-bargein-errors"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -60,7 +60,7 @@ print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 # =============================================================================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Rachel
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "DLsHlh26Ugcm6ELvS0qi")  # MS WALKER
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
 # Twilio Gather settings
@@ -418,13 +418,18 @@ def generate_twiml_sync(
     """
     Generate TwiML response with Gather or Say.
     
-    Uses Polly Neural voice for reliable, natural speech.
-    ElevenLabs integration disabled until credits are added.
+    Features:
+    - bargeIn="true" allows user to interrupt agent speech
+    - Enhanced speech recognition for phone calls
+    - Fallback to transfer if no input detected
     """
     action = action_url or f"https://{host}/twilio/gather/respond"
     
+    # Escape XML special characters in text
+    import html
+    safe_text = html.escape(text)
+    
     # Use Polly Neural voice - reliable and sounds good
-    # ElevenLabs disabled due to quota issues
     voice = "Polly.Joanna-Neural"
     
     # For terminal states, no gather needed
@@ -433,23 +438,28 @@ def generate_twiml_sync(
             emergency_number = os.getenv("EMERGENCY_PHONE", "+18005551234")
             return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna-Neural">{text}</Say>
+    <Say voice="{voice}">{safe_text}</Say>
     <Dial>{emergency_number}</Dial>
 </Response>"""
         else:
             return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna-Neural">{text}</Say>
+    <Say voice="{voice}">{safe_text}</Say>
     <Hangup/>
 </Response>"""
     
-    # Standard gather response with neural voice
+    # Standard gather response with barge-in enabled
+    # bargeIn="true" allows user to interrupt the agent while speaking
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
-        <Say voice="Polly.Joanna-Neural">{text}</Say>
+    <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
+        <Say voice="{voice}">{safe_text}</Say>
     </Gather>
-    <Say voice="Polly.Joanna-Neural">I didn't hear anything. Let me transfer you to an agent.</Say>
+    <Say voice="{voice}">I didn't catch that. Could you please repeat?</Say>
+    <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
+        <Say voice="{voice}">I'm still here. How can I help you?</Say>
+    </Gather>
+    <Say voice="{voice}">I'm having trouble hearing you. Let me connect you with someone who can help.</Say>
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
 
@@ -505,85 +515,121 @@ async def gather_respond(request: Request):
     """
     Handle speech input from Gather.
     Process through state machine and return next prompt.
+    
+    Error handling:
+    - Empty speech: Reprompt with friendly message
+    - Low confidence: Ask for clarification
+    - Processing errors: Graceful fallback to transfer
     """
-    # Get form data - try cached first (from middleware), then parse fresh
-    if hasattr(request.state, 'twilio_form_data'):
-        form_dict = request.state.twilio_form_data
-    else:
-        form = await request.form()
-        form_dict = dict(form)
+    host = request.headers.get("host", "")
+    action_url = f"https://{host}/twilio/gather/respond"
     
-    logger.info("RESPOND FORM DATA: %s", form_dict)
-    
-    call_sid = form_dict.get("CallSid", "unknown")
-    speech_result = form_dict.get("SpeechResult", "")
-    confidence = form_dict.get("Confidence", "0")
-    
-    logger.info("Speech received: CallSid=%s, Speech='%s', Confidence=%s", 
-               call_sid, speech_result[:100] if speech_result else "(empty)", confidence)
-    
-    # Get session
-    session = get_session(call_sid)
-    
-    # Handle empty speech (timeout)
-    if not speech_result or not speech_result.strip():
-        session["retries"] = session.get("retries", 0) + 1
+    try:
+        # Get form data - try cached first (from middleware), then parse fresh
+        if hasattr(request.state, 'twilio_form_data'):
+            form_dict = request.state.twilio_form_data
+        else:
+            form = await request.form()
+            form_dict = dict(form)
         
-        if session["retries"] >= MAX_RETRIES:
-            # Transfer after too many retries
-            logger.warning("Max retries reached for CallSid=%s, transferring", call_sid)
-            twiml = """<?xml version="1.0" encoding="UTF-8"?>
+        logger.info("RESPOND FORM DATA: %s", form_dict)
+        
+        call_sid = form_dict.get("CallSid", "unknown")
+        speech_result = form_dict.get("SpeechResult", "")
+        confidence_str = form_dict.get("Confidence", "0")
+        
+        # Parse confidence as float
+        try:
+            confidence = float(confidence_str)
+        except (ValueError, TypeError):
+            confidence = 0.0
+        
+        logger.info("Speech received: CallSid=%s, Speech='%s', Confidence=%.2f", 
+                   call_sid, speech_result[:100] if speech_result else "(empty)", confidence)
+        
+        # Get session
+        session = get_session(call_sid)
+        
+        # Handle empty speech (timeout or no input detected)
+        if not speech_result or not speech_result.strip():
+            session["retries"] = session.get("retries", 0) + 1
+            
+            if session["retries"] >= MAX_RETRIES:
+                logger.warning("Max retries reached for CallSid=%s, transferring", call_sid)
+                twiml = """<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna">I'm having trouble hearing you. Let me transfer you to someone who can help.</Say>
+    <Say voice="Polly.Joanna-Neural">I'm having trouble hearing you. Let me transfer you to someone who can help.</Say>
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
-            return Response(content=twiml, media_type="application/xml")
-        
-        # Reprompt
-        reprompt = get_prompt(None, key="reprompt")
-        host = request.headers.get("host", "")
-        action_url = f"https://{host}/twilio/gather/respond"
-        
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+                return Response(content=twiml, media_type="application/xml")
+            
+            # Friendly reprompt based on retry count
+            if session["retries"] == 1:
+                reprompt = "I didn't catch that. Could you please repeat?"
+            else:
+                reprompt = "I'm still here. Take your time - what can I help you with?"
+            
+            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
         <Say voice="Polly.Joanna-Neural">{reprompt}</Say>
     </Gather>
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
+            return Response(content=twiml, media_type="application/xml")
+        
+        # Handle very low confidence speech (likely background noise or unclear)
+        if confidence < 0.3 and len(speech_result) < 10:
+            logger.info("Low confidence speech (%.2f), asking for clarification", confidence)
+            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
+        <Say voice="Polly.Joanna-Neural">I didn't quite catch that. Could you speak a little louder or clearer?</Say>
+    </Gather>
+    <Redirect>/twilio/gather/transfer</Redirect>
+</Response>"""
+            return Response(content=twiml, media_type="application/xml")
+        
+        # Reset retries on successful speech
+        session["retries"] = 0
+        
+        # Add to history
+        session["history"].append({
+            "role": "user",
+            "content": speech_result,
+            "confidence": confidence,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Process through state machine
+        next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
+        
+        # Update session
+        session["state"] = next_state
+        session["slots"] = updated_slots
+        session["history"].append({
+            "role": "assistant",
+            "content": response_text,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        logger.info("State transition: %s -> %s, Response: %s", 
+                   session.get("state"), next_state, response_text[:50])
+        
+        # Generate TwiML
+        twiml = generate_twiml_sync(response_text, next_state, call_sid, action_url=action_url, host=host)
+        
         return Response(content=twiml, media_type="application/xml")
-    
-    # Reset retries on successful speech
-    session["retries"] = 0
-    
-    # Add to history
-    session["history"].append({
-        "role": "user",
-        "content": speech_result,
-        "timestamp": datetime.now().isoformat()
-    })
-    
-    # Process through state machine
-    next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
-    
-    # Update session
-    session["state"] = next_state
-    session["slots"] = updated_slots
-    session["history"].append({
-        "role": "assistant",
-        "content": response_text,
-        "timestamp": datetime.now().isoformat()
-    })
-    
-    logger.info("State transition: %s -> %s, Response: %s", 
-               session.get("state"), next_state, response_text[:50])
-    
-    # Generate TwiML
-    host = request.headers.get("host", "")
-    action_url = f"https://{host}/twilio/gather/respond"
-    twiml = generate_twiml_sync(response_text, next_state, call_sid, action_url=action_url, host=host)
-    
-    return Response(content=twiml, media_type="application/xml")
+        
+    except Exception as e:
+        # Catch-all error handler - never let the call fail silently
+        logger.error("Error processing speech: %s", str(e), exc_info=True)
+        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Joanna-Neural">I apologize, I'm having a technical issue. Let me connect you with someone who can help.</Say>
+    <Redirect>/twilio/gather/transfer</Redirect>
+</Response>"""
+        return Response(content=twiml, media_type="application/xml")
 
 
 @router.api_route("/twilio/gather/transfer", methods=["GET", "POST"])
