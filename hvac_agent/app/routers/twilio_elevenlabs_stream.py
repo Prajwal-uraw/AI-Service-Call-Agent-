@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.3-verbose"
+_STREAM_VERSION = "3.0.4-inbound"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -808,11 +808,12 @@ async def elevenlabs_twiml(request: Request):
         stream_url = os.getenv("STREAM_WEBSOCKET_URL", "wss://YOUR_DOMAIN/twilio/elevenlabs/stream")
     
     # Use ElevenLabs stream if available, otherwise fall back to regular stream
+    # CRITICAL: track="inbound_track" is required to receive caller audio
     if is_elevenlabs_available():
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Connect>
-        <Stream url="{stream_url}" />
+        <Stream url="{stream_url}" track="inbound_track" />
     </Connect>
 </Response>"""
     else:
