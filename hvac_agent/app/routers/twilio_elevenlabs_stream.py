@@ -29,9 +29,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import Response
 from starlette.websockets import WebSocketState
 
-# Diagnostic mode - set VOICE_DIAGNOSTIC_MODE=true to enable verbose logging
-DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
-
 from app.utils.logging import get_logger
 from app.utils.audio import validate_base64_audio, encode_audio
 from app.services.tts.elevenlabs import ElevenLabsTTS
@@ -39,6 +36,12 @@ from app.services.tts.factory import get_tts_provider, TTSProvider, is_elevenlab
 
 router = APIRouter(tags=["twilio-elevenlabs"])
 logger = get_logger("twilio.elevenlabs")
+
+# Diagnostic mode - enables verbose logging
+DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
+
+# Version marker for deployment verification
+_STREAM_VERSION = "2.0.1-queue-based"
 
 # Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -403,11 +406,12 @@ class ElevenLabsStreamBridge:
         self.call_sid = start_data.get("callSid")
         
         logger.info(
-            "Stream started: stream_sid=%s, call_sid=%s",
-            self.stream_sid, self.call_sid
+            "Stream started [v%s]: stream_sid=%s, call_sid=%s",
+            _STREAM_VERSION, self.stream_sid, self.call_sid
         )
         
         # Start audio sender (single writer pattern)
+        logger.info(">>> Starting audio sender task")
         self._start_audio_sender()
         
         # Start keepalive task to prevent Twilio timeout
