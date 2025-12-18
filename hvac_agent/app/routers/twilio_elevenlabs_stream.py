@@ -76,9 +76,10 @@ class ElevenLabsStreamBridge:
         self._silence_frames = 0
         self._speech_frames = 0
         
-        # Thresholds
-        self._silence_threshold = 50  # frames of silence to trigger processing
-        self._min_speech_frames = 10  # minimum frames to consider as speech
+        # Thresholds - tuned to avoid false positives
+        self._silence_threshold = 80  # frames of silence to trigger processing (increased)
+        self._min_speech_frames = 25  # minimum frames to consider as speech (increased)
+        self._speech_threshold = 40  # variance threshold for speech detection (increased)
         
     async def start(self):
         """Start the stream bridge."""
@@ -161,19 +162,28 @@ class ElevenLabsStreamBridge:
         # Decode audio
         audio_bytes = base64.b64decode(payload)
         
-        # Check for barge-in (user speaking while agent is speaking)
-        if self._is_speaking and self._detect_speech(audio_bytes):
-            logger.debug("Barge-in detected, cancelling speech")
-            if self._tts:
-                self._tts.cancel_speech()
-            self._is_speaking = False
+        # CRITICAL: Don't process audio while agent is speaking
+        # This prevents the agent's own speech from being transcribed
+        if self._is_speaking:
+            # Only check for strong barge-in (user interrupting)
+            if self._detect_speech(audio_bytes, threshold=60):  # Higher threshold for barge-in
+                logger.debug("Barge-in detected, cancelling speech")
+                if self._tts:
+                    self._tts.cancel_speech()
+                self._is_speaking = False
+                # Clear buffer to avoid processing agent's speech
+                async with self._input_lock:
+                    self._input_buffer.clear()
+                    self._speech_frames = 0
+                    self._silence_frames = 0
+            return  # Don't buffer audio while speaking
         
-        # Buffer audio for STT
+        # Buffer audio for STT (only when agent is NOT speaking)
         async with self._input_lock:
             self._input_buffer.extend(audio_bytes)
             
-            # Detect speech/silence
-            if self._detect_speech(audio_bytes):
+            # Detect speech/silence with higher threshold
+            if self._detect_speech(audio_bytes, threshold=self._speech_threshold):
                 self._speech_frames += 1
                 self._silence_frames = 0
                 self._user_speaking = True
@@ -194,17 +204,25 @@ class ElevenLabsStreamBridge:
                     # Process in background to not block
                     asyncio.create_task(self._process_utterance(audio_data))
     
-    def _detect_speech(self, audio_bytes: bytes, threshold: int = 20) -> bool:
+    def _detect_speech(self, audio_bytes: bytes, threshold: int = 40) -> bool:
         """
         Detect if audio contains speech (not silence).
         
         For μ-law, silence is around 0xFF (255) or 0x7F (127).
+        Uses a higher default threshold to avoid false positives from noise.
         """
-        if len(audio_bytes) == 0:
+        if len(audio_bytes) < 160:  # Need at least 20ms of audio at 8kHz
             return False
         
-        silence_value = 0xFF
-        variance = sum(abs(b - silence_value) for b in audio_bytes) / len(audio_bytes)
+        # μ-law silence values
+        silence_high = 0xFF
+        silence_low = 0x7F
+        
+        # Calculate variance from both silence points and take the minimum
+        variance_high = sum(abs(b - silence_high) for b in audio_bytes) / len(audio_bytes)
+        variance_low = sum(abs(b - silence_low) for b in audio_bytes) / len(audio_bytes)
+        variance = min(variance_high, variance_low)
+        
         return variance > threshold
     
     async def _process_utterance(self, audio_data: bytes):
