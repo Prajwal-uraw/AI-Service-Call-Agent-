@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.7-bargein-errors"
+_VERSION = "1.0.8-fast-faq-fix"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -300,6 +300,35 @@ def is_emergency(speech: str) -> bool:
 
 
 # =============================================================================
+# FAST FAQ DETECTION (skip GPT for common questions)
+# =============================================================================
+FAQ_PATTERNS = {
+    "service_call_cost": ["how much", "cost", "price", "charge", "fee", "service call", "service fee"],
+    "hours": ["hours", "open", "available", "when are you"],
+    "emergency": ["emergency", "after hours", "24/7", "urgent"],
+    "warranty": ["warranty", "guarantee"],
+    "payment": ["payment", "pay", "credit card", "financing"],
+}
+
+FAQ_ANSWERS = {
+    "service_call_cost": "Our service call fee is $89, which includes the diagnostic. If you proceed with repairs, that fee is applied to the total cost. Would you like to schedule a service appointment?",
+    "hours": "We're available Monday through Friday, 8 AM to 6 PM, with emergency service available 24/7. Would you like to schedule an appointment?",
+    "emergency": "For emergencies like gas leaks or no heat in freezing weather, we offer 24/7 emergency service. Is this an emergency situation?",
+    "warranty": "We offer a 1-year warranty on all repairs and installations. Would you like to schedule a service?",
+    "payment": "We accept all major credit cards, checks, and offer financing options for larger repairs. Would you like to schedule an appointment?",
+}
+
+
+def quick_faq_check(speech: str) -> Optional[str]:
+    """Check for common FAQ patterns without GPT. Returns answer or None."""
+    speech_lower = speech.lower()
+    for topic, patterns in FAQ_PATTERNS.items():
+        if any(pattern in speech_lower for pattern in patterns):
+            return FAQ_ANSWERS.get(topic)
+    return None
+
+
+# =============================================================================
 # STATE MACHINE TRANSITIONS
 # =============================================================================
 async def process_state(
@@ -310,17 +339,64 @@ async def process_state(
     """
     Process current state and user input, return next state and response.
     
+    Uses fast pattern matching for common cases, GPT only when needed.
+    
     Returns:
         (next_state, response_text, updated_slots)
     """
     current_state = ConversationState(session["state"])
     slots = session["slots"]
+    speech_lower = speech.lower().strip()
     
     # Quick emergency check
     if is_emergency(speech):
         return ConversationState.EMERGENCY, get_prompt(ConversationState.EMERGENCY), slots
     
-    # Analyze speech with GPT
+    # FAST PATH: Check for common FAQ questions (skip GPT)
+    if current_state == ConversationState.GREETING:
+        faq_answer = quick_faq_check(speech)
+        if faq_answer:
+            logger.info("Fast FAQ match for: %s", speech[:30])
+            return ConversationState.FAQ, faq_answer, slots
+    
+    # FAST PATH: Simple slot extraction for collection states (skip GPT)
+    if current_state == ConversationState.COLLECT_NAME:
+        # Just use what they said as the name
+        slots["name"] = speech.strip()
+        return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+    
+    if current_state == ConversationState.COLLECT_PHONE:
+        # Extract digits from speech
+        import re
+        digits = re.sub(r'\D', '', speech)
+        if len(digits) >= 7:
+            slots["phone"] = digits
+            return ConversationState.COLLECT_ADDRESS, get_prompt(ConversationState.COLLECT_ADDRESS), slots
+        return current_state, "I need your phone number with area code. What's the best number to reach you?", slots
+    
+    if current_state == ConversationState.COLLECT_ADDRESS:
+        slots["address"] = speech.strip()
+        return ConversationState.COLLECT_ISSUE, get_prompt(ConversationState.COLLECT_ISSUE), slots
+    
+    if current_state == ConversationState.COLLECT_ISSUE:
+        slots["issue"] = speech.strip()
+        return ConversationState.COLLECT_DATE, get_prompt(ConversationState.COLLECT_DATE), slots
+    
+    if current_state == ConversationState.COLLECT_DATE:
+        slots["date"] = speech.strip()
+        return ConversationState.COLLECT_TIME, get_prompt(ConversationState.COLLECT_TIME), slots
+    
+    if current_state == ConversationState.COLLECT_TIME:
+        slots["time"] = speech.strip()
+        return ConversationState.CONFIRM, get_prompt(ConversationState.CONFIRM, slots), slots
+    
+    # For greeting state with non-FAQ, use GPT to understand intent
+    if current_state == ConversationState.GREETING:
+        # Check for simple booking intent
+        if any(word in speech_lower for word in ["schedule", "book", "appointment", "service", "repair", "fix", "broken", "not working"]):
+            return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
+    
+    # SLOW PATH: Use GPT only for complex cases
     analysis = await analyze_speech(speech, current_state, session)
     intent = analysis.get("intent", "unclear")
     extracted_slots = analysis.get("slots", {})
@@ -394,11 +470,14 @@ async def process_state(
         return ConversationState.GOODBYE, get_prompt(ConversationState.GOODBYE, {"company": COMPANY_NAME}), slots
     
     elif current_state == ConversationState.FAQ:
-        if intent == "booking" or intent == "confirm":
+        # After answering FAQ, ask if they want to book
+        speech_lower = speech.lower().strip()
+        if any(word in speech_lower for word in ["yes", "yeah", "sure", "okay", "book", "schedule", "appointment"]):
             return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
-        elif intent == "deny":
+        elif any(word in speech_lower for word in ["no", "nope", "that's all", "goodbye", "bye", "thanks"]):
             return ConversationState.GOODBYE, get_prompt(ConversationState.GOODBYE, {"company": COMPANY_NAME}), slots
-        return ConversationState.GOODBYE, "Alright! Feel free to call back if you need anything. Take care!", slots
+        # Default: ask if they want to schedule
+        return current_state, "Would you like to schedule a service appointment?", slots
     
     # Default: stay in current state with reprompt
     return current_state, get_prompt(current_state, slots) or "I'm sorry, could you repeat that?", slots
