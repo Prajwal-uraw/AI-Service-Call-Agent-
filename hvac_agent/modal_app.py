@@ -23,6 +23,7 @@ image = (
         "openai>=1.50.0",
         "pydantic>=2.7.0",
         "sqlalchemy>=2.0.0",
+        "psycopg2-binary>=2.9.0",  # PostgreSQL driver
         "websockets>=12.0",
         "httpx>=0.27.0",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
