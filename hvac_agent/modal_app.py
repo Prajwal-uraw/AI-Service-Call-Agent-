@@ -8,11 +8,16 @@ Modal provides serverless deployment with:
 - GPU support (if needed)
 - Easy secrets management
 - WebSocket support
+
+Deployment version: 2.0.1-queue-based (forces cache invalidation)
 """
 
 import modal
 
-# Define the Modal image with dependencies
+# Force cache invalidation - change this value to force rebuild
+_CACHE_BUSTER = "v3.0.2-20231218-force"
+
+# Define the Modal image with dependencies and local app source
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")  # Required for ElevenLabs audio conversion
@@ -20,17 +25,21 @@ image = (
         "fastapi>=0.109.0",
         "uvicorn[standard]>=0.27.0",
         "python-dotenv>=1.0.0",
+        "python-multipart>=0.0.6",  # Required for form data (Twilio webhooks)
         "openai>=1.50.0",
         "pydantic>=2.7.0",
         "sqlalchemy>=2.0.0",
+        "psycopg2-binary>=2.9.0",  # PostgreSQL driver
         "websockets>=12.0",
         "httpx>=0.27.0",
         "psycopg2-binary>=2.9.9",
         "python-multipart==0.0.20",
         "twilio==9.8.8",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
+        "twilio>=8.0.0",  # Twilio SDK for request validation
+        # elevenlabs SDK removed - using direct API calls for TTS only
     )
-    .add_local_dir("app", remote_path="/root/app")
+    .add_local_python_source("app")  # Include the app package
 )
 
 # Create Modal app
@@ -42,9 +51,9 @@ app = modal.App("hvac-voice-agent", image=image)
         modal.Secret.from_name("hvac-agent-secrets"),
         modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
     ],
-    allow_concurrent_inputs=100,
-    container_idle_timeout=300,
+    scaledown_window=300,
 )
+@modal.concurrent(max_inputs=100)
 @modal.asgi_app()
 def fastapi_app():
     """

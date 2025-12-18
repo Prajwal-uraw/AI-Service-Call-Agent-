@@ -24,6 +24,8 @@ from app.routers import (
     twilio_voice_router,
     twilio_stream_router,
     twilio_elevenlabs_router,
+    twilio_gather_router,
+    audio_router,
 )
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
@@ -120,6 +122,8 @@ app.include_router(booking_router)
 app.include_router(twilio_voice_router)
 app.include_router(twilio_stream_router)
 app.include_router(twilio_elevenlabs_router)
+app.include_router(twilio_gather_router)  # Enterprise Gather-based voice agent
+app.include_router(audio_router)  # Audio serving for ElevenLabs TTS
 
 
 # Root endpoint
@@ -135,6 +139,7 @@ async def root():
             "twilio_voice": "/twilio/voice",
             "twilio_stream": "/twilio/stream",
             "twilio_elevenlabs_stream": "/twilio/elevenlabs/stream",
+            "twilio_gather": "/twilio/gather/incoming",  # Enterprise Gather-based (recommended)
             "debug_locations": "/debug/locations",
             "debug_appointments": "/debug/appointments",
             "docs": "/docs" if DEBUG else "disabled",

@@ -142,23 +142,40 @@ class ElevenLabsTTS:
         """
         self.reset_cancel()
         self._is_speaking = True
+        total_chunks_sent = 0
+        total_bytes_sent = 0
+        
+        logger.info("Starting TTS stream for text: %s", text[:50])
         
         try:
+            chunk_count = 0
             async for audio_chunk in self.stream_audio(text):
+                chunk_count += 1
+                logger.info("Received ElevenLabs audio chunk #%d: %d bytes", chunk_count, len(audio_chunk))
+                
                 if self._cancel_event.is_set():
                     logger.debug("Speech cancelled (barge-in)")
                     return False
                 
                 # Convert MP3 chunk to μ-law for Twilio
                 ulaw_audio = await self._convert_to_ulaw(audio_chunk)
-                if ulaw_audio:
-                    # Send in smaller chunks for smoother streaming
-                    for i in range(0, len(ulaw_audio), chunk_size):
-                        if self._cancel_event.is_set():
-                            return False
-                        chunk = ulaw_audio[i:i + chunk_size]
-                        await send_audio(chunk)
+                
+                if not ulaw_audio or len(ulaw_audio) == 0:
+                    logger.error("μ-law conversion produced empty audio for chunk #%d", chunk_count)
+                    continue
+                
+                logger.info("Converted to μ-law: %d bytes", len(ulaw_audio))
+                
+                # Send in smaller chunks for smoother streaming
+                for i in range(0, len(ulaw_audio), chunk_size):
+                    if self._cancel_event.is_set():
+                        return False
+                    chunk = ulaw_audio[i:i + chunk_size]
+                    await send_audio(chunk)
+                    total_chunks_sent += 1
+                    total_bytes_sent += len(chunk)
             
+            logger.info("TTS stream complete: sent %d chunks, %d total bytes", total_chunks_sent, total_bytes_sent)
             return True
             
         except Exception as e:
@@ -290,6 +307,10 @@ class ElevenLabsTTS:
         Returns:
             μ-law encoded audio at 8kHz mono
         """
+        if not mp3_data or len(mp3_data) == 0:
+            logger.warning("Empty MP3 data received for conversion")
+            return None
+        
         try:
             # Use ffmpeg to convert MP3 to μ-law
             process = await asyncio.create_subprocess_exec(
@@ -308,12 +329,15 @@ class ElevenLabsTTS:
             stdout, stderr = await process.communicate(input=mp3_data)
             
             if process.returncode != 0:
-                # Don't log every stderr as it's often just info
-                if b"error" in stderr.lower():
-                    logger.warning("ffmpeg conversion warning: %s", stderr[-200:])
+                logger.error("ffmpeg conversion failed (returncode=%d): %s", process.returncode, stderr[-500:].decode('utf-8', errors='ignore'))
                 return None
             
-            return stdout if stdout else None
+            if not stdout or len(stdout) == 0:
+                logger.error("ffmpeg produced no output. stderr: %s", stderr[-500:].decode('utf-8', errors='ignore'))
+                return None
+            
+            logger.debug("ffmpeg conversion success: %d bytes in -> %d bytes out", len(mp3_data), len(stdout))
+            return stdout
             
         except FileNotFoundError:
             logger.error("ffmpeg not found - required for audio conversion")
