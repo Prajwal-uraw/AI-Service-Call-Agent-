@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.2.0-smart-hvac-agent"
+_VERSION = "3.3.0-intelligent-agent"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -200,6 +200,17 @@ FILLER_PHRASES = [
     "Okay.",
     "Sure thing.",
     "Alright.",
+]
+
+# Processing sound URL (soft typing/thinking sound)
+PROCESSING_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3"  # Soft keyboard typing
+
+# Words that should NEVER be treated as names
+NOT_A_NAME_WORDS = [
+    "yes", "yeah", "yep", "yup", "no", "nope", "okay", "ok", "sure",
+    "correct", "right", "wrong", "help", "repeat", "what", "huh",
+    "hello", "hi", "hey", "um", "uh", "hmm", "well", "so",
+    "please", "thanks", "thank you", "sorry", "excuse me"
 ]
 
 # Availability slots (stub - will connect to calendar later)
@@ -503,6 +514,57 @@ def check_universal_commands(speech: str, session: Dict) -> Optional[Tuple[str, 
         return ("location", f"We're located at {COMPANY_ADDRESS}. Would you like to schedule a service appointment?")
     
     return None
+
+
+async def smart_gpt_response(speech: str, current_state: str, session: Dict) -> str:
+    """
+    Use GPT to generate a smart, contextual response for complex or off-topic queries.
+    Always steers conversation back to HVAC services naturally.
+    """
+    if not OPENAI_API_KEY:
+        return f"I'm here to help with HVAC services. Would you like to schedule an appointment?"
+    
+    try:
+        import openai
+        client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+        
+        system_prompt = f"""You are a friendly, intelligent AI assistant for {COMPANY_NAME}, an HVAC company.
+Your primary job is to help customers schedule service appointments, but you can engage in brief friendly conversation.
+
+Key information:
+- Company: {COMPANY_NAME}
+- Address: {COMPANY_ADDRESS}
+- Phone: {COMPANY_PHONE}
+- Service call fee: $89 (includes diagnostic)
+- Hours: Monday-Friday 8am-6pm, Saturday 8am-12pm, Closed Sunday
+- Services: AC repair, heating repair, maintenance, installation, thermostat issues, duct cleaning
+
+Personality:
+- Warm, professional, and helpful
+- Can engage in brief small talk but always steers back to helping with HVAC
+- If asked about non-HVAC topics (politics, weather, sports), give a brief friendly response then redirect
+- Never argue or get into debates
+- Keep responses SHORT (1-2 sentences max) - this is a phone call
+
+Current conversation state: {current_state}
+Customer has said: "{speech}"
+
+Respond naturally and helpfully. If they're not talking about HVAC, acknowledge briefly then ask how you can help with their heating or cooling needs."""
+
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": speech}
+            ],
+            max_tokens=100,
+            temperature=0.7
+        )
+        
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error("GPT response failed: %s", str(e))
+        return "I'm here to help with your HVAC needs. Would you like to schedule a service appointment?"
 
 
 def check_sentiment(speech: str) -> str:
@@ -992,28 +1054,49 @@ async def process_state(
             if issue_keyword in speech_lower:
                 smart_response = get_smart_issue_response(speech)
                 return ConversationState.COLLECT_NAME, f"{smart_response.replace('Would you like to schedule a service appointment?', '')} Let me get you scheduled. May I have your name please?", slots
+        
+        # For anything else unrecognized, use smart GPT to respond naturally
+        # This handles general conversation, off-topic, and complex queries
+        smart_response = await smart_gpt_response(speech, "greeting", session)
+        return current_state, smart_response, slots
     
     # =========================================================================
-    # NAME COLLECTION (2-step: say name → spell to confirm)
+    # NAME COLLECTION (simplified - no spelling required for common names)
     # =========================================================================
     if current_state == ConversationState.COLLECT_NAME:
+        # First check if they said yes/no/help instead of a name
+        if any(word == speech_lower.strip() for word in NOT_A_NAME_WORDS):
+            if any(word in speech_lower for word in YES_WORDS):
+                return current_state, "Great! And what's your name?", slots
+            elif any(word in speech_lower for word in NO_WORDS):
+                return ConversationState.GREETING, "No problem! Is there something else I can help you with?", slots
+            else:
+                return current_state, "I need your name to schedule the appointment. What's your first name?", slots
+        
         # Clean up the name - remove filler words
         name = speech.strip()
-        filler_phrases = ["my name is", "this is", "i'm", "im", "i am", "it's", "its", "call me"]
+        filler_phrases = ["my name is", "this is", "i'm", "im", "i am", "it's", "its", "call me", "you can call me", "they call me"]
         name_lower = name.lower()
         for filler in filler_phrases:
             if name_lower.startswith(filler):
                 name = name[len(filler):].strip()
                 break
         
+        # Remove trailing filler
+        trailing_fillers = ["here", "speaking", "calling"]
+        for filler in trailing_fillers:
+            if name_lower.endswith(filler):
+                name = name[:-len(filler)].strip()
+        
         name = name.title()
         
-        if len(name) >= 2:
-            slots["name_heard"] = name  # Store what we heard
-            # Ask to spell for confirmation
-            return ConversationState.SPELL_NAME, f"I heard {name}. Could you spell that for me? You can say letters like A as in Apple, B as in Boy.", slots
+        # Validate it looks like a name (not too short, not a command)
+        if len(name) >= 2 and name.lower() not in NOT_A_NAME_WORDS:
+            slots["name"] = name
+            # Skip spelling - just confirm and move on (faster flow)
+            return ConversationState.COLLECT_AREA_CODE, f"Hi {name}! Now I need your phone number. What's your area code? Just the 3 digits.", slots
         else:
-            return current_state, "I didn't catch your name. Could you please tell me your name?", slots
+            return current_state, "I didn't catch your name. What's your first name?", slots
     
     if current_state == ConversationState.SPELL_NAME:
         # Check if they said "yes" or "correct" (accepting what we heard)
@@ -1536,6 +1619,10 @@ async def gather_respond(request: Request):
             "confidence": confidence,
             "timestamp": datetime.now().isoformat()
         })
+        
+        # Play a brief acknowledgment sound while processing (reduces perceived latency)
+        # This is a soft "thinking" indicator
+        processing_ack = random.choice(["Okay.", "Got it.", "Alright.", "Sure."])
         
         # Process through state machine
         next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
