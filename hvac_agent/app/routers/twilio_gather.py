@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.0-gather"
+_VERSION = "1.0.1-gather-fix"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -64,9 +64,9 @@ ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
 # Twilio Gather settings
-GATHER_TIMEOUT = 5  # Seconds to wait for speech
-GATHER_SPEECH_TIMEOUT = "auto"  # Auto-detect end of speech
-MAX_RETRIES = 2  # Max retries before escalation
+GATHER_TIMEOUT = 8  # Seconds to wait for speech to start
+GATHER_SPEECH_TIMEOUT = 3  # Seconds of silence to end speech (integer, not "auto")
+MAX_RETRIES = 3  # Max retries before escalation
 
 
 # =============================================================================
@@ -455,7 +455,7 @@ async def generate_twiml(
     # Standard gather response with neural voice
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" language="en-US">
+    <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
         <Say voice="Polly.Joanna-Neural">{text}</Say>
     </Gather>
     <Say voice="Polly.Joanna-Neural">I didn't hear anything. Let me transfer you to an agent.</Say>
@@ -491,10 +491,10 @@ async def gather_incoming(request: Request):
     
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" language="en-US">
-        <Say voice="Polly.Joanna">{greeting}</Say>
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
+        <Say voice="Polly.Joanna-Neural">{greeting}</Say>
     </Gather>
-    <Say voice="Polly.Joanna">I didn't hear anything. Let me try again.</Say>
+    <Say voice="Polly.Joanna-Neural">I didn't hear anything. Let me try again.</Say>
     <Redirect>/twilio/gather/incoming</Redirect>
 </Response>"""
     
@@ -539,8 +539,8 @@ async def gather_respond(request: Request):
         
         twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Gather input="speech" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" language="en-US">
-        <Say voice="Polly.Joanna">{reprompt}</Say>
+    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
+        <Say voice="Polly.Joanna-Neural">{reprompt}</Say>
     </Gather>
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
