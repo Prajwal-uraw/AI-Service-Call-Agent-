@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "2.3.0-enterprise-flow"
+_VERSION = "3.0.0-enterprise-complete"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -63,15 +63,76 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "DLsHlh26Ugcm6ELvS0qi")  # MS WALKER
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
+# Company information
+COMPANY_ADDRESS = "1111 Test Drive, Dallas, Texas"
+COMPANY_PHONE = "682-224-9904"
+
 # Phone numbers for transfers
-# IMPORTANT: Set these in Modal secrets or .env
-EMERGENCY_PHONE = os.getenv("EMERGENCY_PHONE", "+18005551234")  # 24/7 emergency line
-TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+18005551234")    # Office/dispatch line
+EMERGENCY_PHONE = os.getenv("EMERGENCY_PHONE", "+16822249904")  # 24/7 emergency line
+TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+16822249904")    # Office/dispatch line
 
 # Twilio Gather settings
 GATHER_TIMEOUT = 8  # Seconds to wait for speech to start
 GATHER_SPEECH_TIMEOUT = 3  # Seconds of silence to end speech (integer, not "auto")
 MAX_RETRIES = 3  # Max retries before escalation
+
+# Twilio SMS (stub - configure when ready)
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
+
+# =============================================================================
+# UNIVERSAL COMMANDS (work in any state)
+# =============================================================================
+HUMAN_REQUEST_PHRASES = [
+    "talk to a human", "talk to human", "speak to someone", "speak to a person",
+    "real person", "representative", "agent", "operator", "customer service",
+    "talk to someone", "speak to human", "human please", "get me a person"
+]
+
+REPEAT_PHRASES = ["repeat", "say that again", "what did you say", "come again", "pardon", "sorry what"]
+HELP_PHRASES = ["help", "help me", "i need help", "what can you do", "options"]
+START_OVER_PHRASES = ["start over", "begin again", "restart", "from the beginning", "start again"]
+GO_BACK_PHRASES = ["go back", "previous", "back", "undo", "wait"]
+
+# Off-topic detection
+OFF_TOPIC_PHRASES = [
+    "weather", "sports", "news", "joke", "sing", "play music",
+    "what time is it", "who are you", "are you a robot", "are you real",
+    "tell me a story", "what's your name"
+]
+
+# Filler phrases for natural conversation flow
+FILLER_PHRASES = [
+    "Let me check that for you.",
+    "One moment please.",
+    "Got it.",
+    "Okay.",
+    "Sure thing.",
+    "Alright.",
+]
+
+# Availability slots (stub - will connect to calendar later)
+AVAILABLE_SLOTS = {
+    "monday": ["morning", "afternoon"],
+    "tuesday": ["morning", "afternoon"],
+    "wednesday": ["morning", "afternoon"],
+    "thursday": ["morning", "afternoon"],
+    "friday": ["morning", "afternoon"],
+    "saturday": ["morning"],
+    "sunday": [],  # Closed
+    "tomorrow": ["morning", "afternoon"],
+    "today": ["afternoon"],  # Only afternoon available same-day
+}
+
+# Progress messages
+PROGRESS_MESSAGES = {
+    "name_done": "Great! Just a few more details.",
+    "phone_done": "Perfect! Almost there.",
+    "address_done": "Got it! Just 2 more questions.",
+    "issue_done": "Thanks! Now let's schedule.",
+    "date_done": "Last question!",
+}
 
 
 # =============================================================================
@@ -303,11 +364,167 @@ class ConversationState(str, Enum):
     COLLECT_DATE = "collect_date"
     COLLECT_TIME = "collect_time"
     CONFIRM = "confirm"
+    PARTIAL_CORRECTION = "partial_correction"  # What to change?
     COMPLETE = "complete"
     FAQ = "faq"
     EMERGENCY = "emergency"
     TRANSFER = "transfer"
     GOODBYE = "goodbye"
+    # Human request handling (callback flow)
+    HUMAN_REQUEST = "human_request"           # Offer to help or callback
+    COLLECT_CALLBACK_NUMBER = "collect_callback_number"
+    COLLECT_MESSAGE = "collect_message"
+    CALLBACK_CONFIRM = "callback_confirm"
+
+
+# =============================================================================
+# UNIVERSAL COMMAND DETECTION
+# =============================================================================
+def check_universal_commands(speech: str, session: Dict) -> Optional[Tuple[str, str]]:
+    """
+    Check for universal commands that work in any state.
+    Returns (command_type, response) or None.
+    """
+    speech_lower = speech.lower().strip()
+    
+    # Human request - offer callback instead of immediate transfer
+    if any(phrase in speech_lower for phrase in HUMAN_REQUEST_PHRASES):
+        return ("human_request", None)
+    
+    # Repeat last response
+    if any(phrase in speech_lower for phrase in REPEAT_PHRASES):
+        last_response = session.get("last_response", "I'm here to help you schedule an HVAC service appointment.")
+        return ("repeat", f"Sure, I said: {last_response}")
+    
+    # Help - explain what we can do
+    if any(phrase in speech_lower for phrase in HELP_PHRASES):
+        return ("help", f"I can help you schedule an HVAC service appointment, answer questions about our services, or connect you with our team. Our service call fee is $89 which includes the diagnostic. We're located at {COMPANY_ADDRESS}. What would you like to do?")
+    
+    # Start over
+    if any(phrase in speech_lower for phrase in START_OVER_PHRASES):
+        return ("start_over", "No problem, let's start fresh. How can I help you today?")
+    
+    # Off-topic redirect
+    if any(phrase in speech_lower for phrase in OFF_TOPIC_PHRASES):
+        return ("off_topic", f"I'm {COMPANY_NAME}'s scheduling assistant. I can help you book an HVAC service appointment or answer questions about our services. What can I help you with?")
+    
+    # Company location question
+    if "where" in speech_lower and ("located" in speech_lower or "address" in speech_lower or "location" in speech_lower):
+        return ("location", f"We're located at {COMPANY_ADDRESS}. Would you like to schedule a service appointment?")
+    
+    return None
+
+
+def check_sentiment(speech: str) -> str:
+    """
+    Basic sentiment detection.
+    Returns: 'frustrated', 'confused', 'neutral', 'positive'
+    """
+    speech_lower = speech.lower()
+    
+    frustrated_words = ["frustrated", "annoying", "annoyed", "ridiculous", "terrible", 
+                       "worst", "hate", "stupid", "useless", "waste of time", "this is taking forever"]
+    confused_words = ["confused", "don't understand", "what do you mean", "huh", "i don't get it"]
+    positive_words = ["thank you", "thanks", "great", "perfect", "awesome", "wonderful"]
+    
+    if any(word in speech_lower for word in frustrated_words):
+        return "frustrated"
+    if any(word in speech_lower for word in confused_words):
+        return "confused"
+    if any(word in speech_lower for word in positive_words):
+        return "positive"
+    return "neutral"
+
+
+def parse_date(speech: str) -> Tuple[bool, str, str]:
+    """
+    Parse and validate date from speech.
+    Returns: (is_valid, parsed_date, spoken_date)
+    """
+    speech_lower = speech.lower().strip()
+    
+    # Common date phrases
+    today_words = ["today", "this afternoon", "right now", "as soon as possible", "asap"]
+    tomorrow_words = ["tomorrow", "next day"]
+    day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    
+    for word in today_words:
+        if word in speech_lower:
+            return True, "today", "today"
+    
+    for word in tomorrow_words:
+        if word in speech_lower:
+            return True, "tomorrow", "tomorrow"
+    
+    for day in day_names:
+        if day in speech_lower:
+            return True, day, day.capitalize()
+    
+    # Check for "next week", "this week"
+    if "next week" in speech_lower:
+        return True, "next week", "next week"
+    if "this week" in speech_lower:
+        return True, "this week", "this week"
+    
+    # If we can't parse, still accept but flag
+    if len(speech_lower) > 2:
+        return True, speech_lower, speech.strip()
+    
+    return False, "", ""
+
+
+def check_availability(date: str, time: str) -> Tuple[bool, str]:
+    """
+    Check if requested slot is available.
+    Returns: (is_available, message)
+    """
+    date_lower = date.lower()
+    time_lower = time.lower() if time else ""
+    
+    # Check if day is in our availability
+    available_times = None
+    for day, times in AVAILABLE_SLOTS.items():
+        if day in date_lower:
+            available_times = times
+            break
+    
+    if available_times is None:
+        # Unknown day, assume available
+        return True, ""
+    
+    if not available_times:
+        return False, f"I'm sorry, we're closed on {date}. Would Monday work instead?"
+    
+    if time_lower:
+        if "morning" in time_lower and "morning" not in available_times:
+            return False, f"Morning isn't available on {date}. We have afternoon available. Would that work?"
+        if "afternoon" in time_lower and "afternoon" not in available_times:
+            return False, f"Afternoon isn't available on {date}. We have morning available. Would that work?"
+    
+    return True, ""
+
+
+async def send_sms_confirmation(phone: str, name: str, date: str, time: str, address: str) -> bool:
+    """
+    Send SMS confirmation (stub - configure Twilio SMS when ready).
+    Returns True if sent successfully.
+    """
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
+        logger.info("SMS not configured - skipping confirmation SMS")
+        return False
+    
+    try:
+        # Stub - will implement when Twilio SMS is configured
+        message = f"Hi {name}! Your {COMPANY_NAME} appointment is confirmed for {date} ({time}) at {address}. Call {COMPANY_PHONE} to reschedule. Thank you!"
+        logger.info("SMS would be sent to %s: %s", phone, message)
+        # TODO: Implement actual Twilio SMS sending
+        # from twilio.rest import Client
+        # client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        # client.messages.create(body=message, from_=TWILIO_PHONE_NUMBER, to=phone)
+        return True
+    except Exception as e:
+        logger.error("Failed to send SMS: %s", str(e))
+        return False
 
 
 # In-memory session storage (use Redis in production for multi-instance)
@@ -346,9 +563,7 @@ def clear_session(call_sid: str):
 # =============================================================================
 PROMPTS = {
     ConversationState.GREETING: [
-        f"Thanks for calling {COMPANY_NAME}! This is our scheduling assistant. How can I help you today?",
-        f"Hi there! You've reached {COMPANY_NAME}. What can I do for you?",
-        f"Hello! Thanks for calling {COMPANY_NAME}. How may I assist you?",
+        f"Thanks for calling {COMPANY_NAME}! This call may be recorded for quality purposes. I'm your scheduling assistant. How can I help you today?",
     ],
     ConversationState.IDENTIFY_NEED: [
         "Got it. Are you looking to schedule a service appointment, or do you have a question I can help with?",
@@ -583,7 +798,13 @@ async def process_state(
     """
     Process current state and user input, return next state and response.
     
-    Uses fast pattern matching for common cases, GPT only when needed.
+    Enterprise features:
+    - Universal commands (help, repeat, start over, human request)
+    - Sentiment detection with proactive escalation
+    - Off-topic redirect
+    - Date/time validation with availability checking
+    - Partial correction flow
+    - Progress indicators
     
     Returns:
         (next_state, response_text, updated_slots)
@@ -592,9 +813,66 @@ async def process_state(
     slots = session["slots"]
     speech_lower = speech.lower().strip()
     
+    # =========================================================================
+    # UNIVERSAL COMMANDS (work in any state)
+    # =========================================================================
+    command = check_universal_commands(speech, session)
+    if command:
+        cmd_type, cmd_response = command
+        
+        if cmd_type == "human_request":
+            # Don't transfer immediately - offer to help or callback
+            return ConversationState.HUMAN_REQUEST, "I understand you'd like to speak with someone. I can definitely help with most things, but if you prefer, I can have someone call you back. Would you like me to help you now, or would you prefer a callback?", slots
+        
+        if cmd_type == "start_over":
+            # Reset slots and go to greeting
+            slots = {k: None for k in slots}
+            session["slots"] = slots
+            return ConversationState.GREETING, cmd_response, slots
+        
+        if cmd_type in ["repeat", "help", "off_topic", "location"]:
+            # Stay in current state, just respond
+            return current_state, cmd_response, slots
+    
+    # Sentiment detection - escalate frustrated callers
+    sentiment = check_sentiment(speech)
+    if sentiment == "frustrated":
+        logger.info("Frustrated caller detected: %s", speech[:50])
+        return ConversationState.HUMAN_REQUEST, "I can hear this has been frustrating. I want to make sure you get the help you need. Would you like me to continue helping you, or would you prefer I have someone call you back right away?", slots
+    
     # Quick emergency check
     if is_emergency(speech):
         return ConversationState.EMERGENCY, get_prompt(ConversationState.EMERGENCY), slots
+    
+    # =========================================================================
+    # HUMAN REQUEST FLOW (callback instead of immediate transfer)
+    # =========================================================================
+    if current_state == ConversationState.HUMAN_REQUEST:
+        if any(word in speech_lower for word in ["help", "continue", "you", "yes help", "go ahead"]):
+            # User wants to continue with bot
+            return ConversationState.GREETING, "Great! I'm happy to help. What can I do for you today?", slots
+        elif any(word in speech_lower for word in ["callback", "call back", "call me", "someone call", "prefer"]):
+            # User wants callback
+            return ConversationState.COLLECT_CALLBACK_NUMBER, "No problem! What's the best number for us to call you back?", slots
+        else:
+            return current_state, "Would you like me to help you now, or would you prefer a callback from our team?", slots
+    
+    if current_state == ConversationState.COLLECT_CALLBACK_NUMBER:
+        is_valid, formatted, spoken = validate_phone(speech)
+        if is_valid:
+            slots["callback_phone"] = formatted
+            slots["callback_phone_spoken"] = spoken
+            return ConversationState.COLLECT_MESSAGE, f"Got it, {spoken}. Is there a message you'd like me to pass along?", slots
+        return current_state, "I need a phone number to call you back. What's the best number?", slots
+    
+    if current_state == ConversationState.COLLECT_MESSAGE:
+        slots["callback_message"] = speech.strip() if speech.strip() and speech_lower not in ["no", "nope", "nothing"] else "Customer requested callback"
+        return ConversationState.CALLBACK_CONFIRM, f"Perfect! I'll have someone call you at {slots.get('callback_phone_spoken', slots.get('callback_phone'))} as soon as possible. Is there anything else I can help with?", slots
+    
+    if current_state == ConversationState.CALLBACK_CONFIRM:
+        if any(word in speech_lower for word in ["yes", "yeah", "actually", "one more"]):
+            return ConversationState.GREETING, "Sure! What else can I help you with?", slots
+        return ConversationState.GOODBYE, f"Great! Someone will call you back shortly. Thank you for calling {COMPANY_NAME}. Have a great day!", slots
     
     # FAST PATH: Check for common FAQ questions (skip GPT)
     if current_state == ConversationState.GREETING:
@@ -721,14 +999,38 @@ async def process_state(
     
     if current_state == ConversationState.COLLECT_ISSUE:
         slots["issue"] = speech.strip()
-        return ConversationState.COLLECT_DATE, "When would you like us to come out?", slots
+        return ConversationState.COLLECT_DATE, f"{PROGRESS_MESSAGES['issue_done']} When would you like us to come out? We're available Monday through Saturday.", slots
     
     if current_state == ConversationState.COLLECT_DATE:
-        slots["date"] = speech.strip()
-        return ConversationState.COLLECT_TIME, "Do you prefer morning or afternoon?", slots
+        # Parse and validate date
+        is_valid, parsed_date, spoken_date = parse_date(speech)
+        if is_valid:
+            # Check availability
+            is_available, availability_msg = check_availability(parsed_date, None)
+            if not is_available:
+                return current_state, availability_msg, slots
+            slots["date"] = spoken_date
+            return ConversationState.COLLECT_TIME, f"{PROGRESS_MESSAGES['date_done']} Do you prefer morning or afternoon?", slots
+        return current_state, "What day works for you? You can say tomorrow, Monday, Tuesday, or any day this week.", slots
     
     if current_state == ConversationState.COLLECT_TIME:
-        slots["time"] = speech.strip()
+        time_lower = speech.lower().strip()
+        # Validate time preference
+        if "morning" in time_lower:
+            slots["time"] = "morning"
+        elif "afternoon" in time_lower:
+            slots["time"] = "afternoon"
+        elif any(word in time_lower for word in ["either", "any", "doesn't matter", "don't care"]):
+            slots["time"] = "morning"  # Default to morning
+        else:
+            return current_state, "Would you prefer morning or afternoon?", slots
+        
+        # Check availability for the time slot
+        is_available, availability_msg = check_availability(slots.get("date", ""), slots["time"])
+        if not is_available:
+            slots["time"] = None
+            return current_state, availability_msg, slots
+        
         # Build confirmation summary
         summary = f"Let me confirm: {slots.get('name')}, phone {slots.get('phone_spoken', slots.get('phone'))}, " \
                   f"at {slots.get('address')}, for {slots.get('issue')}, " \
@@ -800,16 +1102,58 @@ async def process_state(
         # Check for yes/no in speech directly (more reliable than GPT for simple responses)
         if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "sure", "okay", "ok", "confirm", "that's right", "sounds good"]):
             logger.info("BOOKING CONFIRMED: %s", slots)
+            
+            # Try to send SMS confirmation (stub)
+            await send_sms_confirmation(
+                slots.get("phone", ""),
+                slots.get("name", ""),
+                slots.get("date", ""),
+                slots.get("time", ""),
+                slots.get("address", "")
+            )
+            
             complete_msg = f"Perfect! You're all set, {slots.get('name')}. " \
                           f"A technician will be at {slots.get('address')} on {slots.get('date')} in the {slots.get('time')}. " \
                           f"We'll call {slots.get('phone_spoken', slots.get('phone'))} if anything changes. " \
                           f"Thanks for choosing {COMPANY_NAME}!"
             return ConversationState.COMPLETE, complete_msg, slots
-        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect", "not right", "change", "start over"]):
-            # Ask what they want to change instead of starting over
-            return current_state, "What would you like to change? Your name, phone, address, or the appointment time?", slots
+        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect", "not right", "change"]):
+            # Partial correction flow - ask what to change
+            return ConversationState.PARTIAL_CORRECTION, "No problem! What would you like to change? You can say name, phone, address, issue, or appointment time.", slots
+        elif "start over" in speech_lower:
+            slots = {k: None for k in slots}
+            return ConversationState.COLLECT_NAME, "Let's start fresh. What's your name?", slots
         # If unclear, ask again more explicitly
-        return current_state, "I need a yes or no. Is the booking information correct?", slots
+        return current_state, "I need a yes or no. Is the booking information correct?"
+    
+    elif current_state == ConversationState.PARTIAL_CORRECTION:
+        # Handle partial corrections
+        if "name" in speech_lower:
+            slots["name"] = None
+            return ConversationState.COLLECT_NAME, "What's your name?", slots
+        elif "phone" in speech_lower or "number" in speech_lower:
+            slots["phone"] = None
+            slots["area_code"] = None
+            slots["phone_prefix"] = None
+            slots["phone_line"] = None
+            return ConversationState.COLLECT_AREA_CODE, "What's your area code?", slots
+        elif "address" in speech_lower:
+            slots["address"] = None
+            return ConversationState.COLLECT_ADDRESS, "What's the service address?", slots
+        elif "issue" in speech_lower or "problem" in speech_lower:
+            slots["issue"] = None
+            return ConversationState.COLLECT_ISSUE, "What's going on with your system?", slots
+        elif "time" in speech_lower or "date" in speech_lower or "appointment" in speech_lower or "schedule" in speech_lower:
+            slots["date"] = None
+            slots["time"] = None
+            return ConversationState.COLLECT_DATE, "When would you like us to come out?", slots
+        elif any(word in speech_lower for word in ["nothing", "never mind", "it's fine", "actually correct"]):
+            # They changed their mind
+            summary = f"Okay, let me confirm again: {slots.get('name')}, phone {slots.get('phone_spoken', slots.get('phone'))}, " \
+                      f"at {slots.get('address')}, for {slots.get('issue')}, " \
+                      f"{slots.get('date')} in the {slots.get('time')}. Is that correct?"
+            return ConversationState.CONFIRM, summary, slots
+        return current_state, "What would you like to change? Name, phone, address, issue, or appointment time?", slots
     
     elif current_state == ConversationState.COMPLETE:
         if intent in ["deny", "other"]:
