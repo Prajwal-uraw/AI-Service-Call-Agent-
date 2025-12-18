@@ -44,14 +44,14 @@ from app.services.hvac_knowledge import (
     get_troubleshooting_tips,
     format_insight_for_voice
 )
-from app.services.tts.elevenlabs_sync import generate_speech, is_elevenlabs_available
+from app.services.tts.elevenlabs_tts import generate_audio_url, is_available as is_elevenlabs_available
 
 logger = get_logger("twilio.gather")
 
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "1.0.8-fast-faq-fix"
+_VERSION = "2.0.0-elevenlabs-play"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -484,32 +484,51 @@ async def process_state(
 
 
 # =============================================================================
-# TWIML GENERATION
+# TWIML GENERATION WITH ELEVENLABS <Play>
 # =============================================================================
-def generate_twiml_sync(
+async def generate_twiml(
     text: str,
     next_state: ConversationState,
     call_sid: str,
-    gather: bool = True,
+    host: str,
     action_url: str = None,
-    host: str = "",
 ) -> str:
     """
-    Generate TwiML response with Gather or Say.
+    Generate TwiML response with ElevenLabs <Play> or Polly <Say> fallback.
+    
+    Architecture:
+    - Generate audio via ElevenLabs TTS API
+    - Serve audio at /audio/{hash}.mp3
+    - Use <Play> to play the audio
+    - Use <Gather> to capture speech input
+    - Fallback to Polly <Say> if ElevenLabs fails
     
     Features:
-    - bargeIn="true" allows user to interrupt agent speech
+    - bargeIn="true" allows user to interrupt
     - Enhanced speech recognition for phone calls
-    - Fallback to transfer if no input detected
     """
     action = action_url or f"https://{host}/twilio/gather/respond"
     
-    # Escape XML special characters in text
+    # Try ElevenLabs first
+    audio_url = None
+    if is_elevenlabs_available():
+        try:
+            audio_url = await generate_audio_url(text, host)
+            if audio_url:
+                logger.info("ElevenLabs audio URL: %s", audio_url)
+        except Exception as e:
+            logger.warning("ElevenLabs failed, using Polly: %s", str(e))
+    
+    # Fallback voice element
     import html
     safe_text = html.escape(text)
+    polly_voice = "Polly.Joanna-Neural"
     
-    # Use Polly Neural voice - reliable and sounds good
-    voice = "Polly.Joanna-Neural"
+    # Build the voice element (Play or Say)
+    if audio_url:
+        voice_element = f'<Play>{audio_url}</Play>'
+    else:
+        voice_element = f'<Say voice="{polly_voice}">{safe_text}</Say>'
     
     # For terminal states, no gather needed
     if next_state in [ConversationState.GOODBYE, ConversationState.EMERGENCY, ConversationState.TRANSFER]:
@@ -517,28 +536,27 @@ def generate_twiml_sync(
             emergency_number = os.getenv("EMERGENCY_PHONE", "+18005551234")
             return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="{voice}">{safe_text}</Say>
+    {voice_element}
     <Dial>{emergency_number}</Dial>
 </Response>"""
         else:
             return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="{voice}">{safe_text}</Say>
+    {voice_element}
     <Hangup/>
 </Response>"""
     
     # Standard gather response with barge-in enabled
-    # bargeIn="true" allows user to interrupt the agent while speaking
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
-        <Say voice="{voice}">{safe_text}</Say>
+        {voice_element}
     </Gather>
-    <Say voice="{voice}">I didn't catch that. Could you please repeat?</Say>
+    <Say voice="{polly_voice}">I didn't catch that. Could you please repeat?</Say>
     <Gather input="speech dtmf" action="{action}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US" bargeIn="true">
-        <Say voice="{voice}">I'm still here. How can I help you?</Say>
+        <Say voice="{polly_voice}">I'm still here. How can I help you?</Say>
     </Gather>
-    <Say voice="{voice}">I'm having trouble hearing you. Let me connect you with someone who can help.</Say>
+    <Say voice="{polly_voice}">I'm having trouble hearing you. Let me connect you with someone who can help.</Say>
     <Redirect>/twilio/gather/transfer</Redirect>
 </Response>"""
 
@@ -550,7 +568,7 @@ def generate_twiml_sync(
 async def gather_incoming(request: Request):
     """
     Entry point for incoming calls.
-    Returns initial greeting with Gather.
+    Returns initial greeting with ElevenLabs <Play> or Polly fallback.
     """
     # Get form data - try cached first (from middleware), then parse fresh
     if hasattr(request.state, 'twilio_form_data'):
@@ -573,18 +591,9 @@ async def gather_incoming(request: Request):
     # Get greeting
     greeting = get_prompt(ConversationState.GREETING)
     
-    # Generate TwiML
+    # Generate TwiML with ElevenLabs
     host = request.headers.get("host", "")
-    action_url = f"https://{host}/twilio/gather/respond"
-    
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Gather input="speech dtmf" action="{action_url}" method="POST" timeout="{GATHER_TIMEOUT}" speechTimeout="{GATHER_SPEECH_TIMEOUT}" speechModel="phone_call" enhanced="true" language="en-US">
-        <Say voice="Polly.Joanna-Neural">{greeting}</Say>
-    </Gather>
-    <Say voice="Polly.Joanna-Neural">I didn't hear anything. Let me try again.</Say>
-    <Redirect>/twilio/gather/incoming</Redirect>
-</Response>"""
+    twiml = await generate_twiml(greeting, ConversationState.GREETING, call_sid, host)
     
     return Response(content=twiml, media_type="application/xml")
 
@@ -695,8 +704,8 @@ async def gather_respond(request: Request):
         logger.info("State transition: %s -> %s, Response: %s", 
                    session.get("state"), next_state, response_text[:50])
         
-        # Generate TwiML
-        twiml = generate_twiml_sync(response_text, next_state, call_sid, action_url=action_url, host=host)
+        # Generate TwiML with ElevenLabs
+        twiml = await generate_twiml(response_text, next_state, call_sid, host, action_url=action_url)
         
         return Response(content=twiml, media_type="application/xml")
         

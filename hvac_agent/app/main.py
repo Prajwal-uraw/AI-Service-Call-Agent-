@@ -25,6 +25,7 @@ from app.routers import (
     twilio_stream_router,
     twilio_elevenlabs_router,
     twilio_gather_router,
+    audio_router,
 )
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
@@ -122,6 +123,7 @@ app.include_router(twilio_voice_router)
 app.include_router(twilio_stream_router)
 app.include_router(twilio_elevenlabs_router)
 app.include_router(twilio_gather_router)  # Enterprise Gather-based voice agent
+app.include_router(audio_router)  # Audio serving for ElevenLabs TTS
 
 
 # Root endpoint
