@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "2.0.1-optimized"
+_VERSION = "2.1.0-production"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -63,10 +63,79 @@ ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "DLsHlh26Ugcm6ELvS0qi")  # MS WALKER
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
+# Phone numbers for transfers
+# IMPORTANT: Set these in Modal secrets or .env
+EMERGENCY_PHONE = os.getenv("EMERGENCY_PHONE", "+18005551234")  # 24/7 emergency line
+TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+18005551234")    # Office/dispatch line
+
 # Twilio Gather settings
 GATHER_TIMEOUT = 8  # Seconds to wait for speech to start
 GATHER_SPEECH_TIMEOUT = 3  # Seconds of silence to end speech (integer, not "auto")
 MAX_RETRIES = 3  # Max retries before escalation
+
+
+# =============================================================================
+# VALIDATION HELPERS
+# =============================================================================
+import re
+
+def validate_phone(phone_input: str) -> Tuple[bool, str, str]:
+    """
+    Validate and format phone number.
+    
+    Returns: (is_valid, formatted_number, spoken_format)
+    """
+    # Extract digits only
+    digits = re.sub(r'\D', '', phone_input)
+    
+    # Handle common spoken formats
+    # "five five five one two three four" -> already extracted as digits by Twilio
+    
+    if len(digits) == 10:
+        # Format as (XXX) XXX-XXXX
+        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        # Spoken format: "5 5 5, 1 2 3, 4 5 6 7"
+        spoken = f"{digits[0]} {digits[1]} {digits[2]}, {digits[3]} {digits[4]} {digits[5]}, {digits[6]} {digits[7]} {digits[8]} {digits[9]}"
+        return True, formatted, spoken
+    elif len(digits) == 11 and digits[0] == '1':
+        # US number with country code
+        digits = digits[1:]
+        formatted = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        spoken = f"{digits[0]} {digits[1]} {digits[2]}, {digits[3]} {digits[4]} {digits[5]}, {digits[6]} {digits[7]} {digits[8]} {digits[9]}"
+        return True, formatted, spoken
+    elif len(digits) >= 7:
+        # Partial number - might be missing area code
+        return False, digits, "incomplete"
+    else:
+        return False, digits, "invalid"
+
+
+def validate_address(address_input: str) -> Tuple[bool, str]:
+    """
+    Basic address validation.
+    
+    Returns: (is_valid, cleaned_address)
+    """
+    address = address_input.strip()
+    
+    # Must have at least a number and some text
+    has_number = bool(re.search(r'\d+', address))
+    has_street = len(address.split()) >= 2
+    
+    if has_number and has_street:
+        # Capitalize properly
+        return True, address.title()
+    
+    return False, address
+
+
+def format_phone_for_speech(phone: str) -> str:
+    """Format phone number for natural speech."""
+    digits = re.sub(r'\D', '', phone)
+    if len(digits) >= 10:
+        digits = digits[-10:]  # Take last 10 digits
+        return f"{digits[0]} {digits[1]} {digits[2]}, {digits[3]} {digits[4]} {digits[5]}, {digits[6]} {digits[7]} {digits[8]} {digits[9]}"
+    return phone
 
 
 # =============================================================================
@@ -77,7 +146,9 @@ class ConversationState(str, Enum):
     IDENTIFY_NEED = "identify_need"
     COLLECT_NAME = "collect_name"
     COLLECT_PHONE = "collect_phone"
+    VERIFY_PHONE = "verify_phone"      # New: verify phone number
     COLLECT_ADDRESS = "collect_address"
+    VERIFY_ADDRESS = "verify_address"  # New: verify address
     COLLECT_ISSUE = "collect_issue"
     COLLECT_DATE = "collect_date"
     COLLECT_TIME = "collect_time"
@@ -284,19 +355,42 @@ Analyze and extract information."""
 
 
 # =============================================================================
-# EMERGENCY DETECTION
+# EMERGENCY DETECTION (TRUE emergencies only)
 # =============================================================================
-EMERGENCY_KEYWORDS = [
-    "gas leak", "smell gas", "carbon monoxide", "co detector", "co alarm",
-    "no heat", "freezing", "frozen pipes", "fire", "smoke", "burning smell",
-    "electrical fire", "sparks", "flooding", "water damage"
+# TRUE emergencies - immediate danger to life or property
+TRUE_EMERGENCY_KEYWORDS = [
+    "gas leak", "smell gas", "smelling gas",
+    "carbon monoxide", "co detector", "co alarm", "co going off",
+    "fire", "smoke", "burning smell", "electrical fire", "sparks",
+    "flooding", "water everywhere",
 ]
+
+# Conditional emergencies - only emergency if combined with danger words
+# "no heat" alone is NOT an emergency - it's a normal service call
+DANGER_CONDITIONS = ["freezing", "frozen", "elderly", "baby", "infant", "sick", "medical"]
 
 
 def is_emergency(speech: str) -> bool:
-    """Quick check for emergency keywords."""
+    """
+    Check for TRUE emergencies only.
+    
+    'No heat' alone is NOT an emergency - it's a normal service request.
+    Only flag as emergency if there's immediate danger.
+    """
     speech_lower = speech.lower()
-    return any(kw in speech_lower for kw in EMERGENCY_KEYWORDS)
+    
+    # Check for true emergencies (always emergency)
+    if any(kw in speech_lower for kw in TRUE_EMERGENCY_KEYWORDS):
+        return True
+    
+    # "No heat" is only emergency if combined with danger conditions
+    if "no heat" in speech_lower or "heat not working" in speech_lower:
+        if any(danger in speech_lower for danger in DANGER_CONDITIONS):
+            return True
+        # Otherwise it's just a normal service call
+        return False
+    
+    return False
 
 
 # =============================================================================
@@ -362,33 +456,65 @@ async def process_state(
     # FAST PATH: Simple slot extraction for collection states (skip GPT)
     if current_state == ConversationState.COLLECT_NAME:
         # Just use what they said as the name
-        slots["name"] = speech.strip()
-        return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+        name = speech.strip().title()
+        slots["name"] = name
+        return ConversationState.COLLECT_PHONE, f"Thanks {name}! What's the best phone number to reach you?", slots
     
     if current_state == ConversationState.COLLECT_PHONE:
-        # Extract digits from speech
-        import re
-        digits = re.sub(r'\D', '', speech)
-        if len(digits) >= 7:
-            slots["phone"] = digits
-            return ConversationState.COLLECT_ADDRESS, get_prompt(ConversationState.COLLECT_ADDRESS), slots
-        return current_state, "I need your phone number with area code. What's the best number to reach you?", slots
+        # Validate phone number
+        is_valid, formatted, spoken = validate_phone(speech)
+        if is_valid:
+            slots["phone"] = formatted
+            slots["phone_spoken"] = spoken
+            # Ask for verification
+            return ConversationState.VERIFY_PHONE, f"I have {spoken}. Is that correct?", slots
+        elif spoken == "incomplete":
+            return current_state, "I need your full 10-digit phone number including area code. What's the number?", slots
+        else:
+            return current_state, "I didn't catch that. Please say your phone number with area code.", slots
+    
+    if current_state == ConversationState.VERIFY_PHONE:
+        # Check yes/no for phone verification
+        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+            return ConversationState.COLLECT_ADDRESS, "Great! What's the service address?", slots
+        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+            slots["phone"] = None
+            return ConversationState.COLLECT_PHONE, "No problem. Please say your phone number again.", slots
+        return current_state, f"I have {slots.get('phone_spoken', 'your number')}. Is that correct? Yes or no?", slots
     
     if current_state == ConversationState.COLLECT_ADDRESS:
-        slots["address"] = speech.strip()
-        return ConversationState.COLLECT_ISSUE, get_prompt(ConversationState.COLLECT_ISSUE), slots
+        # Validate address
+        is_valid, cleaned = validate_address(speech)
+        if is_valid:
+            slots["address"] = cleaned
+            return ConversationState.VERIFY_ADDRESS, f"I have {cleaned}. Is that the correct address?", slots
+        else:
+            return current_state, "I need a street address with a number. For example, 123 Main Street. What's the address?", slots
+    
+    if current_state == ConversationState.VERIFY_ADDRESS:
+        # Check yes/no for address verification
+        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+            return ConversationState.COLLECT_ISSUE, "Perfect! What's going on with your system? Just a quick description.", slots
+        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+            slots["address"] = None
+            return ConversationState.COLLECT_ADDRESS, "Let me get that again. What's the service address?", slots
+        return current_state, f"Is {slots.get('address', 'that address')} correct? Yes or no?", slots
     
     if current_state == ConversationState.COLLECT_ISSUE:
         slots["issue"] = speech.strip()
-        return ConversationState.COLLECT_DATE, get_prompt(ConversationState.COLLECT_DATE), slots
+        return ConversationState.COLLECT_DATE, "When would you like us to come out?", slots
     
     if current_state == ConversationState.COLLECT_DATE:
         slots["date"] = speech.strip()
-        return ConversationState.COLLECT_TIME, get_prompt(ConversationState.COLLECT_TIME), slots
+        return ConversationState.COLLECT_TIME, "Do you prefer morning or afternoon?", slots
     
     if current_state == ConversationState.COLLECT_TIME:
         slots["time"] = speech.strip()
-        return ConversationState.CONFIRM, get_prompt(ConversationState.CONFIRM, slots), slots
+        # Build confirmation summary
+        summary = f"Let me confirm: {slots.get('name')}, phone {slots.get('phone_spoken', slots.get('phone'))}, " \
+                  f"at {slots.get('address')}, for {slots.get('issue')}, " \
+                  f"{slots.get('date')} in the {slots.get('time')}. Is all that correct?"
+        return ConversationState.CONFIRM, summary, slots
     
     # For greeting state with non-FAQ, use GPT to understand intent
     if current_state == ConversationState.GREETING:
@@ -453,16 +579,18 @@ async def process_state(
     
     elif current_state == ConversationState.CONFIRM:
         # Check for yes/no in speech directly (more reliable than GPT for simple responses)
-        speech_lower = speech.lower().strip()
         if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "sure", "okay", "ok", "confirm", "that's right", "sounds good"]):
             logger.info("BOOKING CONFIRMED: %s", slots)
-            return ConversationState.COMPLETE, get_prompt(ConversationState.COMPLETE, slots), slots
+            complete_msg = f"Perfect! You're all set, {slots.get('name')}. " \
+                          f"A technician will be at {slots.get('address')} on {slots.get('date')} in the {slots.get('time')}. " \
+                          f"We'll call {slots.get('phone_spoken', slots.get('phone'))} if anything changes. " \
+                          f"Thanks for choosing {COMPANY_NAME}!"
+            return ConversationState.COMPLETE, complete_msg, slots
         elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect", "not right", "change", "start over"]):
-            # Clear slots and start over
-            slots = {}
-            return ConversationState.COLLECT_NAME, "No problem, let's start over. What's your name?", slots
+            # Ask what they want to change instead of starting over
+            return current_state, "What would you like to change? Your name, phone, address, or the appointment time?", slots
         # If unclear, ask again more explicitly
-        return current_state, "I need a yes or no. Is this information correct?", slots
+        return current_state, "I need a yes or no. Is the booking information correct?", slots
     
     elif current_state == ConversationState.COMPLETE:
         if intent in ["deny", "other"]:
@@ -533,11 +661,10 @@ async def generate_twiml(
     # For terminal states, no gather needed
     if next_state in [ConversationState.GOODBYE, ConversationState.EMERGENCY, ConversationState.TRANSFER]:
         if next_state == ConversationState.EMERGENCY:
-            emergency_number = os.getenv("EMERGENCY_PHONE", "+18005551234")
             return f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     {voice_element}
-    <Dial>{emergency_number}</Dial>
+    <Dial>{EMERGENCY_PHONE}</Dial>
 </Response>"""
         else:
             return f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -726,17 +853,15 @@ async def gather_transfer(request: Request):
     form = await request.form()
     call_sid = form.get("CallSid", "unknown")
     
-    logger.info("Transferring call: CallSid=%s", call_sid)
+    logger.info("Transferring call: CallSid=%s to %s", call_sid, TRANSFER_PHONE)
     
     # Clean up session
     clear_session(call_sid)
     
-    transfer_number = os.getenv("TRANSFER_PHONE", os.getenv("EMERGENCY_PHONE", "+18005551234"))
-    
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="Polly.Joanna">Please hold while I transfer you.</Say>
-    <Dial>{transfer_number}</Dial>
+    <Say voice="Polly.Joanna-Neural">Please hold while I transfer you to our office.</Say>
+    <Dial>{TRANSFER_PHONE}</Dial>
 </Response>"""
     
     return Response(content=twiml, media_type="application/xml")
