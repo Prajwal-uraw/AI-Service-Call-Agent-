@@ -46,6 +46,12 @@ from app.services.hvac_knowledge import (
     format_insight_for_voice
 )
 from app.services.tts.elevenlabs_tts import generate_audio_url, is_available as is_elevenlabs_available
+from app.services.session_store import (
+    get_session as get_session_from_store,
+    save_session,
+    clear_session as clear_session_from_store,
+    session_store
+)
 
 logger = get_logger("twilio.gather")
 
@@ -685,35 +691,32 @@ async def send_sms_confirmation(phone: str, name: str, date: str, time: str, add
         return False
 
 
-# In-memory session storage (use Redis in production for multi-instance)
-# Key: CallSid, Value: session data
-_sessions: Dict[str, Dict[str, Any]] = {}
+# Session storage - uses Redis with local cache (see session_store.py)
+# Provides: persistence, multi-instance support, graceful fallback to in-memory
+_sessions: Dict[str, Dict[str, Any]] = {}  # Legacy reference for health check
 
 
 def get_session(call_sid: str) -> Dict[str, Any]:
-    """Get or create session for a call."""
-    if call_sid not in _sessions:
-        _sessions[call_sid] = {
-            "state": ConversationState.GREETING,
-            "slots": {
-                "name": None,
-                "phone": None,
-                "address": None,
-                "issue": None,
-                "date": None,
-                "time": None,
-            },
-            "retries": 0,
-            "history": [],
-            "created_at": datetime.now().isoformat(),
-        }
-    return _sessions[call_sid]
+    """
+    Get or create session for a call.
+    
+    Uses Redis-backed session store with local cache for performance.
+    Falls back to in-memory if Redis unavailable.
+    """
+    session = get_session_from_store(call_sid, default_state=ConversationState.GREETING.value)
+    
+    # Ensure state is ConversationState enum value (string)
+    if isinstance(session.get("state"), ConversationState):
+        session["state"] = session["state"].value
+    elif session.get("state") is None:
+        session["state"] = ConversationState.GREETING.value
+    
+    return session
 
 
 def clear_session(call_sid: str):
     """Clear session after call ends."""
-    if call_sid in _sessions:
-        del _sessions[call_sid]
+    clear_session_from_store(call_sid)
 
 
 # =============================================================================
@@ -1339,7 +1342,7 @@ async def process_state(
             slots = {k: None for k in slots}
             return ConversationState.COLLECT_NAME, "Let's start fresh. What's your name?", slots
         # If unclear, ask again more explicitly
-        return current_state, "I need a yes or no. Is the booking information correct?"
+        return current_state, "I need a yes or no. Is the booking information correct?", slots
     
     elif current_state == ConversationState.PARTIAL_CORRECTION:
         # Handle partial corrections
@@ -1654,13 +1657,16 @@ async def gather_respond(request: Request):
         next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
         
         # Update session
-        session["state"] = next_state
+        session["state"] = next_state.value if isinstance(next_state, ConversationState) else next_state
         session["slots"] = updated_slots
         session["history"].append({
             "role": "assistant",
             "content": response_text,
             "timestamp": datetime.now().isoformat()
         })
+        
+        # Persist session to Redis/store
+        save_session(call_sid, session)
         
         logger.info("State transition: %s -> %s, Response: %s", 
                    session.get("state"), next_state, response_text[:50])
@@ -1743,10 +1749,11 @@ async def gather_status(request: Request):
 @router.get("/twilio/gather/health")
 async def gather_health():
     """Health check for gather endpoints."""
+    store_stats = session_store.get_stats()
     return {
         "status": "healthy",
         "version": _VERSION,
-        "active_sessions": len(_sessions),
+        "session_store": store_stats,
         "elevenlabs_configured": bool(ELEVENLABS_API_KEY),
         "openai_configured": bool(OPENAI_API_KEY),
     }
