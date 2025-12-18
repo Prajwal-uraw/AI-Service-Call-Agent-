@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.2-paced"
+_STREAM_VERSION = "3.0.3-verbose"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -206,9 +206,10 @@ async def audio_sender(ctx: CallContext):
                 ctx.frames_sent += 1
                 last_send_time = time.time()
                 
-                # Log every 50 frames
-                if ctx.frames_sent % 50 == 0:
-                    logger.info("Frames sent: %d (each 160 bytes)", ctx.frames_sent)
+                # Log first 5 frames and then every 25 frames
+                if ctx.frames_sent <= 5 or ctx.frames_sent % 25 == 0:
+                    logger.info(">>> SENT frame #%d to Twilio (160 bytes, streamSid=%s)", 
+                               ctx.frames_sent, ctx.stream_sid[:20] if ctx.stream_sid else "None")
                     
             except asyncio.TimeoutError:
                 continue
