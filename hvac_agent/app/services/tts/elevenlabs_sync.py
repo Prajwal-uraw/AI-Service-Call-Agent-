@@ -27,7 +27,7 @@ logger = get_logger("tts.elevenlabs_sync")
 
 # Configuration
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Rachel - warm, friendly
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "DLsHlh26Ugcm6ELvS0qi")  # MS WALKER
 ELEVENLABS_MODEL = "eleven_turbo_v2_5"  # Fast, high-quality
 ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1"
 
