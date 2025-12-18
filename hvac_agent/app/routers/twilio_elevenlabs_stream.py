@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.4-inbound"
+_STREAM_VERSION = "3.0.5-fix-speech"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -355,10 +355,10 @@ class ElevenLabsStreamBridge:
     def __init__(self, twilio_ws: WebSocket):
         self.ctx = CallContext(twilio_ws)
         
-        # Thresholds for speech detection
-        self._silence_threshold = 80
-        self._min_speech_frames = 25
-        self._speech_threshold = 40
+        # Thresholds for speech detection - tuned to avoid false positives
+        self._silence_threshold = 40  # Reduced: frames of silence to trigger processing
+        self._min_speech_frames = 15  # Reduced: minimum frames to consider as speech
+        self._speech_threshold = 50   # Increased: variance threshold for speech detection
         
         # Utterance lock
         self._utterance_lock = asyncio.Lock()
@@ -518,10 +518,13 @@ class ElevenLabsStreamBridge:
         else:
             self.ctx.silence_frames += 1
             
+            # Reset user_speaking after enough silence (prevents false positive blocking reprompt)
+            if self.ctx.silence_frames >= 20:  # ~400ms of silence
+                self.ctx.user_speaking = False
+            
             # If we had speech and now silence, process the utterance
-            if (self.ctx.user_speaking and 
-                self.ctx.silence_frames >= self._silence_threshold and
-                self.ctx.speech_frames >= self._min_speech_frames):
+            if (self.ctx.speech_frames >= self._min_speech_frames and
+                self.ctx.silence_frames >= self._silence_threshold):
                 
                 audio_data = bytes(self.ctx.input_buffer)
                 self.ctx.input_buffer.clear()
