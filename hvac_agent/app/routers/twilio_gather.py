@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "2.0.0-elevenlabs-play"
+_VERSION = "2.0.1-optimized"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
