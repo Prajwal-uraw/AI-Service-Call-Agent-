@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "2.0.4-fixed"
+_STREAM_VERSION = "2.0.5-direct-send"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # Configuration
@@ -122,10 +122,6 @@ class ElevenLabsStreamBridge:
         self._max_reprompts: int = 3  # Max reprompts before giving up
         self._reprompt_timeout: float = 5.0  # Seconds to wait before reprompt
         self._keepalive_task: Optional[asyncio.Task] = None  # Keepalive task
-        
-        # Audio queue for single-writer pattern
-        self._audio_queue: asyncio.Queue = asyncio.Queue()
-        self._audio_sender_task: Optional[asyncio.Task] = None
         
         # Frame counter for diagnostics
         self._frames_sent: int = 0
@@ -234,37 +230,6 @@ class ElevenLabsStreamBridge:
         task.add_done_callback(self._active_tasks.discard)
         return task
     
-    def _start_audio_sender(self):
-        """Start the single audio sender task.
-        
-        INVARIANT: Only this task writes to the Twilio WebSocket.
-        All audio (TTS + keepalive) flows through _audio_queue.
-        """
-        if self._audio_sender_task and not self._audio_sender_task.done():
-            return
-        self._audio_sender_task = self._create_task(self._audio_sender_loop())
-    
-    async def _audio_sender_loop(self):
-        """Single writer loop for Twilio WebSocket.
-        
-        This is the ONLY coroutine that sends audio to Twilio.
-        """
-        logger.info("Audio sender loop started")
-        
-        try:
-            while not self.is_closing:
-                try:
-                    # Wait for audio with timeout to allow checking is_closing
-                    frame = await asyncio.wait_for(self._audio_queue.get(), timeout=0.1)
-                    await self._send_frame_to_twilio(frame)
-                except asyncio.TimeoutError:
-                    continue
-                except asyncio.CancelledError:
-                    break
-        except Exception as e:
-            logger.error("Audio sender loop error: %s", str(e))
-        finally:
-            logger.info("Audio sender loop ended")
     
     def _start_keepalive(self):
         """Start the keepalive task to prevent Twilio timeout."""
@@ -273,12 +238,9 @@ class ElevenLabsStreamBridge:
         self._keepalive_task = self._create_task(self._keepalive_loop())
     
     async def _keepalive_loop(self):
-        """Send silence frames periodically to keep Twilio stream alive.
-        
-        Sends silence through the audio queue (single writer pattern).
-        """
-        KEEPALIVE_INTERVAL = 1.0  # Send keepalive every 1 second (more frequent)
-        SILENCE_FRAME = b"\x7f" * 160  # 20ms of μ-law silence
+        """Send silence frames periodically to keep Twilio stream alive."""
+        KEEPALIVE_INTERVAL = 1.0  # Send keepalive every 1 second
+        SILENCE_FRAME = b"\x7f" * 160  # 20ms of μ-law silence (exactly 160 bytes)
         
         logger.info("Keepalive loop started")
         
@@ -289,11 +251,10 @@ class ElevenLabsStreamBridge:
                 if self.is_closing:
                     break
                 
-                # Always send keepalive, even while speaking (Twilio needs continuous audio)
-                await self._queue_audio(SILENCE_FRAME)
-                
-                if DIAGNOSTIC_MODE:
-                    logger.debug("Queued keepalive frame, queue size: %d", self._audio_queue.qsize())
+                # Only send keepalive if not currently speaking (TTS sends its own frames)
+                if not self._is_speaking:
+                    await self._send_audio_chunk(SILENCE_FRAME)
+                    logger.info("Sent keepalive silence frame")
                     
         except asyncio.CancelledError:
             logger.debug("Keepalive loop cancelled")
@@ -411,9 +372,6 @@ class ElevenLabsStreamBridge:
             _STREAM_VERSION, self.stream_sid, self.call_sid
         )
         
-        # Start audio sender (single writer pattern)
-        logger.info(">>> Starting audio sender task")
-        self._start_audio_sender()
         
         # Start keepalive task to prevent Twilio timeout
         self._start_keepalive()
@@ -704,75 +662,58 @@ class ElevenLabsStreamBridge:
             # Track when agent finished speaking for reprompt logic
             self._last_agent_speech_time = time.time()
     
-    async def _queue_audio(self, audio_bytes: bytes):
-        """Queue audio for sending through the single writer.
+    async def _send_audio_chunk(self, audio_bytes: bytes):
+        """Send audio chunk to Twilio as exactly 160-byte frames.
         
-        Breaks audio into 160-byte frames before queueing.
-        """
-        if self.is_closing or not self.stream_sid:
-            return
-        
-        FRAME_SIZE = 160
-        ULAW_SILENCE = b"\x7f"
-        
-        # Break into 160-byte frames and queue each
-        for i in range(0, len(audio_bytes), FRAME_SIZE):
-            if self.is_closing:
-                break
-            
-            chunk = audio_bytes[i:i + FRAME_SIZE]
-            
-            # Pad undersized frames
-            if len(chunk) < FRAME_SIZE:
-                chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
-            
-            await self._audio_queue.put(chunk)
-    
-    async def _send_frame_to_twilio(self, frame: bytes):
-        """Send a single 160-byte frame to Twilio.
-        
-        INVARIANT: Only called from _audio_sender_loop.
+        CRITICAL: Every frame MUST be exactly 160 bytes.
+        This is the callback used by ElevenLabs TTS.
         """
         if self.is_closing or not self.stream_sid:
             return
         
         if self.twilio_ws.client_state != WebSocketState.CONNECTED:
-            if DIAGNOSTIC_MODE:
-                logger.warning("WebSocket not connected, dropping frame")
+            logger.warning("WebSocket not connected, cannot send audio")
             return
+        
+        FRAME_SIZE = 160
+        ULAW_SILENCE = b"\x7f"
+        frames_sent = 0
         
         try:
-            payload = base64.b64encode(frame).decode("ascii")
-            await self.twilio_ws.send_text(json.dumps({
-                "event": "media",
-                "streamSid": self.stream_sid,
-                "media": {
-                    "payload": payload,
-                },
-            }))
-            self._frames_sent += 1
-            
-            if DIAGNOSTIC_MODE and self._frames_sent % 50 == 0:
-                logger.info("Total frames sent: %d (streamSid=%s)", self._frames_sent, self.stream_sid[:20])
+            # Break into exactly 160-byte frames
+            for i in range(0, len(audio_bytes), FRAME_SIZE):
+                if self.is_closing:
+                    break
                 
+                chunk = audio_bytes[i:i + FRAME_SIZE]
+                
+                # CRITICAL: Pad undersized frames to exactly 160 bytes
+                if len(chunk) < FRAME_SIZE:
+                    chunk = chunk + (ULAW_SILENCE * (FRAME_SIZE - len(chunk)))
+                
+                # ASSERTION: Frame must be exactly 160 bytes
+                assert len(chunk) == FRAME_SIZE, f"Frame size {len(chunk)} != {FRAME_SIZE}"
+                
+                # Send frame directly to Twilio
+                payload = base64.b64encode(chunk).decode("ascii")
+                await self.twilio_ws.send_text(json.dumps({
+                    "event": "media",
+                    "streamSid": self.stream_sid,
+                    "media": {
+                        "payload": payload,
+                    },
+                }))
+                frames_sent += 1
+                self._frames_sent += 1
+            
+            if frames_sent > 0:
+                logger.info("Sent %d frames (each 160 bytes) to Twilio, total: %d", frames_sent, self._frames_sent)
+                
+        except AssertionError as e:
+            logger.error("FRAME SIZE VIOLATION: %s", str(e))
         except Exception as e:
             if not self.is_closing:
-                logger.error("Failed to send frame to Twilio: %s", str(e))
-    
-    async def _send_audio_chunk(self, audio_bytes: bytes):
-        """Send audio chunk to Twilio via the audio queue.
-        
-        This is the callback used by ElevenLabs TTS.
-        Audio is queued and sent by the single writer task.
-        """
-        if self.is_closing or not self.stream_sid:
-            return
-        
-        await self._queue_audio(audio_bytes)
-        
-        if DIAGNOSTIC_MODE:
-            frames_queued = (len(audio_bytes) + 159) // 160
-            logger.info("Queued %d frames (%d bytes) for Twilio", frames_queued, len(audio_bytes))
+                logger.error("Failed to send audio to Twilio: %s", str(e))
 
 
 @router.websocket("/twilio/elevenlabs/stream")
