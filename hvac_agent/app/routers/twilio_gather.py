@@ -51,7 +51,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "2.2.0-enterprise"
+_VERSION = "2.3.0-enterprise-flow"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -182,17 +182,123 @@ def format_phone_for_speech(phone: str) -> str:
     return phone
 
 
+# NATO phonetic alphabet for spelling names
+NATO_ALPHABET = {
+    'a': 'A as in Alpha', 'b': 'B as in Bravo', 'c': 'C as in Charlie',
+    'd': 'D as in Delta', 'e': 'E as in Echo', 'f': 'F as in Foxtrot',
+    'g': 'G as in Golf', 'h': 'H as in Hotel', 'i': 'I as in India',
+    'j': 'J as in Juliet', 'k': 'K as in Kilo', 'l': 'L as in Lima',
+    'm': 'M as in Mike', 'n': 'N as in November', 'o': 'O as in Oscar',
+    'p': 'P as in Papa', 'q': 'Q as in Quebec', 'r': 'R as in Romeo',
+    's': 'S as in Sierra', 't': 'T as in Tango', 'u': 'U as in Uniform',
+    'v': 'V as in Victor', 'w': 'W as in Whiskey', 'x': 'X as in X-ray',
+    'y': 'Y as in Yankee', 'z': 'Z as in Zulu'
+}
+
+# Letter word mappings (what Twilio might transcribe)
+LETTER_WORDS = {
+    'alpha': 'a', 'bravo': 'b', 'charlie': 'c', 'delta': 'd', 'echo': 'e',
+    'foxtrot': 'f', 'golf': 'g', 'hotel': 'h', 'india': 'i', 'juliet': 'j',
+    'kilo': 'k', 'lima': 'l', 'mike': 'm', 'november': 'n', 'oscar': 'o',
+    'papa': 'p', 'quebec': 'q', 'romeo': 'r', 'sierra': 's', 'tango': 't',
+    'uniform': 'u', 'victor': 'v', 'whiskey': 'w', 'xray': 'x', 'x-ray': 'x',
+    'yankee': 'y', 'zulu': 'z',
+    # Common alternatives
+    'apple': 'a', 'boy': 'b', 'cat': 'c', 'dog': 'd', 'edward': 'e',
+    'frank': 'f', 'george': 'g', 'henry': 'h', 'john': 'j', 'king': 'k',
+    'larry': 'l', 'mary': 'm', 'nancy': 'n', 'peter': 'p', 'queen': 'q',
+    'robert': 'r', 'sam': 's', 'tom': 't', 'william': 'w', 'young': 'y',
+    # Single letters (Twilio sometimes transcribes these)
+    'a': 'a', 'b': 'b', 'c': 'c', 'd': 'd', 'e': 'e', 'f': 'f', 'g': 'g',
+    'h': 'h', 'i': 'i', 'j': 'j', 'k': 'k', 'l': 'l', 'm': 'm', 'n': 'n',
+    'o': 'o', 'p': 'p', 'q': 'q', 'r': 'r', 's': 's', 't': 't', 'u': 'u',
+    'v': 'v', 'w': 'w', 'x': 'x', 'y': 'y', 'z': 'z',
+    # Common mishearings
+    'bee': 'b', 'see': 'c', 'sea': 'c', 'dee': 'd', 'gee': 'g', 'jay': 'j',
+    'kay': 'k', 'el': 'l', 'em': 'm', 'en': 'n', 'oh': 'o', 'pee': 'p',
+    'cue': 'q', 'queue': 'q', 'are': 'r', 'es': 's', 'tee': 't', 'tea': 't',
+    'you': 'u', 'vee': 'v', 'double': 'w', 'ex': 'x', 'why': 'y', 'zee': 'z',
+}
+
+
+def convert_spelled_to_name(speech: str) -> str:
+    """
+    Convert spelled letters to a name.
+    Handles: "J O H N" or "J as in Juliet, O as in Oscar..." 
+    """
+    result = []
+    words = speech.lower().replace(',', ' ').replace('.', ' ').split()
+    
+    skip_next = 0
+    for i, word in enumerate(words):
+        if skip_next > 0:
+            skip_next -= 1
+            continue
+            
+        # Skip filler words
+        if word in ['as', 'in', 'like', 'for', 'is']:
+            continue
+        
+        # Check letter mappings
+        clean_word = re.sub(r'[^a-z]', '', word)
+        if clean_word in LETTER_WORDS:
+            result.append(LETTER_WORDS[clean_word])
+    
+    return ''.join(result).title()
+
+
+def format_name_for_spelling(name: str) -> str:
+    """Format name with NATO phonetic for confirmation."""
+    letters = []
+    for char in name.upper():
+        if char.isalpha():
+            letters.append(NATO_ALPHABET.get(char.lower(), char))
+    return ', '.join(letters)
+
+
+def extract_digits_chunk(speech: str, expected_length: int) -> Tuple[bool, str]:
+    """
+    Extract a specific number of digits from speech.
+    More lenient - accepts if we get the expected count.
+    
+    Returns: (is_valid, digits)
+    """
+    # First try direct digit extraction
+    digits = re.sub(r'\D', '', speech)
+    
+    # If not enough, try word conversion
+    if len(digits) < expected_length:
+        digits = convert_spoken_to_digits(speech)
+    
+    # Check if we got the expected length
+    if len(digits) == expected_length:
+        return True, digits
+    elif len(digits) > expected_length:
+        # Take the first N digits
+        return True, digits[:expected_length]
+    else:
+        return False, digits
+
+
 # =============================================================================
 # CONVERSATION STATE
 # =============================================================================
 class ConversationState(str, Enum):
     GREETING = "greeting"
     IDENTIFY_NEED = "identify_need"
+    # Name collection (2-step: say name, then spell to confirm)
     COLLECT_NAME = "collect_name"
-    COLLECT_PHONE = "collect_phone"
-    VERIFY_PHONE = "verify_phone"      # New: verify phone number
+    SPELL_NAME = "spell_name"          # Ask to spell for confirmation
+    VERIFY_NAME = "verify_name"        # Confirm spelled name
+    # Phone collection (chunked: area code → first 3 → last 4)
+    COLLECT_AREA_CODE = "collect_area_code"
+    COLLECT_PHONE_PREFIX = "collect_phone_prefix"
+    COLLECT_PHONE_LINE = "collect_phone_line"
+    VERIFY_PHONE = "verify_phone"
+    # Address collection
     COLLECT_ADDRESS = "collect_address"
-    VERIFY_ADDRESS = "verify_address"  # New: verify address
+    VERIFY_ADDRESS = "verify_address"
+    # Issue and scheduling
     COLLECT_ISSUE = "collect_issue"
     COLLECT_DATE = "collect_date"
     COLLECT_TIME = "collect_time"
@@ -497,11 +603,12 @@ async def process_state(
             logger.info("Fast FAQ match for: %s", speech[:30])
             return ConversationState.FAQ, faq_answer, slots
     
-    # FAST PATH: Simple slot extraction for collection states (skip GPT)
+    # =========================================================================
+    # NAME COLLECTION (2-step: say name → spell to confirm)
+    # =========================================================================
     if current_state == ConversationState.COLLECT_NAME:
         # Clean up the name - remove filler words
         name = speech.strip()
-        # Remove common filler phrases
         filler_phrases = ["my name is", "this is", "i'm", "im", "i am", "it's", "its", "call me"]
         name_lower = name.lower()
         for filler in filler_phrases:
@@ -509,36 +616,89 @@ async def process_state(
                 name = name[len(filler):].strip()
                 break
         
-        # Capitalize properly
         name = name.title()
         
-        # Validate - name should have at least 2 characters
         if len(name) >= 2:
-            slots["name"] = name
-            return ConversationState.COLLECT_PHONE, f"Thanks {name}! What's the best phone number to reach you?", slots
+            slots["name_heard"] = name  # Store what we heard
+            # Ask to spell for confirmation
+            return ConversationState.SPELL_NAME, f"I heard {name}. Could you spell that for me? You can say letters like A as in Apple, B as in Boy.", slots
         else:
             return current_state, "I didn't catch your name. Could you please tell me your name?", slots
     
-    if current_state == ConversationState.COLLECT_PHONE:
-        # Validate phone number
-        is_valid, formatted, spoken = validate_phone(speech)
-        if is_valid:
-            slots["phone"] = formatted
-            slots["phone_spoken"] = spoken
-            # Ask for verification
-            return ConversationState.VERIFY_PHONE, f"I have {spoken}. Is that correct?", slots
-        elif spoken == "incomplete":
-            return current_state, "I need your full 10-digit phone number including area code. What's the number?", slots
+    if current_state == ConversationState.SPELL_NAME:
+        # Check if they said "yes" or "correct" (accepting what we heard)
+        if any(word in speech_lower for word in ["yes", "yeah", "correct", "right", "that's right", "that's correct"]):
+            slots["name"] = slots.get("name_heard", "")
+            return ConversationState.COLLECT_AREA_CODE, f"Great, {slots['name']}! Now for your phone number. What's your area code? Just the 3 digits.", slots
+        
+        # Try to convert spelled letters to name
+        spelled_name = convert_spelled_to_name(speech)
+        
+        if len(spelled_name) >= 2:
+            slots["name_spelled"] = spelled_name
+            return ConversationState.VERIFY_NAME, f"So that's {spelled_name}, spelled {format_name_for_spelling(spelled_name)}. Is that correct?", slots
         else:
-            return current_state, "I didn't catch that. Please say your phone number with area code.", slots
+            # Maybe they just said the name again
+            name = speech.strip().title()
+            if len(name) >= 2:
+                slots["name_heard"] = name
+                return current_state, f"I heard {name}. Could you spell that out for me letter by letter?", slots
+            return current_state, "I didn't catch that. Please spell your name letter by letter.", slots
+    
+    if current_state == ConversationState.VERIFY_NAME:
+        if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
+            slots["name"] = slots.get("name_spelled", slots.get("name_heard", ""))
+            return ConversationState.COLLECT_AREA_CODE, f"Perfect, {slots['name']}! Now for your phone number. What's your area code? Just the 3 digits.", slots
+        elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+            return ConversationState.SPELL_NAME, "No problem. Please spell your name again, letter by letter.", slots
+        return current_state, f"Is {slots.get('name_spelled', 'that')} correct? Yes or no?", slots
+    
+    # =========================================================================
+    # PHONE COLLECTION (chunked: area code → prefix → line number)
+    # =========================================================================
+    if current_state == ConversationState.COLLECT_AREA_CODE:
+        is_valid, digits = extract_digits_chunk(speech, 3)
+        if is_valid:
+            slots["area_code"] = digits
+            spoken = f"{digits[0]} {digits[1]} {digits[2]}"
+            return ConversationState.COLLECT_PHONE_PREFIX, f"Area code {spoken}. Now the next 3 digits?", slots
+        else:
+            return current_state, "I need your 3-digit area code. For example, 5 5 5. What's your area code?", slots
+    
+    if current_state == ConversationState.COLLECT_PHONE_PREFIX:
+        is_valid, digits = extract_digits_chunk(speech, 3)
+        if is_valid:
+            slots["phone_prefix"] = digits
+            area = slots.get("area_code", "")
+            spoken = f"{area[0]} {area[1]} {area[2]}, {digits[0]} {digits[1]} {digits[2]}"
+            return ConversationState.COLLECT_PHONE_LINE, f"Got it, {spoken}. And the last 4 digits?", slots
+        else:
+            return current_state, "I need the next 3 digits of your phone number.", slots
+    
+    if current_state == ConversationState.COLLECT_PHONE_LINE:
+        is_valid, digits = extract_digits_chunk(speech, 4)
+        if is_valid:
+            slots["phone_line"] = digits
+            # Combine all parts
+            area = slots.get("area_code", "")
+            prefix = slots.get("phone_prefix", "")
+            full_phone = f"({area}) {prefix}-{digits}"
+            slots["phone"] = full_phone
+            spoken = f"{area[0]} {area[1]} {area[2]}, {prefix[0]} {prefix[1]} {prefix[2]}, {digits[0]} {digits[1]} {digits[2]} {digits[3]}"
+            slots["phone_spoken"] = spoken
+            return ConversationState.VERIFY_PHONE, f"I have {spoken}. Is that correct?", slots
+        else:
+            return current_state, "I need the last 4 digits of your phone number.", slots
     
     if current_state == ConversationState.VERIFY_PHONE:
-        # Check yes/no for phone verification
         if any(word in speech_lower for word in ["yes", "yeah", "yep", "correct", "right", "that's right"]):
             return ConversationState.COLLECT_ADDRESS, "Great! What's the service address?", slots
         elif any(word in speech_lower for word in ["no", "nope", "wrong", "incorrect"]):
+            slots["area_code"] = None
+            slots["phone_prefix"] = None
+            slots["phone_line"] = None
             slots["phone"] = None
-            return ConversationState.COLLECT_PHONE, "No problem. Please say your phone number again.", slots
+            return ConversationState.COLLECT_AREA_CODE, "No problem. Let's start over. What's your area code?", slots
         return current_state, f"I have {slots.get('phone_spoken', 'your number')}. Is that correct? Yes or no?", slots
     
     if current_state == ConversationState.COLLECT_ADDRESS:
@@ -838,11 +998,17 @@ async def gather_respond(request: Request):
             current_state = ConversationState(session.get("state", "greeting"))
             if current_state == ConversationState.COLLECT_NAME:
                 reprompt = "I didn't catch your name. Could you tell me your name please?"
-            elif current_state == ConversationState.COLLECT_PHONE:
-                reprompt = "I need your phone number. Please say it slowly, like: 5 5 5, 1 2 3, 4 5 6 7."
+            elif current_state == ConversationState.SPELL_NAME:
+                reprompt = "Could you spell your name for me? Say each letter, like A as in Apple."
+            elif current_state == ConversationState.COLLECT_AREA_CODE:
+                reprompt = "What's your 3-digit area code?"
+            elif current_state == ConversationState.COLLECT_PHONE_PREFIX:
+                reprompt = "What are the next 3 digits of your phone number?"
+            elif current_state == ConversationState.COLLECT_PHONE_LINE:
+                reprompt = "And the last 4 digits?"
             elif current_state == ConversationState.COLLECT_ADDRESS:
                 reprompt = "What's the street address where you need service?"
-            elif current_state in [ConversationState.VERIFY_PHONE, ConversationState.VERIFY_ADDRESS, ConversationState.CONFIRM]:
+            elif current_state in [ConversationState.VERIFY_NAME, ConversationState.VERIFY_PHONE, ConversationState.VERIFY_ADDRESS, ConversationState.CONFIRM]:
                 reprompt = "I just need a yes or no. Is that correct?"
             else:
                 reprompt = "I'm still here. What can I help you with today?"
