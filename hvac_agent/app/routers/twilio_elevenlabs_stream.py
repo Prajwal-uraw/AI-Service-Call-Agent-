@@ -41,7 +41,7 @@ logger = get_logger("twilio.elevenlabs")
 DIAGNOSTIC_MODE = os.getenv("VOICE_DIAGNOSTIC_MODE", "true").lower() == "true"
 
 # Version marker for deployment verification - MUST appear in logs
-_STREAM_VERSION = "3.0.1-debug"
+_STREAM_VERSION = "3.0.2-paced"
 print(f"[STREAM_MODULE_LOADED] Version: {_STREAM_VERSION}")  # Force print on module load
 
 # =============================================================================
@@ -164,9 +164,15 @@ async def audio_sender(ctx: CallContext):
     Dedicated Twilio audio sender. This is the ONLY coroutine that sends audio.
     
     Pulls 160-byte frames from ctx.audio_queue and sends to Twilio.
+    Paces frames at ~20ms each (160 bytes @ 8kHz = 20ms).
     Stops when ctx.closed == True.
     """
     logger.info("Audio sender started")
+    
+    # Pacing: 160 bytes @ 8kHz = 20ms per frame
+    # Send slightly faster than real-time to keep buffer filled
+    FRAME_INTERVAL = 0.018  # 18ms between frames (slightly faster than 20ms)
+    last_send_time = 0
     
     try:
         while not ctx.closed:
@@ -184,6 +190,12 @@ async def audio_sender(ctx: CallContext):
                     logger.warning("WebSocket disconnected, dropping frame")
                     continue
                 
+                # Pace frames to avoid overwhelming Twilio
+                now = time.time()
+                elapsed = now - last_send_time
+                if elapsed < FRAME_INTERVAL:
+                    await asyncio.sleep(FRAME_INTERVAL - elapsed)
+                
                 # Send to Twilio
                 payload = base64.b64encode(frame).decode("ascii")
                 await ctx.ws.send_text(json.dumps({
@@ -192,6 +204,7 @@ async def audio_sender(ctx: CallContext):
                     "media": {"payload": payload},
                 }))
                 ctx.frames_sent += 1
+                last_send_time = time.time()
                 
                 # Log every 50 frames
                 if ctx.frames_sent % 50 == 0:
