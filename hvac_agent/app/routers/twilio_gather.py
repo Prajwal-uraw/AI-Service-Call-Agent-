@@ -52,13 +52,16 @@ from app.services.session_store import (
     clear_session as clear_session_from_store,
     session_store
 )
+from app.services.response_cache import get_faq_response, cache_response, get_cached_response
+from app.services.acknowledgments import get_acknowledgment, get_thinking_phrase
+from app.services.sentiment import analyze_sentiment, get_frustration_level, clear_analyzer
 
 logger = get_logger("twilio.gather")
 
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.5.0-thinking-sound"
+_VERSION = "3.6.0-latency-optimized"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -717,6 +720,7 @@ def get_session(call_sid: str) -> Dict[str, Any]:
 def clear_session(call_sid: str):
     """Clear session after call ends."""
     clear_session_from_store(call_sid)
+    clear_analyzer(call_sid)  # Clean up sentiment analyzer state
 
 
 # =============================================================================
@@ -1644,6 +1648,37 @@ async def gather_respond(request: Request):
         
         # Reset retries on successful speech
         session["retries"] = 0
+        
+        # === LATENCY OPTIMIZATION: Sentiment analysis for frustration detection ===
+        sentiment_result = analyze_sentiment(speech_result, call_sid)
+        frustration_level = sentiment_result.frustration_score
+        
+        # If caller is very frustrated, consider escalation
+        if sentiment_result.should_escalate:
+            logger.warning("Caller frustration detected, escalating: %s", sentiment_result.escalation_reason)
+            escalation_msg = "I can hear this has been frustrating. Let me connect you with someone who can help right away."
+            twiml = await generate_twiml(escalation_msg, ConversationState.TRANSFER, call_sid, host)
+            return Response(content=twiml, media_type="application/xml")
+        
+        # === LATENCY OPTIMIZATION: Check FAQ cache for instant response ===
+        current_state = ConversationState(session.get("state", "greeting"))
+        cached_faq = get_faq_response(speech_result)
+        if cached_faq and current_state in [ConversationState.GREETING, ConversationState.IDENTIFY_NEED, ConversationState.FAQ]:
+            logger.info("FAQ cache hit for: %s", speech_result[:50])
+            # Add acknowledgment for natural feel
+            ack = get_acknowledgment("question", len(session.get("history", [])), frustration_level)
+            response_text = f"{ack} {cached_faq}"
+            next_state = ConversationState.FAQ
+            updated_slots = session.get("slots", {})
+            
+            # Update session and return fast
+            session["history"].append({"role": "user", "content": speech_result, "confidence": confidence, "timestamp": datetime.now().isoformat()})
+            session["history"].append({"role": "assistant", "content": response_text, "timestamp": datetime.now().isoformat()})
+            session["state"] = next_state.value
+            save_session(call_sid, session)
+            
+            twiml = await generate_twiml(response_text, next_state, call_sid, host, action_url=action_url)
+            return Response(content=twiml, media_type="application/xml")
         
         # Add to history
         session["history"].append({
