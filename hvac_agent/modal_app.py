@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v3.0.2-20231218-force"
+_CACHE_BUSTER = "v3.1.0-20241218-production-hardening"
 
 # Define the Modal image with dependencies and local app source
 image = (
@@ -34,7 +34,10 @@ image = (
         "httpx>=0.27.0",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
         "twilio>=8.0.0",  # Twilio SDK for request validation
-        # elevenlabs SDK removed - using direct API calls for TTS only
+        # Phase 1-5 production hardening dependencies
+        "redis>=5.0.0",  # Session store backend
+        "cachetools>=5.3.0",  # Local TTL cache for session store
+        "phonenumbers>=8.13.0",  # Phone number validation
     )
     .add_local_python_source("app")  # Include the app package
 )
