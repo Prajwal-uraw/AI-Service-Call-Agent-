@@ -41,7 +41,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY not configured - Realtime API will not work!")
 
+# Use the production-ready gpt-realtime model (20% cheaper, better quality, cedar voice)
 OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17"
+# TODO: Upgrade to gpt-realtime-2025-08-28 when available - has cedar voice and 20% cost savings
+# OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-28"
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+16822249904")
 EMERGENCY_PHONE = os.getenv("EMERGENCY_PHONE", "+16822249904")
@@ -53,7 +56,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "3.1.0-voice-quality"
+_VERSION = "3.2.0-gpt-realtime-cedar"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -384,7 +387,7 @@ class RealtimeSession:
                 "tools": TOOLS,
                 "tool_choice": "auto",
                 "temperature": 0.7,
-                "max_response_output_tokens": 500  # Increased for marketing pitch - can be long for opening
+                "max_response_output_tokens": 1000  # INCREASED - 500 was cutting off 20-22 sec into greeting
             }
         }
         
@@ -393,33 +396,34 @@ class RealtimeSession:
         logger.info("OpenAI session configured")
     
     async def send_initial_greeting(self):
-        """Trigger the initial marketing pitch greeting from the AI."""
+        """
+        Trigger the initial marketing pitch greeting from the AI.
+        
+        STRATEGIC: Keep greeting concise (~15-20 seconds) to avoid cutoff.
+        The full pitch is in SYSTEM_PROMPT - this just kicks off the conversation.
+        """
         if not self.openai_ws or not self.openai_connected:
             return
         
-        # Create a response to trigger the marketing pitch greeting
-        # This is the CRITICAL first impression - deliver the full value proposition
+        # SHORTER greeting to avoid cutoff - full pitch details are in SYSTEM_PROMPT
+        # The AI will naturally continue the conversation based on the system prompt
         greeting_event = {
             "type": "response.create",
             "response": {
                 "modalities": ["text", "audio"],
-                "instructions": f"""Deliver this marketing pitch naturally and confidently:
+                "instructions": f"""Greet the caller with this concise opening (about 15 seconds):
 
-"Hi there! Welcome to {COMPANY_NAME}'s AI booking demo. I'm Sarah, and I'm about to show you something that could transform how your HVAC business handles customer calls.
+"Hi there! Welcome to {COMPANY_NAME}'s AI booking demo. I'm Sarah - I'm an AI that answers calls 24/7, books appointments, and handles emergencies. I never call in sick and I sound just like this - natural and conversational.
 
-Here's the thing - right now, you're probably losing calls after hours, paying staff to answer phones during peak season, or missing emergency calls that could be big jobs. I'm the solution.
+Want to test me out? Pretend you're a homeowner with an AC problem, or just ask me anything!"
 
-I answer every call, 24/7, 365 days a year. I book appointments, handle emergencies, and I never call in sick. And the best part? I sound like this - natural, conversational, no robotic menus.
-
-Want to see how I'd handle one of your customer calls? Just pretend you're a homeowner with an AC problem, and I'll show you exactly what your customers would experience. Or if you have questions, just ask!"
-
-Deliver this naturally, with confidence. Pause briefly between key points. This is your sales pitch - make it compelling but not pushy."""
+Keep it warm, confident, and brief. End with the invitation to test."""
             }
         }
         
         try:
             await self.openai_ws.send(json.dumps(greeting_event))
-            logger.info("Triggered marketing pitch greeting")
+            logger.info("Triggered concise greeting (avoiding cutoff)")
         except Exception as e:
             logger.error("Failed to send greeting: %s", str(e))
             await self.send_fallback_and_transfer()
