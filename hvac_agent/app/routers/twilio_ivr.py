@@ -23,7 +23,7 @@ logger = get_logger("twilio.ivr")
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 
 # Version for deployment verification
-_VERSION = "1.0.0-ivr"
+_VERSION = "1.0.1-ivr-fixed"
 print(f"[IVR_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -52,7 +52,7 @@ async def ivr_incoming(request: Request):
     <Say voice="Polly.Joanna-Neural">
         I didn't receive any input. Connecting you to our standard service.
     </Say>
-    <Redirect>/twilio/gather/incoming</Redirect>
+    <Redirect>https://{host}/twilio/gather/incoming</Redirect>
 </Response>"""
     
     return Response(content=twiml, media_type="application/xml")
@@ -85,7 +85,7 @@ async def ivr_route(request: Request):
     <Say voice="Polly.Joanna-Neural">Connecting you now.</Say>
     <Connect>
         <Stream url="{ws_url}">
-            <Parameter name="caller" value="{{{{From}}}}" />
+            <Parameter name="caller" value="{{From}}" />
         </Stream>
     </Connect>
 </Response>"""

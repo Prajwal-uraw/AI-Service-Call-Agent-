@@ -53,7 +53,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "2.0.0-realtime-production"
+_VERSION = "2.0.1-realtime-fixed"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -913,7 +913,7 @@ async def realtime_incoming(request: Request):
 <Response>
     <Connect>
         <Stream url="{ws_url}">
-            <Parameter name="caller" value="{{{{From}}}}" />
+            <Parameter name="caller" value="{{From}}" />
         </Stream>
     </Connect>
     <Say voice="Polly.Joanna-Neural">We're experiencing technical difficulties. Please hold.</Say>
