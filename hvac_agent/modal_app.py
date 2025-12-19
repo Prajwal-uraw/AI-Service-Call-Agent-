@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v4.2.0-20241219-lead-capture-resend"
+_CACHE_BUSTER = "v4.3.0-20241219-kc-persona-polished"
 
 # Define the Modal image with dependencies and local app source
 image = (
