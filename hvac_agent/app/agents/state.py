@@ -36,6 +36,25 @@ class CallState(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     
+     # Booking flow state
+    booking_stage: Optional[str] = Field(
+        None,
+        description="Current stage of the booking process. "
+        "One of: 'collecting_issue', 'collecting_location', 'collecting_time', 'collecting_contact', 'confirming'"
+    )
+    booking_data: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Temporary storage for booking form data"
+    )
+    booking_attempts: int = Field(
+        0,
+        description="Number of attempts made in the current booking flow"
+    )
+    last_booking_error: Optional[str] = Field(
+        None,
+        description="Last error message encountered during booking"
+    )
+
     # Issue details
     issue: Optional[str] = None
     issue_category: Optional[str] = None
@@ -107,6 +126,47 @@ class CallState(BaseModel):
             prefix = "User" if turn.role == "user" else "Agent"
             lines.append(f"{prefix}: {turn.content}")
         return "\n".join(lines)
+    
+    # In your CallState class, add these methods after the get_conversation_summary method
+
+    def start_booking_flow(self) -> None:
+        """Initialize booking flow."""
+        self.booking_stage = 'collecting_issue'
+        self.booking_data = {}  # Reset any previous data
+        self.booking_attempts = 0
+        self.last_booking_error = None
+        logger.info("Started booking flow")
+
+    def update_booking_data(self, **updates) -> None:
+        """
+        Update booking data with new values.
+        
+        Args:
+            **updates: Key-value pairs to update in booking_data
+        """
+        self.booking_data.update(updates)
+        self.last_activity = datetime.utcnow()
+
+    def complete_booking_flow(self) -> None:
+        """Complete the booking flow and update appointment state."""
+        self.has_appointment = True
+        self.appointment_id = self.booking_data.get('appointment_id')
+        self.appointment_date = self.booking_data.get('date')
+        self.appointment_time = self.booking_data.get('time')
+        self.issue = self.booking_data.get('issue')
+        self.location_code = self.booking_data.get('location_code')
+        self.booking_stage = None  # Reset booking flow
+        self.booking_attempts = 0
+        self.last_booking_error = None
+        logger.info("Completed booking flow for appointment %s", self.appointment_id)
+
+    def reset_booking_flow(self) -> None:
+        """Reset the booking flow without completing it."""
+        self.booking_stage = None
+        self.booking_data = {}
+        self.booking_attempts = 0
+        self.last_booking_error = None
+        logger.info("Reset booking flow")
     
     def set_emergency(self, emergency_type: str) -> None:
         """Mark call as emergency."""
