@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v3.4.0-20241219-greeting-fix-cedar-ready"
+_CACHE_BUSTER = "v4.0.0-20241219-gpt-realtime-production-cedar"
 
 # Define the Modal image with dependencies and local app source
 image = (
