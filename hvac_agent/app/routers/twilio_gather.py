@@ -46,13 +46,22 @@ from app.services.hvac_knowledge import (
     format_insight_for_voice
 )
 from app.services.tts.elevenlabs_tts import generate_audio_url, is_available as is_elevenlabs_available
+from app.services.session_store import (
+    get_session as get_session_from_store,
+    save_session,
+    clear_session as clear_session_from_store,
+    session_store
+)
+from app.services.response_cache import get_faq_response, cache_response, get_cached_response
+from app.services.acknowledgments import get_acknowledgment, get_thinking_phrase
+from app.services.sentiment import analyze_sentiment, get_frustration_level, clear_analyzer
 
 logger = get_logger("twilio.gather")
 
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.5.0-thinking-sound"
+_VERSION = "3.8.0-human-like"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -685,101 +694,139 @@ async def send_sms_confirmation(phone: str, name: str, date: str, time: str, add
         return False
 
 
-# In-memory session storage (use Redis in production for multi-instance)
-# Key: CallSid, Value: session data
-_sessions: Dict[str, Dict[str, Any]] = {}
+# Session storage - uses Redis with local cache (see session_store.py)
+# Provides: persistence, multi-instance support, graceful fallback to in-memory
+_sessions: Dict[str, Dict[str, Any]] = {}  # Legacy reference for health check
 
 
 def get_session(call_sid: str) -> Dict[str, Any]:
-    """Get or create session for a call."""
-    if call_sid not in _sessions:
-        _sessions[call_sid] = {
-            "state": ConversationState.GREETING,
-            "slots": {
-                "name": None,
-                "phone": None,
-                "address": None,
-                "issue": None,
-                "date": None,
-                "time": None,
-            },
-            "retries": 0,
-            "history": [],
-            "created_at": datetime.now().isoformat(),
+    """
+    Get or create session for a call.
+    
+    Uses Redis-backed session store with local cache for performance.
+    Falls back to in-memory if Redis unavailable.
+    """
+    session = get_session_from_store(call_sid, default_state=ConversationState.GREETING.value)
+    
+    # Ensure state is ConversationState enum value (string)
+    if isinstance(session.get("state"), ConversationState):
+        session["state"] = session["state"].value
+    elif session.get("state") is None:
+        session["state"] = ConversationState.GREETING.value
+    
+    # CRITICAL: Initialize slots if not present
+    if "slots" not in session or session["slots"] is None:
+        session["slots"] = {
+            "name": None,
+            "phone": None,
+            "area_code": None,
+            "phone_prefix": None,
+            "phone_line": None,
+            "phone_spoken": None,
+            "address": None,
+            "issue": None,
+            "date": None,
+            "time": None,
+            "callback_phone": None,
+            "callback_message": None,
         }
-    return _sessions[call_sid]
+    
+    # Initialize history if not present
+    if "history" not in session:
+        session["history"] = []
+    
+    # Initialize retry counter
+    if "retries" not in session:
+        session["retries"] = 0
+    
+    return session
 
 
 def clear_session(call_sid: str):
     """Clear session after call ends."""
-    if call_sid in _sessions:
-        del _sessions[call_sid]
+    clear_session_from_store(call_sid)
+    clear_analyzer(call_sid)  # Clean up sentiment analyzer state
 
 
 # =============================================================================
 # PROMPTS - Natural, Human-like Responses
+# INDUSTRY-BEST: Conversational, warm, varied - sounds like a real person
 # =============================================================================
 PROMPTS = {
     ConversationState.GREETING: [
-        f"Thanks for calling {COMPANY_NAME}! This call may be recorded for quality purposes. Are you calling to schedule a service appointment today?",
+        f"Hi, thanks for calling {COMPANY_NAME}! This is Sarah. How can I help you today?",
+        f"{COMPANY_NAME}, this is Sarah. What can I do for you?",
+        f"Good afternoon, {COMPANY_NAME}. Sarah speaking, how can I help?",
     ],
     ConversationState.IDENTIFY_NEED: [
-        "Got it. Are you looking to schedule a service appointment, or do you have a question I can help with?",
+        "Sure! Are you looking to schedule something, or do you have a question?",
+        "Got it. Need to book a service, or just have a quick question?",
     ],
     ConversationState.COLLECT_NAME: [
-        "Perfect, I can help you schedule that. May I have your name please?",
-        "Sure thing! Let me get you scheduled. What's your name?",
-        "Absolutely, I'll set that up. Can I get your name?",
+        "I can definitely help with that. And your name?",
+        "Sure thing, let me get you scheduled. What's your name?",
+        "Absolutely. And who am I speaking with?",
     ],
     ConversationState.COLLECT_AREA_CODE: [
-        "Thanks {name}! Now for your phone number. What's your area code? Just the 3 digits.",
+        "Thanks, {name}! What's your phone number? Start with the area code.",
+        "Got it, {name}. Best number to reach you? Area code first.",
     ],
     ConversationState.COLLECT_PHONE_PREFIX: [
-        "Got it. And the next 3 digits?",
+        "Okay, and the next three?",
+        "Got it. Next three digits?",
     ],
     ConversationState.COLLECT_PHONE_LINE: [
-        "And the last 4 digits?",
+        "And the last four?",
+        "Last four digits?",
     ],
     ConversationState.COLLECT_ADDRESS: [
-        "Great. What's the service address?",
-        "And what address will we be coming to?",
+        "What's the address there?",
+        "And where are we heading to?",
+        "What address should the tech come to?",
     ],
     ConversationState.COLLECT_ISSUE: [
-        "What's going on with your system? Just give me a quick description.",
-        "Can you tell me briefly what the issue is?",
+        "So what's going on with your system?",
+        "Tell me what's happening - just a quick description.",
+        "What seems to be the problem?",
     ],
     ConversationState.COLLECT_DATE: [
-        "When would you like us to come out? We have availability this week.",
-        "What day works best for you?",
+        "When works for you? We've got availability this week.",
+        "What day's good for you?",
+        "When would you like us to come out?",
     ],
     ConversationState.COLLECT_TIME: [
-        "And do you prefer morning or afternoon?",
-        "Would morning or afternoon work better?",
+        "Morning or afternoon work better?",
+        "Do you prefer morning or afternoon?",
     ],
     ConversationState.CONFIRM: [
-        "Okay, let me confirm. {name}, we'll have a technician at {address} on {date} in the {time} for {issue}. Does that sound right?",
+        "Alright, so I've got {name} at {address}, {date} in the {time}, for {issue}. Sound right?",
+        "Let me make sure I got this: {name}, {address}, {date} {time}, for {issue}. That correct?",
     ],
     ConversationState.COMPLETE: [
-        "You're all set! We'll see you on {date}. Is there anything else I can help with?",
-        "Perfect, your appointment is confirmed for {date}. Anything else?",
+        "Perfect, you're all set for {date}! Anything else I can help with?",
+        "You're booked for {date}. Need anything else?",
+        "All done! We'll see you {date}. Anything else?",
     ],
     ConversationState.FAQ: [
-        "{answer} Would you like to schedule a service call?",
+        "{answer} Want me to get you scheduled?",
+        "{answer} Would you like to book a service call?",
     ],
     ConversationState.EMERGENCY: [
-        "That sounds like it could be an emergency. I'm going to transfer you to our emergency line right away. Please hold.",
+        "Okay, that sounds serious. I'm transferring you to our emergency line right now. Please hold.",
+        "That's an emergency situation. Let me get you to our urgent line immediately.",
     ],
     ConversationState.GOODBYE: [
-        "Thanks for calling {company}! Have a great day.",
-        "Thank you! Take care and stay comfortable.",
+        "Alright, take care! We'll see you soon.",
+        "Sounds good. Have a great day!",
+        "Perfect. Thanks for calling, take care!",
     ],
     "reprompt": [
-        "Sorry, I didn't catch that. Could you say that again?",
-        "I didn't quite hear you. One more time?",
-        "Could you repeat that please?",
+        "Sorry, I missed that. One more time?",
+        "Didn't catch that - could you say it again?",
+        "Say that again for me?",
     ],
     "fallback": [
-        "I'm having trouble understanding. Let me transfer you to someone who can help.",
+        "I'm having trouble hearing you. Let me connect you with someone who can help.",
     ],
 }
 
@@ -1252,13 +1299,22 @@ async def process_state(
                   f"{slots.get('date')} in the {slots.get('time')}. Is all that correct?"
         return ConversationState.CONFIRM, summary, slots
     
-    # For greeting state with non-FAQ, use GPT to understand intent
-    if current_state == ConversationState.GREETING:
-        # Check for simple booking intent
-        if any(word in speech_lower for word in ["schedule", "book", "appointment", "service", "repair", "fix", "broken", "not working"]):
-            return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
+    # SLOW PATH: Use GPT only for complex cases that weren't handled above
+    # Skip GPT for states that have clear deterministic flows
+    if current_state in [
+        ConversationState.COLLECT_AREA_CODE,
+        ConversationState.COLLECT_PHONE_PREFIX, 
+        ConversationState.COLLECT_PHONE_LINE,
+        ConversationState.VERIFY_PHONE,
+        ConversationState.VERIFY_ADDRESS,
+        ConversationState.VERIFY_NAME,
+        ConversationState.CONFIRM,
+        ConversationState.PARTIAL_CORRECTION,
+    ]:
+        # These states should have been handled above - if we get here, reprompt
+        logger.warning("Unhandled input in state %s: %s", current_state, speech[:50])
+        return current_state, get_prompt(current_state, slots) or "I didn't catch that. Could you repeat?", slots
     
-    # SLOW PATH: Use GPT only for complex cases
     analysis = await analyze_speech(speech, current_state, session)
     intent = analysis.get("intent", "unclear")
     extracted_slots = analysis.get("slots", {})
@@ -1268,7 +1324,7 @@ async def process_state(
         if value and key in slots:
             slots[key] = value
     
-    # State transitions
+    # State transitions - GPT fallback path (only for GREETING and complex states)
     if current_state == ConversationState.GREETING:
         if analysis.get("is_emergency"):
             return ConversationState.EMERGENCY, get_prompt(ConversationState.EMERGENCY), slots
@@ -1277,21 +1333,28 @@ async def process_state(
             answer = format_insight_for_voice(insight)
             return ConversationState.FAQ, get_prompt(ConversationState.FAQ, {"answer": answer}), slots
         elif intent in ["booking", "other", "unclear"]:
-            # Default to booking flow
+            # Default to booking flow - use COLLECT_NAME (not COLLECT_PHONE)
             if slots.get("name"):
-                return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+                # If we already have name, go to area code (chunked phone)
+                return ConversationState.COLLECT_AREA_CODE, f"Thanks {slots.get('name')}! Now for your phone number. What's your area code? Just the 3 digits.", slots
             return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
+        # If nothing matched, stay in greeting but give a helpful response
+        return ConversationState.COLLECT_NAME, "I can help you schedule an HVAC service appointment. May I have your name please?", slots
     
     elif current_state == ConversationState.COLLECT_NAME:
         if slots.get("name"):
-            return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+            # Go to chunked phone collection, not COLLECT_PHONE
+            return ConversationState.COLLECT_AREA_CODE, f"Thanks {slots.get('name')}! Now for your phone number. What's your area code? Just the 3 digits.", slots
         # Retry
         return current_state, "I didn't catch your name. Could you tell me your name please?", slots
     
+    # NOTE: COLLECT_PHONE state is deprecated - we use chunked collection now
+    # Keep this for backward compatibility but redirect to chunked flow
     elif current_state == ConversationState.COLLECT_PHONE:
         if slots.get("phone"):
             return ConversationState.COLLECT_ADDRESS, get_prompt(ConversationState.COLLECT_ADDRESS), slots
-        return current_state, "I need your phone number. What's the best number to reach you?", slots
+        # Redirect to chunked phone collection
+        return ConversationState.COLLECT_AREA_CODE, "Let me get your phone number. What's your area code? Just the 3 digits.", slots
     
     elif current_state == ConversationState.COLLECT_ADDRESS:
         if slots.get("address"):
@@ -1339,7 +1402,7 @@ async def process_state(
             slots = {k: None for k in slots}
             return ConversationState.COLLECT_NAME, "Let's start fresh. What's your name?", slots
         # If unclear, ask again more explicitly
-        return current_state, "I need a yes or no. Is the booking information correct?"
+        return current_state, "I need a yes or no. Is the booking information correct?", slots
     
     elif current_state == ConversationState.PARTIAL_CORRECTION:
         # Handle partial corrections
@@ -1642,6 +1705,37 @@ async def gather_respond(request: Request):
         # Reset retries on successful speech
         session["retries"] = 0
         
+        # === LATENCY OPTIMIZATION: Sentiment analysis for frustration detection ===
+        sentiment_result = analyze_sentiment(speech_result, call_sid)
+        frustration_level = sentiment_result.frustration_score
+        
+        # If caller is very frustrated, consider escalation
+        if sentiment_result.should_escalate:
+            logger.warning("Caller frustration detected, escalating: %s", sentiment_result.escalation_reason)
+            escalation_msg = "I can hear this has been frustrating. Let me connect you with someone who can help right away."
+            twiml = await generate_twiml(escalation_msg, ConversationState.TRANSFER, call_sid, host)
+            return Response(content=twiml, media_type="application/xml")
+        
+        # === LATENCY OPTIMIZATION: Check FAQ cache for instant response ===
+        current_state = ConversationState(session.get("state", "greeting"))
+        cached_faq = get_faq_response(speech_result)
+        if cached_faq and current_state in [ConversationState.GREETING, ConversationState.IDENTIFY_NEED, ConversationState.FAQ]:
+            logger.info("FAQ cache hit for: %s", speech_result[:50])
+            # Add acknowledgment for natural feel
+            ack = get_acknowledgment("question", len(session.get("history", [])), frustration_level)
+            response_text = f"{ack} {cached_faq}"
+            next_state = ConversationState.FAQ
+            updated_slots = session.get("slots", {})
+            
+            # Update session and return fast
+            session["history"].append({"role": "user", "content": speech_result, "confidence": confidence, "timestamp": datetime.now().isoformat()})
+            session["history"].append({"role": "assistant", "content": response_text, "timestamp": datetime.now().isoformat()})
+            session["state"] = next_state.value
+            save_session(call_sid, session)
+            
+            twiml = await generate_twiml(response_text, next_state, call_sid, host, action_url=action_url)
+            return Response(content=twiml, media_type="application/xml")
+        
         # Add to history
         session["history"].append({
             "role": "user",
@@ -1654,13 +1748,16 @@ async def gather_respond(request: Request):
         next_state, response_text, updated_slots = await process_state(call_sid, speech_result, session)
         
         # Update session
-        session["state"] = next_state
+        session["state"] = next_state.value if isinstance(next_state, ConversationState) else next_state
         session["slots"] = updated_slots
         session["history"].append({
             "role": "assistant",
             "content": response_text,
             "timestamp": datetime.now().isoformat()
         })
+        
+        # Persist session to Redis/store
+        save_session(call_sid, session)
         
         logger.info("State transition: %s -> %s, Response: %s", 
                    session.get("state"), next_state, response_text[:50])
@@ -1743,10 +1840,11 @@ async def gather_status(request: Request):
 @router.get("/twilio/gather/health")
 async def gather_health():
     """Health check for gather endpoints."""
+    store_stats = session_store.get_stats()
     return {
         "status": "healthy",
         "version": _VERSION,
-        "active_sessions": len(_sessions),
+        "session_store": store_stats,
         "elevenlabs_configured": bool(ELEVENLABS_API_KEY),
         "openai_configured": bool(OPENAI_API_KEY),
     }

@@ -208,16 +208,44 @@ def create_booking(
         issue: Description of the HVAC issue
         location_code: Location code
         phone: Customer phone (optional)
-        call_sid: Twilio call SID (optional)
+        call_sid: Twilio call SID (optional, used as idempotency key)
         priority: Priority level (1=High, 2=Medium, 3=Normal)
         
     Returns:
         Booking result with status and details
+        
+    Note:
+        If call_sid is provided, this function is idempotent - calling it
+        multiple times with the same call_sid will return the existing booking
+        instead of creating a duplicate.
     """
     loc = get_location_by_code(db, location_code)
     if not loc:
         logger.warning("Booking attempt for unknown location: %s", location_code)
         return {"status": "error", "message": "Unknown location."}
+
+    # IDEMPOTENCY CHECK: If call_sid provided, check for existing booking from this call
+    if call_sid:
+        existing_stmt = (
+            select(Appointment)
+            .where(Appointment.call_sid == call_sid)
+            .where(Appointment.is_cancelled == False)
+        )
+        existing = db.scalar(existing_stmt)
+        
+        if existing:
+            logger.info(
+                "Idempotent booking request: call_sid=%s already has appointment_id=%d",
+                call_sid, existing.id
+            )
+            return {
+                "status": "success",
+                "message": f"Booking already confirmed for {existing.date.isoformat()} at {existing.time.strftime('%H:%M')}.",
+                "appointment_id": existing.id,
+                "confirmation": f"Your confirmation number is {existing.id:05d}.",
+                "confirmation_sent": bool(existing.customer_phone or existing.customer_email),
+                "idempotent": True,  # Indicates this was a duplicate request
+            }
 
     # Check availability first
     avail = check_availability(db, date_str, time_str, location_code)

@@ -59,8 +59,19 @@ HVAC_COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_TOOL_CALLS = int(os.getenv("MAX_TOOL_CALLS", "5"))
 
-# Initialize OpenAI client with timeout
-_http_client = httpx.Client(timeout=httpx.Timeout(4.0, connect=2.0))
+# Initialize OpenAI client with production-grade timeout configuration
+# - total: 15s for complete request (GPT-4o with tools can take 3-5s)
+# - connect: 3s for connection establishment
+# - read: 12s for response streaming
+# - write: 5s for request upload
+# - pool: 5s for connection pool wait
+_http_client = httpx.Client(timeout=httpx.Timeout(
+    timeout=15.0,
+    connect=3.0,
+    read=12.0,
+    write=5.0,
+    pool=5.0
+))
 client = OpenAI(api_key=OPENAI_API_KEY, http_client=_http_client)
 
 # Enterprise-Level Service Agent - Natural, Professional, Conversational
