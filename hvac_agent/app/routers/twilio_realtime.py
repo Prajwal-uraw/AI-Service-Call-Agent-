@@ -41,10 +41,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     logger.warning("OPENAI_API_KEY not configured - Realtime API will not work!")
 
-# Use the production-ready gpt-realtime model (20% cheaper, better quality, cedar voice)
-OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17"
-# TODO: Upgrade to gpt-realtime-2025-08-28 when available - has cedar voice and 20% cost savings
-# OPENAI_REALTIME_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-28"
+# PRIMARY: Production-ready gpt-realtime model (20% cheaper, better quality, cedar voice)
+OPENAI_REALTIME_URL_PRIMARY = "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-28"
+# FALLBACK: Previous model if primary fails
+OPENAI_REALTIME_URL_FALLBACK = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17"
 COMPANY_NAME = os.getenv("HVAC_COMPANY_NAME", "KC Comfort Air")
 TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+16822249904")
 EMERGENCY_PHONE = os.getenv("EMERGENCY_PHONE", "+16822249904")
@@ -56,7 +56,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "3.2.0-gpt-realtime-cedar"
+_VERSION = "4.0.0-gpt-realtime-production"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -311,54 +311,72 @@ class RealtimeSession:
         # Transfer flags
         self.transfer_to_gather_pending: bool = False
         
+        # Track which model we're using
+        self.using_fallback_model: bool = False
+        
     async def connect_to_openai(self) -> bool:
         """
         Establish WebSocket connection to OpenAI Realtime API.
-        Includes retry logic with exponential backoff.
+        
+        Strategy:
+        1. Try PRIMARY model (gpt-realtime-2025-08-28) first
+        2. If that fails, fallback to PREVIOUS model (gpt-4o-realtime-preview)
+        3. Uses exponential backoff within each model attempt
         
         Note: Uses 'additional_headers' for older websockets versions (Modal)
         and 'extra_headers' for newer versions. Tries both for compatibility.
         """
-        max_retries = 3
-        base_delay = 0.5  # seconds
-        
         headers = [
             ("Authorization", f"Bearer {OPENAI_API_KEY}"),
             ("OpenAI-Beta", "realtime=v1")
         ]
         
-        for attempt in range(max_retries):
-            try:
-                # Try with additional_headers first (older websockets versions on Modal)
-                try:
-                    self.openai_ws = await websockets.connect(
-                        OPENAI_REALTIME_URL,
-                        additional_headers=headers,
-                        ping_interval=20,
-                        ping_timeout=10
-                    )
-                except TypeError:
-                    # Fall back to extra_headers (newer websockets versions)
-                    self.openai_ws = await websockets.connect(
-                        OPENAI_REALTIME_URL,
-                        extra_headers=headers,
-                        ping_interval=20,
-                        ping_timeout=10
-                    )
-                
-                logger.info("Connected to OpenAI Realtime API (attempt %d)", attempt + 1)
-                self.openai_connected = True
-                return True
-                
-            except Exception as e:
-                logger.error("Failed to connect to OpenAI (attempt %d/%d): %s", 
-                           attempt + 1, max_retries, str(e))
-                if attempt < max_retries - 1:
-                    delay = base_delay * (2 ** attempt)  # Exponential backoff
-                    logger.info("Retrying in %.1f seconds...", delay)
-                    await asyncio.sleep(delay)
+        # Try PRIMARY model first, then FALLBACK
+        models_to_try = [
+            (OPENAI_REALTIME_URL_PRIMARY, "gpt-realtime-2025-08-28 (primary)"),
+            (OPENAI_REALTIME_URL_FALLBACK, "gpt-4o-realtime-preview (fallback)")
+        ]
         
-        logger.error("All OpenAI connection attempts failed")
+        for model_url, model_name in models_to_try:
+            max_retries = 2  # Fewer retries per model since we have fallback
+            base_delay = 0.3
+            
+            for attempt in range(max_retries):
+                try:
+                    # Try with additional_headers first (older websockets versions on Modal)
+                    try:
+                        self.openai_ws = await websockets.connect(
+                            model_url,
+                            additional_headers=headers,
+                            ping_interval=20,
+                            ping_timeout=10
+                        )
+                    except TypeError:
+                        # Fall back to extra_headers (newer websockets versions)
+                        self.openai_ws = await websockets.connect(
+                            model_url,
+                            extra_headers=headers,
+                            ping_interval=20,
+                            ping_timeout=10
+                        )
+                    
+                    self.using_fallback_model = (model_url == OPENAI_REALTIME_URL_FALLBACK)
+                    logger.info("Connected to OpenAI Realtime API: %s", model_name)
+                    self.openai_connected = True
+                    return True
+                    
+                except Exception as e:
+                    logger.warning("Failed to connect to %s (attempt %d/%d): %s", 
+                                 model_name, attempt + 1, max_retries, str(e))
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        await asyncio.sleep(delay)
+            
+            # If primary failed, log and try fallback
+            if model_url == OPENAI_REALTIME_URL_PRIMARY:
+                logger.warning("Primary model failed, trying fallback model...")
+        
+        logger.error("All OpenAI connection attempts failed (both primary and fallback)")
         return False
     
     async def configure_session(self):
@@ -366,13 +384,19 @@ class RealtimeSession:
         if not self.openai_ws or self.session_configured:
             return
         
+        # Select voice based on model
+        # cedar = "natural and conversational" (only on gpt-realtime-2025-08-28)
+        # shimmer = "energetic and expressive" (fallback for older model)
+        voice = "cedar" if not self.using_fallback_model else "shimmer"
+        logger.info("Using voice: %s (fallback_model=%s)", voice, self.using_fallback_model)
+        
         # Session configuration
         config = {
             "type": "session.update",
             "session": {
                 "modalities": ["text", "audio"],
                 "instructions": SYSTEM_PROMPT,
-                "voice": "shimmer",  # shimmer = energetic/expressive, most human-like available
+                "voice": voice,  # cedar for new model, shimmer for fallback
                 "input_audio_format": "pcm16",  # We'll convert from μ-law
                 "output_audio_format": "pcm16",  # We'll convert to μ-law
                 "input_audio_transcription": {
