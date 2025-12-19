@@ -61,7 +61,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.6.0-latency-optimized"
+_VERSION = "3.7.0-flow-fixed"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -714,6 +714,31 @@ def get_session(call_sid: str) -> Dict[str, Any]:
     elif session.get("state") is None:
         session["state"] = ConversationState.GREETING.value
     
+    # CRITICAL: Initialize slots if not present
+    if "slots" not in session or session["slots"] is None:
+        session["slots"] = {
+            "name": None,
+            "phone": None,
+            "area_code": None,
+            "phone_prefix": None,
+            "phone_line": None,
+            "phone_spoken": None,
+            "address": None,
+            "issue": None,
+            "date": None,
+            "time": None,
+            "callback_phone": None,
+            "callback_message": None,
+        }
+    
+    # Initialize history if not present
+    if "history" not in session:
+        session["history"] = []
+    
+    # Initialize retry counter
+    if "retries" not in session:
+        session["retries"] = 0
+    
     return session
 
 
@@ -1259,13 +1284,22 @@ async def process_state(
                   f"{slots.get('date')} in the {slots.get('time')}. Is all that correct?"
         return ConversationState.CONFIRM, summary, slots
     
-    # For greeting state with non-FAQ, use GPT to understand intent
-    if current_state == ConversationState.GREETING:
-        # Check for simple booking intent
-        if any(word in speech_lower for word in ["schedule", "book", "appointment", "service", "repair", "fix", "broken", "not working"]):
-            return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
+    # SLOW PATH: Use GPT only for complex cases that weren't handled above
+    # Skip GPT for states that have clear deterministic flows
+    if current_state in [
+        ConversationState.COLLECT_AREA_CODE,
+        ConversationState.COLLECT_PHONE_PREFIX, 
+        ConversationState.COLLECT_PHONE_LINE,
+        ConversationState.VERIFY_PHONE,
+        ConversationState.VERIFY_ADDRESS,
+        ConversationState.VERIFY_NAME,
+        ConversationState.CONFIRM,
+        ConversationState.PARTIAL_CORRECTION,
+    ]:
+        # These states should have been handled above - if we get here, reprompt
+        logger.warning("Unhandled input in state %s: %s", current_state, speech[:50])
+        return current_state, get_prompt(current_state, slots) or "I didn't catch that. Could you repeat?", slots
     
-    # SLOW PATH: Use GPT only for complex cases
     analysis = await analyze_speech(speech, current_state, session)
     intent = analysis.get("intent", "unclear")
     extracted_slots = analysis.get("slots", {})
@@ -1275,7 +1309,7 @@ async def process_state(
         if value and key in slots:
             slots[key] = value
     
-    # State transitions
+    # State transitions - GPT fallback path (only for GREETING and complex states)
     if current_state == ConversationState.GREETING:
         if analysis.get("is_emergency"):
             return ConversationState.EMERGENCY, get_prompt(ConversationState.EMERGENCY), slots
@@ -1284,21 +1318,28 @@ async def process_state(
             answer = format_insight_for_voice(insight)
             return ConversationState.FAQ, get_prompt(ConversationState.FAQ, {"answer": answer}), slots
         elif intent in ["booking", "other", "unclear"]:
-            # Default to booking flow
+            # Default to booking flow - use COLLECT_NAME (not COLLECT_PHONE)
             if slots.get("name"):
-                return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+                # If we already have name, go to area code (chunked phone)
+                return ConversationState.COLLECT_AREA_CODE, f"Thanks {slots.get('name')}! Now for your phone number. What's your area code? Just the 3 digits.", slots
             return ConversationState.COLLECT_NAME, get_prompt(ConversationState.COLLECT_NAME), slots
+        # If nothing matched, stay in greeting but give a helpful response
+        return ConversationState.COLLECT_NAME, "I can help you schedule an HVAC service appointment. May I have your name please?", slots
     
     elif current_state == ConversationState.COLLECT_NAME:
         if slots.get("name"):
-            return ConversationState.COLLECT_PHONE, get_prompt(ConversationState.COLLECT_PHONE, slots), slots
+            # Go to chunked phone collection, not COLLECT_PHONE
+            return ConversationState.COLLECT_AREA_CODE, f"Thanks {slots.get('name')}! Now for your phone number. What's your area code? Just the 3 digits.", slots
         # Retry
         return current_state, "I didn't catch your name. Could you tell me your name please?", slots
     
+    # NOTE: COLLECT_PHONE state is deprecated - we use chunked collection now
+    # Keep this for backward compatibility but redirect to chunked flow
     elif current_state == ConversationState.COLLECT_PHONE:
         if slots.get("phone"):
             return ConversationState.COLLECT_ADDRESS, get_prompt(ConversationState.COLLECT_ADDRESS), slots
-        return current_state, "I need your phone number. What's the best number to reach you?", slots
+        # Redirect to chunked phone collection
+        return ConversationState.COLLECT_AREA_CODE, "Let me get your phone number. What's your area code? Just the 3 digits.", slots
     
     elif current_state == ConversationState.COLLECT_ADDRESS:
         if slots.get("address"):
