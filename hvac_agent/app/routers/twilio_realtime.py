@@ -53,7 +53,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "3.0.0-echo-fix"
+_VERSION = "3.1.0-voice-quality"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -369,7 +369,7 @@ class RealtimeSession:
             "session": {
                 "modalities": ["text", "audio"],
                 "instructions": SYSTEM_PROMPT,
-                "voice": "alloy",  # Options: alloy, echo, fable, onyx, nova, shimmer
+                "voice": "shimmer",  # shimmer = energetic/expressive, most human-like available
                 "input_audio_format": "pcm16",  # We'll convert from μ-law
                 "output_audio_format": "pcm16",  # We'll convert to μ-law
                 "input_audio_transcription": {
@@ -377,9 +377,9 @@ class RealtimeSession:
                 },
                 "turn_detection": {
                     "type": "server_vad",  # Server-side voice activity detection
-                    "threshold": 0.35,  # LOWERED from 0.5 - phone audio is quieter, catches soft speakers
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 700  # INCREASED - gives user more time to think
+                    "threshold": 0.5,  # RAISED back - 0.35 was too sensitive, causing false triggers
+                    "prefix_padding_ms": 400,  # INCREASED - more buffer before speech detection
+                    "silence_duration_ms": 800  # INCREASED - prevents cutting off mid-sentence
                 },
                 "tools": TOOLS,
                 "tool_choice": "auto",
@@ -891,37 +891,76 @@ Deliver this naturally, with confidence. Pause briefly between key points. This 
         return bytes(ulaw_bytes)
     
     def resample_8k_to_24k(self, audio: bytes) -> bytes:
-        """Resample from 8kHz to 24kHz (3x upsample) using linear interpolation."""
+        """
+        Resample from 8kHz to 24kHz (3x upsample) using cubic interpolation.
+        Better quality than linear interpolation - reduces audio distortion.
+        """
         num_samples = len(audio) // 2
         if num_samples == 0:
             return b''
+        
+        if num_samples < 4:
+            # Not enough samples for cubic, fall back to simple repeat
+            samples = struct.unpack(f'<{num_samples}h', audio)
+            upsampled = []
+            for s in samples:
+                upsampled.extend([s, s, s])
+            return struct.pack(f'<{len(upsampled)}h', *upsampled)
         
         samples = struct.unpack(f'<{num_samples}h', audio)
         upsampled = []
         
-        for i in range(len(samples) - 1):
-            s1, s2 = samples[i], samples[i + 1]
-            upsampled.append(s1)
-            upsampled.append(int(s1 + (s2 - s1) / 3))
-            upsampled.append(int(s1 + 2 * (s2 - s1) / 3))
-        
-        # Last sample
-        if samples:
-            upsampled.append(samples[-1])
-            upsampled.append(samples[-1])
-            upsampled.append(samples[-1])
+        # Cubic interpolation for smoother audio
+        for i in range(len(samples)):
+            # Get 4 points for cubic interpolation (with boundary handling)
+            p0 = samples[max(0, i - 1)]
+            p1 = samples[i]
+            p2 = samples[min(len(samples) - 1, i + 1)]
+            p3 = samples[min(len(samples) - 1, i + 2)]
+            
+            # Output 3 samples for each input sample
+            for j in range(3):
+                t = j / 3.0
+                # Catmull-Rom spline interpolation
+                t2 = t * t
+                t3 = t2 * t
+                
+                v = 0.5 * (
+                    (2 * p1) +
+                    (-p0 + p2) * t +
+                    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+                    (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+                )
+                
+                # Clamp to valid PCM16 range
+                v = max(-32768, min(32767, int(v)))
+                upsampled.append(v)
         
         return struct.pack(f'<{len(upsampled)}h', *upsampled)
     
     def resample_24k_to_8k(self, audio: bytes) -> bytes:
-        """Resample from 24kHz to 8kHz (3x downsample)."""
+        """
+        Resample from 24kHz to 8kHz (3x downsample) with anti-aliasing.
+        Uses averaging instead of simple decimation to reduce aliasing artifacts.
+        """
         num_samples = len(audio) // 2
         if num_samples == 0:
             return b''
         
         samples = struct.unpack(f'<{num_samples}h', audio)
-        # Take every 3rd sample
-        downsampled = [samples[i] for i in range(0, len(samples), 3)]
+        downsampled = []
+        
+        # Average every 3 samples instead of just taking every 3rd
+        # This acts as a simple low-pass filter to reduce aliasing
+        for i in range(0, len(samples) - 2, 3):
+            avg = (samples[i] + samples[i + 1] + samples[i + 2]) // 3
+            downsampled.append(avg)
+        
+        # Handle remaining samples
+        remaining = len(samples) % 3
+        if remaining > 0:
+            avg = sum(samples[-remaining:]) // remaining
+            downsampled.append(avg)
         
         return struct.pack(f'<{len(downsampled)}h', *downsampled)
     
