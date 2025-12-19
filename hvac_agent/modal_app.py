@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v3.0.2-20231218-force"
+_CACHE_BUSTER = "v4.3.0-20241219-kc-persona-polished"
 
 # Define the Modal image with dependencies and local app source
 image = (
@@ -37,7 +37,10 @@ image = (
         "twilio==9.8.8",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
         "twilio>=8.0.0",  # Twilio SDK for request validation
-        # elevenlabs SDK removed - using direct API calls for TTS only
+        # Phase 1-5 production hardening dependencies
+        "redis>=5.0.0",  # Session store backend
+        "cachetools>=5.3.0",  # Local TTL cache for session store
+        "phonenumbers>=8.13.0",  # Phone number validation
     )
     .add_local_python_source("app")  # Include the app package
 )
@@ -50,6 +53,7 @@ app = modal.App("hvac-voice-agent", image=image)
     secrets=[
         modal.Secret.from_name("hvac-agent-secrets"),
         modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
+        modal.Secret.from_name("resend", required_keys=[]),  # Resend API for lead emails
     ],
     scaledown_window=300,
 )
@@ -66,6 +70,8 @@ def fastapi_app():
     - ELEVENLABS_API_KEY (optional, for natural voice)
     - ELEVENLABS_VOICE_ID (optional)
     - USE_ELEVENLABS (optional, set to "true" to enable)
+    - RESEND_API_KEY (for lead email notifications)
+    - LEAD_NOTIFICATION_EMAIL (defaults to subodh.kc@haiec.com)
     """
     from app.main import app
     return app

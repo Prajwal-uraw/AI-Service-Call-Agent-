@@ -25,6 +25,8 @@ from app.routers import (
     twilio_stream_router,
     twilio_elevenlabs_router,
     twilio_gather_router,
+    twilio_realtime_router,
+    twilio_ivr_router,
     audio_router,
 )
 from app.utils.logging import get_logger
@@ -123,6 +125,8 @@ app.include_router(twilio_voice_router)
 app.include_router(twilio_stream_router)
 app.include_router(twilio_elevenlabs_router)
 app.include_router(twilio_gather_router)  # Enterprise Gather-based voice agent
+app.include_router(twilio_realtime_router)  # OpenAI Realtime API (best latency)
+app.include_router(twilio_ivr_router)  # IVR menu to choose system
 app.include_router(audio_router)  # Audio serving for ElevenLabs TTS
 
 
@@ -139,7 +143,9 @@ async def root():
             "twilio_voice": "/twilio/voice",
             "twilio_stream": "/twilio/stream",
             "twilio_elevenlabs_stream": "/twilio/elevenlabs/stream",
-            "twilio_gather": "/twilio/gather/incoming",  # Enterprise Gather-based (recommended)
+            "twilio_gather": "/twilio/gather/incoming",  # Enterprise Gather-based
+            "twilio_realtime": "/twilio/realtime/incoming",  # OpenAI Realtime API (BEST - lowest latency)
+            "twilio_ivr": "/twilio/ivr/incoming",  # IVR menu - Press 1 for Realtime, 2 for Gather
             "debug_locations": "/debug/locations",
             "debug_appointments": "/debug/appointments",
             "docs": "/docs" if DEBUG else "disabled",

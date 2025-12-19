@@ -16,6 +16,8 @@ from typing import AsyncGenerator, Optional, Callable, Any
 import aiohttp
 
 from app.utils.logging import get_logger
+from app.services.audio.converter import convert_mp3_to_ulaw
+from app.services.audio.buffer import MP3FrameBuffer
 
 logger = get_logger("tts.elevenlabs")
 
@@ -279,8 +281,8 @@ class ElevenLabsTTS:
         """
         Convert MP3 audio to PCM μ-law 8kHz mono for Twilio.
         
-        Uses audioop for μ-law encoding. For MP3 decoding, we use
-        a simple approach that works with the streaming chunks.
+        Uses the centralized audio converter module for consistent
+        conversion across the application.
         
         Args:
             mp3_data: Raw MP3 audio bytes
@@ -288,63 +290,7 @@ class ElevenLabsTTS:
         Returns:
             μ-law encoded audio bytes, or None on error
         """
-        try:
-            # For production, we need proper MP3 decoding
-            # This requires ffmpeg or similar. For now, we'll use
-            # a subprocess approach that's compatible with streaming.
-            return await self._decode_mp3_to_ulaw(mp3_data)
-        except Exception as e:
-            logger.error("Audio conversion error: %s", str(e))
-            return None
-    
-    async def _decode_mp3_to_ulaw(self, mp3_data: bytes) -> Optional[bytes]:
-        """
-        Decode MP3 to μ-law using ffmpeg subprocess.
-        
-        Args:
-            mp3_data: MP3 audio bytes
-            
-        Returns:
-            μ-law encoded audio at 8kHz mono
-        """
-        if not mp3_data or len(mp3_data) == 0:
-            logger.warning("Empty MP3 data received for conversion")
-            return None
-        
-        try:
-            # Use ffmpeg to convert MP3 to μ-law
-            process = await asyncio.create_subprocess_exec(
-                "ffmpeg",
-                "-i", "pipe:0",           # Input from stdin
-                "-f", "mulaw",            # Output format: μ-law
-                "-ar", "8000",            # Sample rate: 8kHz
-                "-ac", "1",               # Channels: mono
-                "-acodec", "pcm_mulaw",   # Codec: μ-law
-                "pipe:1",                 # Output to stdout
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            
-            stdout, stderr = await process.communicate(input=mp3_data)
-            
-            if process.returncode != 0:
-                logger.error("ffmpeg conversion failed (returncode=%d): %s", process.returncode, stderr[-500:].decode('utf-8', errors='ignore'))
-                return None
-            
-            if not stdout or len(stdout) == 0:
-                logger.error("ffmpeg produced no output. stderr: %s", stderr[-500:].decode('utf-8', errors='ignore'))
-                return None
-            
-            logger.debug("ffmpeg conversion success: %d bytes in -> %d bytes out", len(mp3_data), len(stdout))
-            return stdout
-            
-        except FileNotFoundError:
-            logger.error("ffmpeg not found - required for audio conversion")
-            return None
-        except Exception as e:
-            logger.error("ffmpeg conversion error: %s", str(e))
-            return None
+        return await convert_mp3_to_ulaw(mp3_data)
 
 
 # Module-level convenience function
