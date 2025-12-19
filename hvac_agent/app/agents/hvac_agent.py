@@ -202,7 +202,7 @@ class HVACAgent:
                 booking_response = self._handle_booking_flow(user_text, state)
                 if booking_response:
                     return booking_response
-                    
+
             # Detect caller emotion for empathetic response
             emotion = detect_caller_emotion(user_text)
             if emotion:
@@ -553,7 +553,14 @@ class HVACAgent:
         Returns:
             str: Response to user, or None if not in booking flow
         """
+        print(f"\n=== DEBUG: Booking Flow ===")
+        print(f"Current Stage: {state.booking_stage or 'Not started'}")
+        print(f"User Input: '{user_text}'")
+        print(f"Booking Data: {state.booking_data}")
+        print(f"Booking Attempts: {state.booking_attempts + 1}/5")
+    
         if not state.booking_stage:
+            print("DEBUG: No active booking stage, exiting booking flow")
             return None
         
         # Track booking attempts
@@ -590,48 +597,79 @@ class HVACAgent:
                     return "I'm sorry, we don't service that area yet. Could you try a nearby city like Dallas or Fort Worth?"
             
             elif state.booking_stage == 'collecting_time':
+                print("DEBUG: Processing time preference")
                 text_lower = user_text.lower()
                 if 'morning' in text_lower:
                     time_pref = 'morning'
                 elif 'afternoon' in text_lower:
                     time_pref = 'afternoon'
                 else:
+                    print(f"DEBUG: Unclear time preference - {user_text}")
                     return "Please say 'morning' or 'afternoon' for your preferred time."
                 
+                print(f"DEBUG: Time preference - {time_pref}")
+
                 # Get available slots
+                location_code = state.booking_data.get('location_code')
+                print(f"DEBUG: Getting available slots for {location_code}")
                 slots = tool_get_next_slots(
                     self.db,
                     location_code=state.booking_data.get('location_code'),
-                    num_slots=3,
-                    time_of_day=time_pref
+                    num_slots=10  # Get more slots to filter from
                 )
-                
-                if not slots or not slots.get('available_slots'):
+
+                print(f"DEBUG: Received {len(slots.get('available_slots', []))} slots")
+
+
+                # Filter slots by time of day
+                filtered_slots = [
+                    s for s in slots.get('available_slots', []) 
+                    if (
+                        (time_pref == 'morning' and int(s['time'].split(':')[0]) < 12) or
+                        (time_pref == 'afternoon' and int(s['time'].split(':')[0]) >= 12)
+                    ) and int(s['time'].split(':')[0]) >= 8  # No slots before 8 AM
+                ]
+
+                if not filtered_slots:
                     return "I'm sorry, we don't have any available slots. Would you like to try a different time?"
+
+        
                 
-                # Store first available slot
-                slot = slots['available_slots'][0]
-                state.update_booking_data(
+                slot = filtered_slots[0]  
+                state.booking_stage = 'collecting_contact'
+                state.update_booking_data(  
                     date=slot['date'],
                     time=slot['time'],
                     appointment_id=slot.get('slot_id')
                 )
-                
-                state.booking_stage = 'collecting_contact'
-                return (
-                    f"I have {slot['date']} at {slot['time']} available. "
-                    "May I have your name to complete the booking?"
+                time_str = datetime.strptime(slot['time'], '%H:%M').strftime('%I:%M %p').lstrip('0')
+                response = (
+                    f"I can schedule you for {slot['date']} at {time_str}. "
+                    "May I have your full name to complete the booking?"
                 )
-            
+                
+                return response
+                
             elif state.booking_stage == 'collecting_contact':
-                state.update_booking_data(customer_name=user_text)
+                name = user_text.strip()
+                if len(name) < 2 or not any(c.isalpha() for c in name):
+                    return "I need a valid name to proceed. Could you please tell me your full name?"
+                
+                print(f"DEBUG: Captured customer name: {name}")
+                state.update_booking_data(customer_name=name)
                 state.booking_stage = 'confirming'
                 
-                return (
-                    f"Got it, {user_text}. To confirm, you'd like to book an appointment for "
-                    f"{state.booking_data.get('issue')} on {state.booking_data.get('date')} at {state.booking_data.get('time')}. "
-                    "Is that correct?"
+                # Format the confirmation message
+                time_str = datetime.strptime(state.booking_data.get('time', '00:00'), '%H:%M').strftime('%I:%M %p').lstrip('0')
+                response = (
+                    f"Got it, {name}. Just to confirm:\n"
+                    f"Issue: {state.booking_data.get('issue')}\n"
+                    f"Date: {state.booking_data.get('date')}\n"
+                    f"Time: {time_str}\n"
+                    "Is this correct?"
                 )
+                print(f"DEBUG: Confirmation - {response}")
+                return response
             
             elif state.booking_stage == 'confirming':
                 if any(word in user_text.lower() for word in ['yes', 'correct', 'right', 'yep']):
