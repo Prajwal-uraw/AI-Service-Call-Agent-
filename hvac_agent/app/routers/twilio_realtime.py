@@ -53,7 +53,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "2.2.0-demo-first"
+_VERSION = "3.0.0-echo-fix"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -61,90 +61,107 @@ print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 # Based on: Call center best practices, voice UX research, HVAC industry standards
 # =============================================================================
 
-# DEMO-FIRST SYSTEM PROMPT
-# Designed for HVAC company owners evaluating our AI booking system
-# Flow: Demo greeting → Showcase capabilities → Offer test booking → Option to switch modes
-SYSTEM_PROMPT = f"""You are Sarah, an AI voice assistant demo for {COMPANY_NAME}. This is a DEMO LINE for HVAC company owners evaluating our AI booking system.
+# MARKETING-FIRST SYSTEM PROMPT WITH SPIN SELLING
+# Designed by market positioning expert for HVAC company owners evaluating our AI booking system
+# Flow: Welcome → Pain Point Discovery → Solution Demo → Value Proposition → Call to Action
+SYSTEM_PROMPT = f"""You are Sarah, an AI voice assistant representing {COMPANY_NAME}'s revolutionary AI booking system. You're speaking with HVAC company owners who are evaluating whether to adopt AI for their customer calls.
 
-## YOUR ROLE
-You're showcasing what an AI booking agent can do for HVAC companies. Be impressive but authentic.
+## YOUR OPENING (MARKETING PITCH - DELIVER THIS FIRST)
+When the call connects, deliver this welcome message naturally and confidently:
 
-## OPENING (CRITICAL - SET THE STAGE)
-Start with a warm, confident demo greeting:
-"Hi there! Thanks for calling the {COMPANY_NAME} AI demo line. I'm Sarah, your AI booking assistant. I can show you exactly how I handle customer calls - want to test a booking scenario, or should I tell you what I can do?"
+"Hi there! Welcome to {COMPANY_NAME}'s AI booking demo. I'm Sarah, and I'm about to show you something that could transform how your HVAC business handles customer calls.
 
-## IF THEY WANT TO SEE CAPABILITIES
-Explain naturally (not a sales pitch):
-"Sure! So basically, I answer calls 24/7, book appointments, handle emergencies, and can transfer to a human anytime. I sound natural because I actually listen and respond in real-time - no menus, no hold music. Want to try a test booking to see how it feels?"
+Here's the thing - right now, you're probably losing calls after hours, paying staff to answer phones during peak season, or missing emergency calls that could be big jobs. I'm the solution.
 
-Key points to mention if asked:
-- Sub-second response time - I respond as fast as a human
-- I handle the whole booking: name, phone, address, issue, scheduling
-- Emergency detection - gas leaks, CO alarms get transferred immediately  
-- I can be customized to your company's voice and policies
-- Full call transcripts and analytics
-- Works with your existing calendar system
+I answer every call, 24/7, 365 days a year. I book appointments, handle emergencies, and I never call in sick. And the best part? I sound like this - natural, conversational, no robotic menus.
 
-## IF THEY WANT TO TEST A BOOKING
-"Great! Just pretend you're a customer calling about an HVAC issue. I'll walk you through exactly what your customers would experience."
+Want to see how I'd handle one of your customer calls? Just pretend you're a homeowner with an AC problem, and I'll show you exactly what your customers would experience. Or if you have questions about how this works, just ask - I can answer anything."
 
-Then switch to BOOKING MODE - act like a real service coordinator:
-- "Hi, thanks for calling! This is Sarah, how can I help?"
-- Gather: issue, name, phone (read it back), address, preferred time
-- Confirm everything naturally
-- "You're all set! Anything else?"
+## SPIN SELLING FRAMEWORK (Use Throughout)
 
-## IF THEY WANT THE TRADITIONAL SYSTEM
-If they say "gather", "traditional", "other system", or "switch":
-"Sure thing! I can transfer you to our turn-based system if you'd like to compare. It uses a different approach - you speak, then I respond. Want me to switch you over?"
-If yes, use the transfer_to_gather function.
+### SITUATION Questions (if they engage)
+- "How many calls does your team handle on a typical day?"
+- "What happens to calls that come in after hours?"
+- "During peak summer season, how backed up do your phones get?"
 
-## NATURAL CONVERSATION RULES
-1. **ONE sentence, then pause** - Let them process
-2. **Be conversational** - "And your name?" not "May I have your name please?"
-3. **React naturally** - "Oh okay", "Got it", "Sure thing"
-4. **Read back phone numbers** - Always confirm: "5-5-5, 1-2-3, 4-5-6-7 - that right?"
+### PROBLEM Discovery
+Listen for and acknowledge these pain points:
+- Missed calls = lost revenue
+- After-hours emergencies going to voicemail
+- Staff overwhelmed during peak season
+- High cost of dedicated phone staff
+- Inconsistent customer experience
 
-## BOOKING FLOW (when testing)
-1. Greet warmly
-2. Understand the issue: "What's going on with your system?"
-3. Get name: "And your name?"
-4. Get phone: "Best number?" → Read it back
-5. Get address: "What's the address there?"
-6. Schedule: "When works? Morning or afternoon?"
-7. Confirm: "Alright, [name] at [address], [day] [time], for [issue]. Sound good?"
-8. Close: "Perfect, you're all set! Anything else?"
+When they mention a problem, acknowledge it: "Yeah, I hear that a lot from HVAC owners. That's exactly why we built this."
+
+### IMPLICATION (Make the pain real)
+- "Every missed call is potentially a $500 repair or a $10,000 system replacement going to your competitor."
+- "When customers hit voicemail, 80% of them call the next company on Google."
+- "Your best techs shouldn't be answering phones - they should be on jobs making you money."
+
+### NEED-PAYOFF (Show the solution)
+- "Imagine never missing another call, even at 2 AM on a Sunday."
+- "What if every caller got the same professional experience, every time?"
+- "Picture your team focused on jobs while I handle all the booking."
+
+## DEMO MODE (When They Want to Test)
+"Perfect! Let's do this. Pretend you're a homeowner - your AC just stopped working and it's 95 degrees. Call me like you'd call an HVAC company. Ready? Go ahead."
+
+Then handle the call professionally:
+- Greet warmly: "Thanks for calling! This is Sarah, how can I help?"
+- Show empathy: "Oh no, that's miserable in this heat. Let me get you taken care of."
+- Gather info efficiently: name, phone (read back), address, issue
+- Offer scheduling: "We can have someone there tomorrow morning, or if this is urgent, let me check for today."
+- Confirm naturally: "Alright, I've got you down for [time]. We'll call when the tech is on the way."
+- Close strong: "You're all set! Anything else I can help with?"
+
+## KEY VALUE PROPOSITIONS (Weave These In)
+1. **24/7 Availability** - "I never sleep, never take breaks, never call in sick."
+2. **Instant Response** - "No hold music, no phone trees - I pick up immediately."
+3. **Consistent Quality** - "Every caller gets the same professional experience."
+4. **Emergency Handling** - "Gas leak? CO alarm? I detect emergencies and escalate instantly."
+5. **Cost Savings** - "I cost less than a part-time receptionist but work 24/7."
+6. **Scalability** - "Peak season? I handle 100 calls as easily as 10."
+
+## HANDLING OBJECTIONS
+
+### "This sounds expensive"
+"I get it - but think about it this way: I cost less than a part-time employee, but I work 24/7 and never miss a call. Most HVAC companies see ROI in the first month just from calls they would have missed."
+
+### "My customers want to talk to a real person"
+"That's what's cool about this - listen to how natural I sound. Most callers don't even realize I'm AI until we tell them. And if anyone asks for a human, I transfer them instantly. No friction."
+
+### "We already have a receptionist"
+"Perfect - I'm not here to replace them. I handle the overflow, the after-hours calls, the weekends. Your receptionist can focus on complex issues while I handle routine bookings."
+
+### "How does it integrate with our system?"
+"Great question. We integrate with most scheduling systems - ServiceTitan, Housecall Pro, Jobber, you name it. The appointments I book go straight into your calendar."
+
+## CLOSING (CALL TO ACTION)
+When they seem interested:
+"So here's what I'd suggest - let me grab your contact info and have someone from our team reach out. They can set up a pilot program so you can see exactly how this works with your real customers. No commitment, just a test run. Sound good?"
+
+If yes, use schedule_appointment function to capture their info as a "lead":
+- Name
+- Company name
+- Phone
+- Best time to call back
+
+## CONVERSATION RULES
+1. **Be confident, not pushy** - You're showing value, not begging for a sale
+2. **Listen more than talk** - Let them share their pain points
+3. **Use their words** - If they say "overwhelmed," use "overwhelmed" back
+4. **One idea at a time** - Don't dump information
+5. **Always offer the demo** - "Want to try it?" is your go-to
+
+## HANDLING ANY QUESTION
+You can discuss ANYTHING - sports, weather, random topics. You're a general AI assistant that happens to specialize in HVAC booking. If they ask about the weather or sports, engage naturally, then bring it back: "Anyway, want to see how I handle a booking call?"
 
 ## EMERGENCY DETECTION
-If you hear: gas smell, carbon monoxide, smoke, sparks, flooding:
-"Okay, that sounds serious. In a real call, I'd transfer to your emergency line immediately."
+If they test an emergency scenario (gas leak, CO alarm, fire):
+"Okay, I'm detecting this as an emergency. In a real call, I'd immediately transfer to your emergency line and alert your on-call tech. No delay, no questions. Want to see how that works?"
 
-## HANDLING QUESTIONS
-
-### "How much does this cost?"
-"Great question! Pricing depends on call volume and features. I can have someone from our team reach out with details - want me to grab your info?"
-
-### "How do I get this for my company?"
-"I'd love to help you get set up! Let me get your contact info and someone from our team will reach out to discuss your needs."
-
-### "Can you handle [specific scenario]?"
-Try to demonstrate it: "Let's try it! Pretend you're a customer and [scenario], and I'll show you how I'd handle it."
-
-## YOUR PERSONALITY
-- Confident but not salesy
-- Helpful and patient
-- Proud of what you can do (you're good at this!)
-- Natural, conversational tone
-- Quick to offer demos: "Want to try it?"
-
-## WHAT MAKES THIS DEMO IMPRESSIVE
-- You respond instantly - no lag
-- You sound human, not robotic
-- You handle interruptions gracefully
-- You remember context throughout the call
-- You can do a full booking in under 2 minutes
-
-Remember: You're showing HVAC company owners what their customers could experience. Make it impressive but authentic."""
+Remember: You're not just demoing software - you're showing HVAC owners how to grow their business, reduce stress, and never miss another opportunity."""
 
 # Tools for function calling
 TOOLS = [
@@ -266,7 +283,10 @@ class RealtimeSession:
         # Otherwise Twilio's echo comes back and triggers barge-in
         self.is_speaking = False
         self.last_audio_sent_time: float = 0
-        self.echo_suppression_ms: int = 250  # Reduced from 500ms - was too long, felt unnatural
+        self.echo_suppression_ms: int = 500  # INCREASED - need more buffer for Twilio's audio pipeline latency
+        
+        # Track when we START sending audio (not when we finish)
+        self.audio_send_start_time: float = 0
         
         # Mark tracking for precise echo cancellation
         self.mark_counter: int = 0
@@ -364,7 +384,7 @@ class RealtimeSession:
                 "tools": TOOLS,
                 "tool_choice": "auto",
                 "temperature": 0.7,
-                "max_response_output_tokens": 150  # Keep responses short for voice
+                "max_response_output_tokens": 500  # Increased for marketing pitch - can be long for opening
             }
         }
         
@@ -373,22 +393,33 @@ class RealtimeSession:
         logger.info("OpenAI session configured")
     
     async def send_initial_greeting(self):
-        """Trigger the initial greeting from the AI."""
+        """Trigger the initial marketing pitch greeting from the AI."""
         if not self.openai_ws or not self.openai_connected:
             return
         
-        # Create a response to trigger greeting - use COMPANY_NAME variable
+        # Create a response to trigger the marketing pitch greeting
+        # This is the CRITICAL first impression - deliver the full value proposition
         greeting_event = {
             "type": "response.create",
             "response": {
                 "modalities": ["text", "audio"],
-                "instructions": f"Greet the caller warmly. Say something like 'Thanks for calling {COMPANY_NAME}, this is Sarah. How can I help you today?'"
+                "instructions": f"""Deliver this marketing pitch naturally and confidently:
+
+"Hi there! Welcome to {COMPANY_NAME}'s AI booking demo. I'm Sarah, and I'm about to show you something that could transform how your HVAC business handles customer calls.
+
+Here's the thing - right now, you're probably losing calls after hours, paying staff to answer phones during peak season, or missing emergency calls that could be big jobs. I'm the solution.
+
+I answer every call, 24/7, 365 days a year. I book appointments, handle emergencies, and I never call in sick. And the best part? I sound like this - natural, conversational, no robotic menus.
+
+Want to see how I'd handle one of your customer calls? Just pretend you're a homeowner with an AC problem, and I'll show you exactly what your customers would experience. Or if you have questions, just ask!"
+
+Deliver this naturally, with confidence. Pause briefly between key points. This is your sales pitch - make it compelling but not pushy."""
             }
         }
         
         try:
             await self.openai_ws.send(json.dumps(greeting_event))
-            logger.info("Triggered initial greeting")
+            logger.info("Triggered marketing pitch greeting")
         except Exception as e:
             logger.error("Failed to send greeting: %s", str(e))
             await self.send_fallback_and_transfer()
@@ -475,13 +506,25 @@ class RealtimeSession:
         # ECHO CANCELLATION: Don't forward audio while AI is speaking
         # This prevents the AI from hearing its own voice and stopping
         if self.is_speaking:
+            logger.debug("Blocking audio - AI is speaking")
             return
         
-        # Extra buffer: Don't forward audio for a short time after speaking stops
-        # This catches any trailing echo from Twilio's audio pipeline
+        # CRITICAL: Check if we're in the echo suppression window
+        # This catches echo from Twilio's audio pipeline (has ~200-500ms latency)
+        current_time = time.time()
+        
+        # Check against BOTH start and end times for maximum protection
+        if self.audio_send_start_time > 0:
+            elapsed_since_start = (current_time - self.audio_send_start_time) * 1000
+            # If we started sending audio recently, block incoming audio
+            if elapsed_since_start < self.echo_suppression_ms:
+                logger.debug("Blocking audio - within echo window (start): %.0fms", elapsed_since_start)
+                return
+        
         if self.last_audio_sent_time > 0:
-            elapsed_ms = (time.time() - self.last_audio_sent_time) * 1000
-            if elapsed_ms < self.echo_suppression_ms:
+            elapsed_since_end = (current_time - self.last_audio_sent_time) * 1000
+            if elapsed_since_end < self.echo_suppression_ms:
+                logger.debug("Blocking audio - within echo window (end): %.0fms", elapsed_since_end)
                 return
         
         payload = message.get("media", {}).get("payload")
@@ -549,21 +592,28 @@ class RealtimeSession:
                 logger.debug("AI speaking: %s", transcript)
                 
         elif event_type == "input_audio_buffer.speech_started":
-            logger.info("User started speaking (barge-in)")
+            logger.info("User started speaking (barge-in detected)")
             self.last_user_speech_time = time.time()
             self.reprompt_count = 0  # Reset reprompt counter when user speaks
             
             # BARGE-IN: Cancel current response if AI is speaking
-            if self.response_in_progress and self.current_response_id:
+            if self.response_in_progress:
                 logger.info("Cancelling AI response due to barge-in")
-                # Clear pending marks since we're interrupting
+                # Clear echo suppression state since we're interrupting
                 self.pending_marks.clear()
                 self.is_speaking = False
-                cancel_event = {
-                    "type": "response.cancel"
-                }
-                await self.openai_ws.send(json.dumps(cancel_event))
-            self.response_in_progress = False
+                self.audio_send_start_time = 0
+                self.last_audio_sent_time = 0
+                
+                # Send cancel event
+                try:
+                    cancel_event = {"type": "response.cancel"}
+                    await self.openai_ws.send(json.dumps(cancel_event))
+                except Exception as e:
+                    logger.warning("Failed to send cancel event: %s", str(e))
+                
+                self.response_in_progress = False
+                self.current_response_id = None
             
         elif event_type == "input_audio_buffer.speech_stopped":
             logger.info("User stopped speaking")
@@ -578,10 +628,11 @@ class RealtimeSession:
             self.response_in_progress = False
             self.current_response_id = None
             # ECHO CANCELLATION: Mark speaking as done
-            # The echo_suppression_ms buffer will handle trailing echo
+            # Keep last_audio_sent_time set - the echo_suppression_ms buffer will handle trailing echo
+            # DON'T reset audio_send_start_time - we need it for the echo window
             self.is_speaking = False
-            self.last_audio_sent_time = time.time()  # Reset timer for echo suppression
-            logger.info("AI response complete")
+            self.last_audio_sent_time = time.time()  # Update end time for echo suppression
+            logger.info("AI response complete - echo suppression window active for %dms", self.echo_suppression_ms)
             
         elif event_type == "response.output_item.done":
             # Handle function calls - this is the correct event for completed function calls
@@ -615,10 +666,16 @@ class RealtimeSession:
         if not audio_b64:
             return
         
-        # ECHO CANCELLATION: Mark that we're speaking
-        # This prevents us from forwarding Twilio's echo back to OpenAI
+        # ECHO CANCELLATION: Mark that we're speaking BEFORE sending any audio
+        # This is CRITICAL - must happen before any audio goes out
+        current_time = time.time()
+        if not self.is_speaking:
+            # First audio chunk - record start time
+            self.audio_send_start_time = current_time
+            logger.info("AI started speaking - echo suppression activated")
+        
         self.is_speaking = True
-        self.last_audio_sent_time = time.time()
+        self.last_audio_sent_time = current_time
         
         try:
             # Decode PCM16 audio from OpenAI
