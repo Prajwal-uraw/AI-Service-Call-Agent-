@@ -25,6 +25,8 @@ import base64
 import asyncio
 import struct
 import time
+import httpx
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import Response
@@ -32,6 +34,14 @@ import websockets
 from websockets.client import WebSocketClientProtocol
 
 from app.utils.logging import get_logger
+
+# Resend API configuration for lead notifications
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+LEAD_NOTIFICATION_EMAIL = os.getenv("LEAD_NOTIFICATION_EMAIL", "subodh.kc@haiec.com")
+
+# In-memory lead storage (for visual review - also logged to console)
+# In production, this would be a database
+CAPTURED_LEADS: List[Dict[str, Any]] = []
 
 router = APIRouter(tags=["twilio-realtime"])
 logger = get_logger("twilio.realtime")
@@ -56,7 +66,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "4.1.0-premium-positioning"
+_VERSION = "4.2.0-lead-capture-email"
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -812,34 +822,60 @@ Then STOP. Let them respond. Don't keep talking."""
         result = {}
         
         if name == "schedule_appointment":
-            # Generate deterministic confirmation number
+            # This is a LEAD CAPTURE - send email notification
             import hashlib
             name_hash = hashlib.md5(args.get("customer_name", "unknown").encode()).hexdigest()[:6].upper()
+            confirmation = f"LEAD-{name_hash}"
+            
+            # Create lead record
+            lead = {
+                "id": confirmation,
+                "timestamp": datetime.now().isoformat(),
+                "customer_name": args.get("customer_name", "Unknown"),
+                "company_name": args.get("company_name", args.get("city", "Unknown")),
+                "phone_number": args.get("phone_number", self.caller_number),
+                "email": args.get("email", ""),
+                "issue_description": args.get("issue_description", "Pilot program inquiry"),
+                "preferred_date": args.get("preferred_date", "ASAP"),
+                "preferred_time": args.get("preferred_time", "Any"),
+                "call_sid": self.call_sid,
+                "source": "AI Demo Line"
+            }
+            
+            # Store lead in memory for visual review
+            CAPTURED_LEADS.append(lead)
+            logger.info("=" * 60)
+            logger.info("🎯 NEW LEAD CAPTURED: %s", confirmation)
+            logger.info("   Name: %s", lead["customer_name"])
+            logger.info("   Company: %s", lead["company_name"])
+            logger.info("   Phone: %s", lead["phone_number"])
+            logger.info("   Email: %s", lead["email"])
+            logger.info("   Notes: %s", lead["issue_description"])
+            logger.info("=" * 60)
+            
+            # Send email notification via Resend
+            await self.send_lead_email(lead)
+            
             result = {
                 "success": True,
-                "confirmation_number": f"KC{name_hash}",
-                "message": f"Appointment scheduled for {args.get('preferred_date', 'tomorrow')} {args.get('preferred_time', 'morning')}"
+                "confirmation_number": confirmation,
+                "message": f"Got it! I've captured their info. Our team will reach out today."
             }
-            logger.info("Booking created: %s for caller %s", result, self.caller_number)
             
         elif name == "transfer_to_human":
             result = {"success": True, "message": "Transferring to human agent"}
             logger.info("Transfer requested: %s", args.get("reason", "no reason"))
-            # In production, trigger actual transfer here
             
         elif name == "handle_emergency":
             result = {"success": True, "message": "Emergency routing activated"}
             logger.warning("EMERGENCY: %s for caller %s", args.get("emergency_type", "unknown"), self.caller_number)
-            # In production, trigger emergency protocol
         
         elif name == "transfer_to_gather":
             result = {"success": True, "message": "Transferring to Gather system"}
             logger.info("Transfer to Gather requested: %s", args.get("reason", "user requested"))
-            # Flag to trigger redirect after response
             self.transfer_to_gather_pending = True
         
         else:
-            # Unknown function
             logger.warning("Unknown function called: %s", name)
             result = {"success": False, "message": f"Unknown function: {name}"}
         
@@ -863,6 +899,52 @@ Then STOP. Let them respond. Don't keep talking."""
                 self.openai_connected = False
             except Exception as e:
                 logger.error("Error sending function call response: %s", str(e))
+    
+    async def send_lead_email(self, lead: dict):
+        """Send lead notification email via Resend API."""
+        if not RESEND_API_KEY:
+            logger.warning("RESEND_API_KEY not configured - skipping email notification")
+            return
+        
+        try:
+            email_html = f"""
+            <h2>🎯 New Lead from AI Demo Line</h2>
+            <table style="border-collapse: collapse; width: 100%;">
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Lead ID</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['id']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Name</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['customer_name']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Company</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['company_name']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Phone</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['phone_number']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Email</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['email'] or 'Not provided'}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Notes</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['issue_description']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Preferred Contact</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['preferred_date']} - {lead['preferred_time']}</td></tr>
+                <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Captured At</strong></td><td style="padding: 8px; border: 1px solid #ddd;">{lead['timestamp']}</td></tr>
+            </table>
+            <p style="margin-top: 20px; color: #666;">This lead was captured by the AI Demo Line. Follow up ASAP!</p>
+            """
+            
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {RESEND_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "from": "AI Demo <leads@haiec.com>",
+                        "to": [LEAD_NOTIFICATION_EMAIL],
+                        "subject": f"🎯 New Lead: {lead['customer_name']} - {lead['company_name']}",
+                        "html": email_html
+                    },
+                    timeout=10.0
+                )
+                
+                if resp.status_code == 200:
+                    logger.info("✅ Lead email sent to %s", LEAD_NOTIFICATION_EMAIL)
+                else:
+                    logger.error("❌ Failed to send lead email: %s - %s", resp.status_code, resp.text)
+                    
+        except Exception as e:
+            logger.error("❌ Error sending lead email: %s", str(e))
     
     # =============================================================================
     # AUDIO CONVERSION UTILITIES
@@ -1195,5 +1277,21 @@ async def realtime_health():
         "status": "ok",
         "version": _VERSION,
         "openai_configured": bool(OPENAI_API_KEY),
+        "resend_configured": bool(RESEND_API_KEY),
         "endpoint": "/twilio/realtime/incoming"
+    }
+
+
+@router.get("/twilio/realtime/leads")
+async def get_leads():
+    """
+    View all captured leads.
+    
+    This endpoint allows you to visually review all leads captured by the AI demo line.
+    In production, this would be protected by authentication.
+    """
+    return {
+        "total_leads": len(CAPTURED_LEADS),
+        "leads": CAPTURED_LEADS,
+        "notification_email": LEAD_NOTIFICATION_EMAIL
     }

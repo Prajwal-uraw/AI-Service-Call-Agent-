@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v4.1.0-20241219-premium-positioning-aida"
+_CACHE_BUSTER = "v4.2.0-20241219-lead-capture-resend"
 
 # Define the Modal image with dependencies and local app source
 image = (
@@ -50,6 +50,7 @@ app = modal.App("hvac-voice-agent", image=image)
     secrets=[
         modal.Secret.from_name("hvac-agent-secrets"),
         modal.Secret.from_name("elevenlabs", required_keys=[]),  # Optional ElevenLabs secret
+        modal.Secret.from_name("resend", required_keys=[]),  # Resend API for lead emails
     ],
     scaledown_window=300,
 )
@@ -66,6 +67,8 @@ def fastapi_app():
     - ELEVENLABS_API_KEY (optional, for natural voice)
     - ELEVENLABS_VOICE_ID (optional)
     - USE_ELEVENLABS (optional, set to "true" to enable)
+    - RESEND_API_KEY (for lead email notifications)
+    - LEAD_NOTIFICATION_EMAIL (defaults to subodh.kc@haiec.com)
     """
     from app.main import app
     return app
