@@ -61,7 +61,7 @@ logger = get_logger("twilio.gather")
 router = APIRouter(tags=["twilio-gather"])
 
 # Version for deployment verification
-_VERSION = "3.7.0-flow-fixed"
+_VERSION = "3.8.0-human-like"
 print(f"[GATHER_MODULE_LOADED] Version: {_VERSION}")
 
 
@@ -750,68 +750,83 @@ def clear_session(call_sid: str):
 
 # =============================================================================
 # PROMPTS - Natural, Human-like Responses
+# INDUSTRY-BEST: Conversational, warm, varied - sounds like a real person
 # =============================================================================
 PROMPTS = {
     ConversationState.GREETING: [
-        f"Thanks for calling {COMPANY_NAME}! This call may be recorded for quality purposes. Are you calling to schedule a service appointment today?",
+        f"Hi, thanks for calling {COMPANY_NAME}! This is Sarah. How can I help you today?",
+        f"{COMPANY_NAME}, this is Sarah. What can I do for you?",
+        f"Good afternoon, {COMPANY_NAME}. Sarah speaking, how can I help?",
     ],
     ConversationState.IDENTIFY_NEED: [
-        "Got it. Are you looking to schedule a service appointment, or do you have a question I can help with?",
+        "Sure! Are you looking to schedule something, or do you have a question?",
+        "Got it. Need to book a service, or just have a quick question?",
     ],
     ConversationState.COLLECT_NAME: [
-        "Perfect, I can help you schedule that. May I have your name please?",
-        "Sure thing! Let me get you scheduled. What's your name?",
-        "Absolutely, I'll set that up. Can I get your name?",
+        "I can definitely help with that. And your name?",
+        "Sure thing, let me get you scheduled. What's your name?",
+        "Absolutely. And who am I speaking with?",
     ],
     ConversationState.COLLECT_AREA_CODE: [
-        "Thanks {name}! Now for your phone number. What's your area code? Just the 3 digits.",
+        "Thanks, {name}! What's your phone number? Start with the area code.",
+        "Got it, {name}. Best number to reach you? Area code first.",
     ],
     ConversationState.COLLECT_PHONE_PREFIX: [
-        "Got it. And the next 3 digits?",
+        "Okay, and the next three?",
+        "Got it. Next three digits?",
     ],
     ConversationState.COLLECT_PHONE_LINE: [
-        "And the last 4 digits?",
+        "And the last four?",
+        "Last four digits?",
     ],
     ConversationState.COLLECT_ADDRESS: [
-        "Great. What's the service address?",
-        "And what address will we be coming to?",
+        "What's the address there?",
+        "And where are we heading to?",
+        "What address should the tech come to?",
     ],
     ConversationState.COLLECT_ISSUE: [
-        "What's going on with your system? Just give me a quick description.",
-        "Can you tell me briefly what the issue is?",
+        "So what's going on with your system?",
+        "Tell me what's happening - just a quick description.",
+        "What seems to be the problem?",
     ],
     ConversationState.COLLECT_DATE: [
-        "When would you like us to come out? We have availability this week.",
-        "What day works best for you?",
+        "When works for you? We've got availability this week.",
+        "What day's good for you?",
+        "When would you like us to come out?",
     ],
     ConversationState.COLLECT_TIME: [
-        "And do you prefer morning or afternoon?",
-        "Would morning or afternoon work better?",
+        "Morning or afternoon work better?",
+        "Do you prefer morning or afternoon?",
     ],
     ConversationState.CONFIRM: [
-        "Okay, let me confirm. {name}, we'll have a technician at {address} on {date} in the {time} for {issue}. Does that sound right?",
+        "Alright, so I've got {name} at {address}, {date} in the {time}, for {issue}. Sound right?",
+        "Let me make sure I got this: {name}, {address}, {date} {time}, for {issue}. That correct?",
     ],
     ConversationState.COMPLETE: [
-        "You're all set! We'll see you on {date}. Is there anything else I can help with?",
-        "Perfect, your appointment is confirmed for {date}. Anything else?",
+        "Perfect, you're all set for {date}! Anything else I can help with?",
+        "You're booked for {date}. Need anything else?",
+        "All done! We'll see you {date}. Anything else?",
     ],
     ConversationState.FAQ: [
-        "{answer} Would you like to schedule a service call?",
+        "{answer} Want me to get you scheduled?",
+        "{answer} Would you like to book a service call?",
     ],
     ConversationState.EMERGENCY: [
-        "That sounds like it could be an emergency. I'm going to transfer you to our emergency line right away. Please hold.",
+        "Okay, that sounds serious. I'm transferring you to our emergency line right now. Please hold.",
+        "That's an emergency situation. Let me get you to our urgent line immediately.",
     ],
     ConversationState.GOODBYE: [
-        "Thanks for calling {company}! Have a great day.",
-        "Thank you! Take care and stay comfortable.",
+        "Alright, take care! We'll see you soon.",
+        "Sounds good. Have a great day!",
+        "Perfect. Thanks for calling, take care!",
     ],
     "reprompt": [
-        "Sorry, I didn't catch that. Could you say that again?",
-        "I didn't quite hear you. One more time?",
-        "Could you repeat that please?",
+        "Sorry, I missed that. One more time?",
+        "Didn't catch that - could you say it again?",
+        "Say that again for me?",
     ],
     "fallback": [
-        "I'm having trouble understanding. Let me transfer you to someone who can help.",
+        "I'm having trouble hearing you. Let me connect you with someone who can help.",
     ],
 }
 
