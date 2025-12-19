@@ -66,7 +66,15 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "4.6.0-error-handling"
+_VERSION = "4.7.0-enhanced-greeting"
+
+# Call duration and flood protection limits
+MAX_CALL_DURATION_SECONDS = 600  # 10 minutes max per call
+CALLER_RATE_LIMIT_CALLS = 5  # Max calls per caller per hour
+CALLER_RATE_LIMIT_WINDOW = 3600  # 1 hour window
+
+# In-memory rate limiting (simple, resets on container restart)
+_caller_call_counts: dict = {}  # {caller_number: [(timestamp, call_sid), ...]}
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -354,6 +362,42 @@ class RealtimeSession:
         
         # Fallback tracking - prevent multiple fallback triggers
         self.fallback_triggered: bool = False
+    
+    def _is_caller_rate_limited(self) -> bool:
+        """Check if caller has exceeded rate limit (flood protection)."""
+        if not self.caller_number:
+            return False
+        
+        current_time = time.time()
+        caller_calls = _caller_call_counts.get(self.caller_number, [])
+        
+        # Filter to calls within the rate limit window
+        recent_calls = [t for t, _ in caller_calls if current_time - t < CALLER_RATE_LIMIT_WINDOW]
+        
+        return len(recent_calls) >= CALLER_RATE_LIMIT_CALLS
+    
+    def _record_caller_call(self):
+        """Record this call for rate limiting."""
+        if not self.caller_number:
+            return
+        
+        current_time = time.time()
+        if self.caller_number not in _caller_call_counts:
+            _caller_call_counts[self.caller_number] = []
+        
+        # Add this call
+        _caller_call_counts[self.caller_number].append((current_time, self.call_sid))
+        
+        # Clean up old entries (older than rate limit window)
+        _caller_call_counts[self.caller_number] = [
+            (t, sid) for t, sid in _caller_call_counts[self.caller_number]
+            if current_time - t < CALLER_RATE_LIMIT_WINDOW
+        ]
+    
+    def _is_call_duration_exceeded(self) -> bool:
+        """Check if call has exceeded maximum duration."""
+        elapsed = time.time() - self.call_start_time
+        return elapsed > MAX_CALL_DURATION_SECONDS
         
     async def connect_to_openai(self) -> bool:
         """
@@ -445,9 +489,9 @@ class RealtimeSession:
                 },
                 "turn_detection": {
                     "type": "server_vad",  # Server-side voice activity detection
-                    "threshold": 0.5,  # RAISED back - 0.35 was too sensitive, causing false triggers
-                    "prefix_padding_ms": 400,  # INCREASED - more buffer before speech detection
-                    "silence_duration_ms": 800  # INCREASED - prevents cutting off mid-sentence
+                    "threshold": 0.4,  # LOWERED from 0.5 - better barge-in detection when user speaks
+                    "prefix_padding_ms": 300,  # REDUCED - faster response to user speech
+                    "silence_duration_ms": 700  # REDUCED slightly - better turn-taking
                 },
                 "tools": TOOLS,
                 "tool_choice": "auto",
@@ -472,15 +516,20 @@ class RealtimeSession:
         
         # SHORT greeting - they called us, they're already interested
         # AIDA: Attention + Interest in 15 seconds, then let them drive
+        # ENHANCED: More features, positioned as extension not replacement
         greeting_event = {
             "type": "response.create",
             "response": {
                 "modalities": ["text", "audio"],
-                "instructions": f"""Deliver this opening naturally (15 seconds max):
+                "instructions": f"""Deliver this opening naturally (15-20 seconds max):
 
-"Hey there! Welcome to {COMPANY_NAME}'s AI demo. I'm KC - I'm the AI that could be answering your customer calls around the clock.
+"Hey there! Welcome to {COMPANY_NAME}'s AI demo line. I'm KC - your potential 24/7 AI receptionist.
 
-Wanna test me out? Just pretend you're a homeowner with an HVAC issue, and I'll show you exactly what your customers would experience."
+I can answer FAQs, book appointments, check booking status, give directions to your shop, handle emergencies, and even qualify leads - all while your team focuses on the real work.
+
+Think of me as an extension to your current system, not a replacement. I handle the overflow and after-hours so you never miss a call.
+
+Wanna test me out? Pretend you're a homeowner with an HVAC issue!"
 
 Then STOP. Let them respond. Don't keep talking."""
             }
@@ -523,6 +572,14 @@ Then STOP. Let them respond. Don't keep talking."""
             
             logger.info("Stream started: call_sid=%s, stream_sid=%s, caller=%s", 
                        self.call_sid, self.stream_sid, self.caller_number)
+            
+            # FLOOD PROTECTION: Check if caller is rate limited
+            if self.caller_number and self.caller_number != "unknown":
+                if self._is_caller_rate_limited():
+                    logger.warning("Caller %s rate limited - too many calls", self.caller_number)
+                    self.closed = True
+                    return
+                self._record_caller_call()
             
             # Validate API key before attempting connection
             if not OPENAI_API_KEY:
@@ -578,6 +635,28 @@ Then STOP. Let them respond. Don't keep talking."""
         audio, which would trigger OpenAI's VAD and cause barge-in on itself.
         """
         if not self.openai_ws or self.closed or not self.openai_connected:
+            return
+        
+        # CALL DURATION LIMIT: End call if exceeded max duration (bad actor protection)
+        if self._is_call_duration_exceeded():
+            if not self.fallback_triggered:
+                self.fallback_triggered = True
+                logger.warning("Call duration exceeded %ds - ending call", MAX_CALL_DURATION_SECONDS)
+                # Send a polite goodbye message before closing
+                try:
+                    goodbye_event = {
+                        "type": "response.create",
+                        "response": {
+                            "modalities": ["text", "audio"],
+                            "instructions": "Say briefly: 'Thanks for calling! I need to wrap up now, but feel free to call back anytime. Have a great day!' Then stop."
+                        }
+                    }
+                    await self.openai_ws.send(json.dumps(goodbye_event))
+                except Exception:
+                    pass
+                # Close after a short delay to let goodbye play
+                await asyncio.sleep(5)
+                self.closed = True
             return
         
         # ECHO CANCELLATION: Don't forward audio while AI is speaking
