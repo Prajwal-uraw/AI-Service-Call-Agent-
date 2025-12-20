@@ -32,6 +32,9 @@ image = (
         "psycopg2-binary>=2.9.0",  # PostgreSQL driver
         "websockets>=12.0",
         "httpx>=0.27.0",
+        "psycopg2-binary>=2.9.9",
+        "python-multipart==0.0.20",
+        "twilio==9.8.8",
         "aiohttp>=3.9.0",  # For ElevenLabs TTS streaming
         "twilio>=8.0.0",  # Twilio SDK for request validation
         # Phase 1-5 production hardening dependencies
@@ -53,10 +56,6 @@ app = modal.App("hvac-voice-agent", image=image)
         modal.Secret.from_name("resend", required_keys=[]),  # Resend API for lead emails
     ],
     scaledown_window=300,
-    # Keep 1 container warm 24/7 to avoid cold start delays on incoming calls
-    # Cost: ~$72/month for always-on container (0.10/hr * 24 * 30)
-    # Benefit: Instant response, no 10-20s cold start silence
-    min_containers=1,
 )
 @modal.concurrent(max_inputs=100)
 @modal.asgi_app()
