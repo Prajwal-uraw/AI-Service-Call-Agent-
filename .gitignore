@@ -113,3 +113,10 @@ notes/
 TODO.md
 NOTES.md
 scratch/
+
+# ===========================================
+# Secrets / API Credentials (DO NOT COMMIT)
+# ===========================================
+credentials.json
+token.json
+config/
