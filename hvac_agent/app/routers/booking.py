@@ -296,16 +296,28 @@ def debug_cancel_appointment(
     Returns:
         Cancellation result
     """
+    # Get the appointment to find its location
     appt = db.get(Appointment, appointment_id)
     if not appt:
         raise HTTPException(status_code=404, detail="Appointment not found")
     
-    appt.is_cancelled = True
-    db.commit()
+    # Get the location code for the appointment
+    location = db.get(Location, appt.location_id)
+    if not location:
+        raise HTTPException(status_code=400, detail="Location not found for this appointment")
+    
+    # Use the cancel_booking function which handles Google Calendar cleanup
+    result = cancel_booking(
+        db=db,
+        name=appt.customer_name,
+        location_code=location.code,
+        confirmation_id=appointment_id
+    )
+    
+    if result["status"] != "success":
+        raise HTTPException(status_code=400, detail=result.get("message", "Failed to cancel appointment"))
     
     return {
-        "status": "success",
-        "message": f"Appointment {appointment_id} cancelled",
     }
 
 

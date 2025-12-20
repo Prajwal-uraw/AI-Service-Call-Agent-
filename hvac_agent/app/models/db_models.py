@@ -94,7 +94,9 @@ class Appointment(Base):
     priority: int = Column(Integer, default=3)  # 1=High, 2=Medium, 3=Normal
     notes: Optional[str] = Column(Text, nullable=True)
     is_confirmed: bool = Column(Boolean, default=False)
+    status: str = Column(String(20), default="scheduled")  # scheduled, completed, cancelled, no_show
     is_cancelled: bool = Column(Boolean, default=False)
+    google_event_id: str = Column(String(255), nullable=True, index=True)  # ID of the corresponding Google Calendar event
     estimated_duration: int = Column(Integer, default=60)  # minutes
     created_at: datetime = Column(DateTime, default=datetime.utcnow)
     updated_at: datetime = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

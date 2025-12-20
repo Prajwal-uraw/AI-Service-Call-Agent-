@@ -127,7 +127,7 @@ class CallState(BaseModel):
             lines.append(f"{prefix}: {turn.content}")
         return "\n".join(lines)
     
-    # In your CallState class, add these methods after the get_conversation_summary method
+    
 
     def start_booking_flow(self) -> None:
         """Initialize booking flow."""
