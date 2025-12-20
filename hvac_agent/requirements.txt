@@ -48,6 +48,16 @@ cachetools>=5.3.0
 # Phone number validation (optional but recommended)
 phonenumbers>=8.13.0
 
+# Redis (optional - for persistent state in multi-instance deployments)
+# Enables session persistence across restarts and multi-instance support
+redis>=5.0.0
+
+# Local caching for session store (required)
+cachetools>=5.3.0
+
+# Phone number validation (optional but recommended)
+phonenumbers>=8.13.0
+
 # Development dependencies (optional)
 # pytest>=8.0.0
 # pytest-asyncio>=0.23.0

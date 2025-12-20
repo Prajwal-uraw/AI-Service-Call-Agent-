@@ -66,7 +66,15 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "4.3.0-kc-persona-polished"
+_VERSION = "4.7.0-enhanced-greeting"
+
+# Call duration and flood protection limits
+MAX_CALL_DURATION_SECONDS = 600  # 10 minutes max per call
+CALLER_RATE_LIMIT_CALLS = 5  # Max calls per caller per hour
+CALLER_RATE_LIMIT_WINDOW = 3600  # 1 hour window
+
+# In-memory rate limiting (simple, resets on container restart)
+_caller_call_counts: dict = {}  # {caller_number: [(timestamp, call_sid), ...]}
 print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 
 # =============================================================================
@@ -314,6 +322,7 @@ class RealtimeSession:
         
         # Session state
         self.session_configured = False
+        self.session_ready = False  # True after session.updated is received
         self.response_in_progress = False
         self.current_response_id: Optional[str] = None
         self.pending_function_calls: Dict[str, dict] = {}
@@ -350,6 +359,45 @@ class RealtimeSession:
         
         # Track which model we're using
         self.using_fallback_model: bool = False
+        
+        # Fallback tracking - prevent multiple fallback triggers
+        self.fallback_triggered: bool = False
+    
+    def _is_caller_rate_limited(self) -> bool:
+        """Check if caller has exceeded rate limit (flood protection)."""
+        if not self.caller_number:
+            return False
+        
+        current_time = time.time()
+        caller_calls = _caller_call_counts.get(self.caller_number, [])
+        
+        # Filter to calls within the rate limit window
+        recent_calls = [t for t, _ in caller_calls if current_time - t < CALLER_RATE_LIMIT_WINDOW]
+        
+        return len(recent_calls) >= CALLER_RATE_LIMIT_CALLS
+    
+    def _record_caller_call(self):
+        """Record this call for rate limiting."""
+        if not self.caller_number:
+            return
+        
+        current_time = time.time()
+        if self.caller_number not in _caller_call_counts:
+            _caller_call_counts[self.caller_number] = []
+        
+        # Add this call
+        _caller_call_counts[self.caller_number].append((current_time, self.call_sid))
+        
+        # Clean up old entries (older than rate limit window)
+        _caller_call_counts[self.caller_number] = [
+            (t, sid) for t, sid in _caller_call_counts[self.caller_number]
+            if current_time - t < CALLER_RATE_LIMIT_WINDOW
+        ]
+    
+    def _is_call_duration_exceeded(self) -> bool:
+        """Check if call has exceeded maximum duration."""
+        elapsed = time.time() - self.call_start_time
+        return elapsed > MAX_CALL_DURATION_SECONDS
         
     async def connect_to_openai(self) -> bool:
         """
@@ -441,9 +489,9 @@ class RealtimeSession:
                 },
                 "turn_detection": {
                     "type": "server_vad",  # Server-side voice activity detection
-                    "threshold": 0.5,  # RAISED back - 0.35 was too sensitive, causing false triggers
-                    "prefix_padding_ms": 400,  # INCREASED - more buffer before speech detection
-                    "silence_duration_ms": 800  # INCREASED - prevents cutting off mid-sentence
+                    "threshold": 0.4,  # LOWERED from 0.5 - better barge-in detection when user speaks
+                    "prefix_padding_ms": 300,  # REDUCED - faster response to user speech
+                    "silence_duration_ms": 700  # REDUCED slightly - better turn-taking
                 },
                 "tools": TOOLS,
                 "tool_choice": "auto",
@@ -468,15 +516,20 @@ class RealtimeSession:
         
         # SHORT greeting - they called us, they're already interested
         # AIDA: Attention + Interest in 15 seconds, then let them drive
+        # ENHANCED: More features, positioned as extension not replacement
         greeting_event = {
             "type": "response.create",
             "response": {
                 "modalities": ["text", "audio"],
-                "instructions": f"""Deliver this opening naturally (15 seconds max):
+                "instructions": f"""Deliver this opening naturally (15-20 seconds max):
 
-"Hey there! Welcome to {COMPANY_NAME}'s AI demo. I'm KC - I'm the AI that could be answering your customer calls around the clock.
+"Hey there! Welcome to {COMPANY_NAME}'s AI demo line. I'm KC - your potential 24/7 AI receptionist.
 
-Wanna test me out? Just pretend you're a homeowner with an HVAC issue, and I'll show you exactly what your customers would experience."
+I can answer FAQs, book appointments, check booking status, give directions to your shop, handle emergencies, and even qualify leads - all while your team focuses on the real work.
+
+Think of me as an extension to your current system, not a replacement. I handle the overflow and after-hours so you never miss a call.
+
+Wanna test me out? Pretend you're a homeowner with an HVAC issue!"
 
 Then STOP. Let them respond. Don't keep talking."""
             }
@@ -520,6 +573,14 @@ Then STOP. Let them respond. Don't keep talking."""
             logger.info("Stream started: call_sid=%s, stream_sid=%s, caller=%s", 
                        self.call_sid, self.stream_sid, self.caller_number)
             
+            # FLOOD PROTECTION: Check if caller is rate limited
+            if self.caller_number and self.caller_number != "unknown":
+                if self._is_caller_rate_limited():
+                    logger.warning("Caller %s rate limited - too many calls", self.caller_number)
+                    self.closed = True
+                    return
+                self._record_caller_call()
+            
             # Validate API key before attempting connection
             if not OPENAI_API_KEY:
                 logger.error("Cannot connect to OpenAI - API key not configured")
@@ -529,9 +590,17 @@ Then STOP. Let them respond. Don't keep talking."""
             # Connect to OpenAI and configure
             if await self.connect_to_openai():
                 await self.configure_session()
-                # Small delay to ensure session is ready
-                await asyncio.sleep(0.5)
-                await self.send_initial_greeting()
+                # Wait for session.updated event (with timeout)
+                wait_start = time.time()
+                while not self.session_ready and (time.time() - wait_start) < 5.0:
+                    await asyncio.sleep(0.1)
+                
+                if self.session_ready:
+                    logger.info("Session ready, sending initial greeting")
+                    await self.send_initial_greeting()
+                else:
+                    logger.warning("Session not ready after 5s, sending greeting anyway")
+                    await self.send_initial_greeting()
             else:
                 # OpenAI connection failed - fallback to transfer
                 logger.error("OpenAI connection failed, initiating fallback")
@@ -566,6 +635,28 @@ Then STOP. Let them respond. Don't keep talking."""
         audio, which would trigger OpenAI's VAD and cause barge-in on itself.
         """
         if not self.openai_ws or self.closed or not self.openai_connected:
+            return
+        
+        # CALL DURATION LIMIT: End call if exceeded max duration (bad actor protection)
+        if self._is_call_duration_exceeded():
+            if not self.fallback_triggered:
+                self.fallback_triggered = True
+                logger.warning("Call duration exceeded %ds - ending call", MAX_CALL_DURATION_SECONDS)
+                # Send a polite goodbye message before closing
+                try:
+                    goodbye_event = {
+                        "type": "response.create",
+                        "response": {
+                            "modalities": ["text", "audio"],
+                            "instructions": "Say briefly: 'Thanks for calling! I need to wrap up now, but feel free to call back anytime. Have a great day!' Then stop."
+                        }
+                    }
+                    await self.openai_ws.send(json.dumps(goodbye_event))
+                except Exception:
+                    pass
+                # Close after a short delay to let goodbye play
+                await asyncio.sleep(5)
+                self.closed = True
             return
         
         # ECHO CANCELLATION: Don't forward audio while AI is speaking
@@ -640,14 +731,22 @@ Then STOP. Let them respond. Don't keep talking."""
         """Process incoming message from OpenAI."""
         event_type = message.get("type")
         
+        # DEBUG: Log all event types to diagnose audio issues
+        if event_type not in ["response.audio.delta", "input_audio_buffer.append"]:
+            logger.info("OpenAI event: %s", event_type)
+        
         if event_type == "session.created":
             logger.info("OpenAI session created")
             
         elif event_type == "session.updated":
-            logger.info("OpenAI session updated")
+            logger.info("OpenAI session updated - session is now ready")
+            self.session_ready = True
             
         elif event_type == "response.audio.delta":
             # Stream audio back to Twilio
+            delta = message.get("delta", "")
+            if delta:
+                logger.debug("Audio delta received: %d bytes", len(delta))
             await self.forward_audio_to_twilio(message)
             
         elif event_type == "response.audio_transcript.delta":
@@ -686,18 +785,58 @@ Then STOP. Let them respond. Don't keep talking."""
             
         elif event_type == "response.created":
             self.response_in_progress = True
-            self.current_response_id = message.get("response", {}).get("id")
-            logger.info("AI response started: %s", self.current_response_id)
+            response = message.get("response", {})
+            self.current_response_id = response.get("id")
+            # Log full response details to debug audio issues
+            modalities = response.get("modalities", [])
+            status = response.get("status", "unknown")
+            logger.info("AI response started: id=%s, modalities=%s, status=%s", 
+                       self.current_response_id, modalities, status)
             
         elif event_type == "response.done":
             self.response_in_progress = False
+            response = message.get("response", {})
+            status = response.get("status", "unknown")
+            status_details = response.get("status_details", {})
+            output = response.get("output", [])
+            
+            # Log detailed response info
+            logger.info("AI response complete: status=%s, output_items=%d", status, len(output))
+            if status_details:
+                logger.info("Response status_details: %s", json.dumps(status_details))
+            
+            # CRITICAL: Handle failed responses (quota exceeded, API errors, etc.)
+            if status == "failed":
+                error_info = status_details.get("error", {})
+                error_type = error_info.get("type", "unknown")
+                error_code = error_info.get("code", "unknown")
+                error_msg = error_info.get("message", "Unknown error")
+                
+                logger.error("OpenAI response FAILED: type=%s, code=%s, message=%s", 
+                           error_type, error_code, error_msg)
+                
+                # Send alert email for critical failures
+                await self.send_failure_alert_email(error_type, error_code, error_msg)
+                
+                # Trigger fallback - close stream so Twilio redirects to Gather system
+                if not self.fallback_triggered:
+                    self.fallback_triggered = True
+                    logger.warning("Triggering fallback due to API failure")
+                    # Close the stream - Twilio TwiML has fallback to Gather system
+                    self.closed = True
+            
+            for item in output:
+                item_type = item.get("type", "unknown")
+                item_status = item.get("status", "unknown")
+                content = item.get("content", [])
+                logger.info("  Output item: type=%s, status=%s, content_parts=%d", 
+                           item_type, item_status, len(content))
+            
             self.current_response_id = None
             # ECHO CANCELLATION: Mark speaking as done
-            # Keep last_audio_sent_time set - the echo_suppression_ms buffer will handle trailing echo
-            # DON'T reset audio_send_start_time - we need it for the echo window
             self.is_speaking = False
-            self.last_audio_sent_time = time.time()  # Update end time for echo suppression
-            logger.info("AI response complete - echo suppression window active for %dms", self.echo_suppression_ms)
+            self.last_audio_sent_time = time.time()
+            logger.info("Echo suppression window active for %dms", self.echo_suppression_ms)
             
         elif event_type == "response.output_item.done":
             # Handle function calls - this is the correct event for completed function calls
@@ -711,11 +850,23 @@ Then STOP. Let them respond. Don't keep talking."""
             self.response_in_progress = False
             self.current_response_id = None
             
+        elif event_type == "response.content_part.added":
+            # Log content part details to debug audio issues
+            part = message.get("part", {})
+            logger.info("Content part added: type=%s", part.get("type", "unknown"))
+            
+        elif event_type == "response.output_item.added":
+            # Log output item details
+            item = message.get("item", {})
+            logger.info("Output item added: type=%s, id=%s", item.get("type", "unknown"), item.get("id", "unknown"))
+            
         elif event_type == "error":
             error = message.get("error", {})
             error_code = error.get("code", "unknown")
             error_msg = error.get("message", "Unknown error")
             logger.error("OpenAI error [%s]: %s", error_code, error_msg)
+            # Log full error for debugging
+            logger.error("Full error details: %s", json.dumps(error))
             
             # Handle specific error codes
             if error_code in ["session_expired", "invalid_session"]:
@@ -901,6 +1052,84 @@ Then STOP. Let them respond. Don't keep talking."""
                 self.openai_connected = False
             except Exception as e:
                 logger.error("Error sending function call response: %s", str(e))
+    
+    async def send_failure_alert_email(self, error_type: str, error_code: str, error_msg: str):
+        """
+        Send alert email when AI agent fails (quota exceeded, API errors, etc.).
+        
+        This ensures the team is notified immediately when the agent goes down.
+        """
+        if not RESEND_API_KEY:
+            logger.warning("RESEND_API_KEY not configured - cannot send failure alert")
+            return
+        
+        try:
+            email_html = f"""
+            <h2 style="color: #dc3545;">🚨 AI Voice Agent FAILURE Alert</h2>
+            <p style="font-size: 16px; color: #333;">The AI voice agent encountered a critical error and is not responding to callers.</p>
+            
+            <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+                <tr style="background-color: #f8d7da;">
+                    <td style="padding: 12px; border: 1px solid #f5c6cb;"><strong>Error Type</strong></td>
+                    <td style="padding: 12px; border: 1px solid #f5c6cb;">{error_type}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;"><strong>Error Code</strong></td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{error_code}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;"><strong>Error Message</strong></td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{error_msg}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;"><strong>Call SID</strong></td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{self.call_sid or 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;"><strong>Caller</strong></td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{self.caller_number or 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 12px; border: 1px solid #ddd;"><strong>Timestamp</strong></td>
+                    <td style="padding: 12px; border: 1px solid #ddd;">{datetime.now().isoformat()}</td>
+                </tr>
+            </table>
+            
+            <h3>Recommended Actions:</h3>
+            <ul>
+                <li><strong>insufficient_quota</strong>: Add credits to your OpenAI account at <a href="https://platform.openai.com/account/billing">platform.openai.com/account/billing</a></li>
+                <li><strong>rate_limit_exceeded</strong>: Wait a few minutes and try again</li>
+                <li><strong>server_error</strong>: OpenAI service issue - check <a href="https://status.openai.com">status.openai.com</a></li>
+            </ul>
+            
+            <p style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+                <strong>Note:</strong> Callers are being redirected to the fallback Gather system, but the AI voice experience is degraded.
+            </p>
+            """
+            
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    "https://api.resend.com/emails",
+                    headers={
+                        "Authorization": f"Bearer {RESEND_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "from": "AI Agent Alerts <alerts@haiec.com>",
+                        "to": [LEAD_NOTIFICATION_EMAIL],
+                        "subject": f"🚨 AI Voice Agent DOWN - {error_code}",
+                        "html": email_html
+                    },
+                    timeout=10.0
+                )
+                
+                if resp.status_code == 200:
+                    logger.info("🚨 Failure alert email sent to %s", LEAD_NOTIFICATION_EMAIL)
+                else:
+                    logger.error("Failed to send failure alert: %s - %s", resp.status_code, resp.text)
+                    
+        except Exception as e:
+            logger.error("Error sending failure alert email: %s", str(e))
     
     async def send_lead_email(self, lead: dict):
         """Send lead notification email via Resend API."""

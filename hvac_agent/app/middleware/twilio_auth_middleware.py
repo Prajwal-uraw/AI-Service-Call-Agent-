@@ -50,7 +50,10 @@ async def validate_twilio_request(request: Request, call_next):
         if request.url.query:
             url += f"?{request.url.query}"
 
-        if not validator.validate(url, params, signature):
+        # Validate request
+        is_valid = validator.validate(url, params, signature)
+
+        if not is_valid:
             return PlainTextResponse("Invalid Twilio signature", status_code=403)
 
     return await call_next(request)
