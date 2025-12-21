@@ -35,10 +35,11 @@ jobs:
           pip install -r requirements.txt
           pip install alembic psycopg2-binary python-dotenv
 
-      # Run database migrations
-      - name: Run DB migrations
+      # Initialize database and run migrations
+      - name: Initialize database and run migrations
         working-directory: ./hvac_agent
         run: |
+          python -c "from app.services.db import init_db; init_db()"
           alembic upgrade head
 
       # Run tests (skip if no tests exist)
