@@ -12,7 +12,7 @@ jobs:
 
     env:
       # Use SQLite for CI/CD testing if DATABASE_URL secret is not set
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'sqlite:///./test.db' }}
       TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID || 'test' }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN || 'test' }}
 
