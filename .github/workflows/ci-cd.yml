@@ -12,7 +12,7 @@ jobs:
 
     env:
       # Use SQLite for CI/CD testing if DATABASE_URL secret is not set
-      DATABASE_URL: ${{ secrets.DATABASE_URL || 'sqlite:///./test.db' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'sqlite:///./hvac_agent.db' }}
       TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID || 'test' }}
       TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN || 'test' }}
 
@@ -35,11 +35,10 @@ jobs:
           pip install -r requirements.txt
           pip install alembic psycopg2-binary python-dotenv
 
-      # Initialize database and run migrations
-      - name: Initialize database and run migrations
+      # Run database migrations
+      - name: Run DB migrations
         working-directory: ./hvac_agent
         run: |
-          python -c "from app.services.db import init_db; init_db()"
           alembic upgrade head
 
       # Run tests (skip if no tests exist)
