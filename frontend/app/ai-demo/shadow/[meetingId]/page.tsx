@@ -249,6 +249,8 @@ export default function ShadowDashboardPage() {
                       </div>
                       <button
                         onClick={() => dismissSignal(signal.id)}
+                        title="Dismiss signal"
+                        aria-label="Dismiss signal"
                         className="text-gray-400 hover:text-gray-600"
                       >
                         <XCircle className="w-5 h-5" />

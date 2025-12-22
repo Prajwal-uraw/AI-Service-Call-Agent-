@@ -189,10 +189,13 @@ export default function BookAIDemoPage() {
                   Date *
                 </label>
                 <input
+                  id="scheduledDate"
                   type="date"
                   name="scheduledDate"
                   value={formData.scheduledDate}
                   onChange={handleInputChange}
+                  title="Select demo date"
+                  placeholder="Select date"
                   required
                   min={new Date().toISOString().split('T')[0]}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -205,10 +208,13 @@ export default function BookAIDemoPage() {
                   Time *
                 </label>
                 <input
+                  id="scheduledTime"
                   type="time"
                   name="scheduledTime"
                   value={formData.scheduledTime}
                   onChange={handleInputChange}
+                  title="Select demo time"
+                  placeholder="Select time"
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -219,9 +225,11 @@ export default function BookAIDemoPage() {
                   Timezone
                 </label>
                 <select
+                  id="timezone"
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleInputChange}
+                  aria-label="Select timezone"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="America/New_York">Eastern Time (ET)</option>
