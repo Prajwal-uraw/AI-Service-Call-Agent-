@@ -34,7 +34,7 @@ supabase>=2.0.0
 psycopg2-binary>=2.9.0
 
 # AI/NLP
-openai>=1.0.0
+openai>=1.12.0  # Required for GPT-4o-mini and JSON mode
 
 # Modal (Serverless)
 modal>=0.56.0
