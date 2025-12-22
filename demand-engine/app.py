@@ -6,6 +6,8 @@ Includes calculator and PDF generation services
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from middleware.rate_limiter import rate_limit_middleware
+from middleware.request_id import RequestIDMiddleware
 
 from calculator.api import router as calculator_router
 from pdf_generator.router import router as pdf_router
@@ -43,11 +45,15 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Request ID middleware (first)
+app.add_middleware(RequestIDMiddleware)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        "http://localhost:3001",
         "https://hvacaiagent.frontofai.com",
         "https://*.vercel.app"
     ],
@@ -55,6 +61,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting middleware (after CORS)
+app.middleware("http")(rate_limit_middleware)
 
 # Include routers
 app.include_router(calculator_router, prefix="/api")
