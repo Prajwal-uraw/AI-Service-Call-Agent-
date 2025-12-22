@@ -113,3 +113,11 @@ notes/
 TODO.md
 NOTES.md
 scratch/
+
+# ===========================================
+# Node.js
+# ===========================================
+node_modules/
+frontend/node_modules/
+*.lock
+package-lock.json

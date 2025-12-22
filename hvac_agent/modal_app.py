@@ -15,7 +15,7 @@ Deployment version: 2.0.1-queue-based (forces cache invalidation)
 import modal
 
 # Force cache invalidation - change this value to force rebuild
-_CACHE_BUSTER = "v4.7.0-20241219-enhanced-greeting"
+_CACHE_BUSTER = "v4.8.0-20241219-please-hold-transcripts"
 
 # Define the Modal image with dependencies and local app source
 image = (
@@ -53,10 +53,9 @@ app = modal.App("hvac-voice-agent", image=image)
         modal.Secret.from_name("resend", required_keys=[]),  # Resend API for lead emails
     ],
     scaledown_window=300,
-    # Keep 1 container warm 24/7 to avoid cold start delays on incoming calls
-    # Cost: ~$72/month for always-on container (0.10/hr * 24 * 30)
-    # Benefit: Instant response, no 10-20s cold start silence
-    min_containers=1,
+    # REMOVED min_containers=1 to save ~$72/month
+    # Cold start is now handled by TwiML \"please hold\" message before Stream connects
+    # Container scales to zero when idle, caller hears \"Thank you for calling, please hold...\"
 )
 @modal.concurrent(max_inputs=100)
 @modal.asgi_app()

@@ -1,0 +1,56 @@
+# Core Dependencies
+modal==0.63.0
+praw==7.7.1
+openai==1.12.0
+supabase==2.3.4
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+tenacity>=8.2.0
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# HTTP/Scraping
+httpx>=0.27.0
+praw>=7.7.0
+beautifulsoup4>=4.12.0
+playwright>=1.40.0
+
+# Phase 3: Pain Signal Aggregator
+praw>=7.7.0  # Reddit API
+
+# Data Processing
+pandas>=2.1.0
+numpy>=1.24.0
+
+# Email/Notifications
+sendgrid>=6.11.0
+python-sendgrid>=6.11.0
+
+# Database
+supabase>=2.0.0
+psycopg2-binary>=2.9.0
+
+# AI/NLP
+openai>=1.0.0
+
+# Modal (Serverless)
+modal>=0.56.0
+
+# Calculator (Phase 2)
+email-validator>=2.1.0
+
+# PDF Generation (Phase 2 Session 7)
+reportlab>=4.0.0
+
+# Email & Storage (Phase 2 Session 8)
+resend>=0.7.0
+httpx>=0.27.0
+
+# Development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+ruff>=0.1.14

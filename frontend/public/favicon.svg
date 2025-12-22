@@ -1,0 +1,19 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .mark { fill: none; stroke: #1e40af; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .fill { fill: #1e40af; }
+    </style>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#f0f9ff"/>
+  <g transform="translate(8,8)">
+    <!-- Kestrel head -->
+    <path class="mark" d="M12 28 C16 18, 28 14, 38 17 C44 19, 48 24, 48 30 C48 38, 40 44, 32 44 C24 44, 18 40, 14 36"/>
+    <!-- Beak -->
+    <path class="mark" d="M47 30 L54 27 L48 35"/>
+    <!-- Eye -->
+    <circle cx="36" cy="26" r="2.5" class="fill"/>
+    <!-- Wing -->
+    <path class="mark" d="M10 44 L44 44"/>
+  </g>
+</svg>

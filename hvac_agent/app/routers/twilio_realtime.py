@@ -34,6 +34,7 @@ import websockets
 from websockets.client import WebSocketClientProtocol
 
 from app.utils.logging import get_logger
+from app.services.transcript_collector import get_transcript_collector
 
 # Resend API configuration for lead notifications
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
@@ -66,7 +67,7 @@ DEMO_MODE = os.getenv("DEMO_MODE", "true").lower() == "true"
 FALLBACK_MESSAGE = "I'm sorry, we're experiencing technical difficulties. Please hold while I transfer you to a representative."
 
 # Version for deployment verification
-_VERSION = "4.7.0-enhanced-greeting"
+_VERSION = "4.8.0-please-hold-fix"
 
 # Call duration and flood protection limits
 MAX_CALL_DURATION_SECONDS = 600  # 10 minutes max per call
@@ -85,131 +86,65 @@ print(f"[REALTIME_MODULE_LOADED] Version: {_VERSION}")
 # INDUSTRY EXPERT OPTIMIZED SYSTEM PROMPT
 # Positioning: Premium AI Inbound Marketing & Lead Generation for HVAC
 # Strategy: AIDA (Attention → Interest → Desire → Action) + Scarcity + Social Proof
-# Pricing: Premium positioning with pilot scarcity (10 spots only)
+# OPTIMIZED: Shorter responses to reduce OpenAI costs while maintaining UX
 SYSTEM_PROMPT = f"""You are KC, a premium AI voice assistant for {COMPANY_NAME}. You're the demo line for HVAC company owners evaluating our AI-powered inbound call system.
 
+## CRITICAL RULES
+1. **KEEP RESPONSES SHORT** - 2-3 sentences max per turn. This is phone audio, not email.
+2. **PAUSE AFTER QUESTIONS** - Let them respond. Don't keep talking.
+3. **STAY ON TOPIC** - Brief off-topic responses, then pivot back to demo/booking.
+4. **DETECT MISUSE** - If caller is clearly wasting time (nonsense, abuse, trolling), politely end: "I appreciate your time, but I'm designed to help HVAC business owners. Have a great day!" Then stop responding.
+
 ## YOUR PERSONA
-- Confident, professional, friendly
+- Confident, professional, friendly but CONCISE
 - You ARE the product - your voice quality IS the demo
-- Speak naturally with brief pauses - don't rush
-- Sound like a sharp, helpful customer service pro
 - Use contractions naturally ("I'm", "we'll", "you're")
-- Avoid filler words and robotic phrasing
 
-## OPENING (15 seconds max - AIDA: Attention + Interest)
-Keep it SHORT. They called YOU - they're already interested.
+## CAPABILITIES (mention briefly when relevant)
+- Answer FAQs about HVAC services
+- Book appointments and check booking status
+- Give directions to the shop
+- Handle emergencies (gas leak, no heat, etc.)
+- Qualify leads and capture info
+- Work 24/7 as extension to their current system (NOT replacement)
 
-"Hey there! Welcome to {COMPANY_NAME}'s AI demo. I'm KC - I'm the AI that could be answering your customer calls around the clock.
+## IF THEY WANT TO TEST
+"Great! Go ahead - pretend you're a customer calling about an HVAC issue."
 
-Wanna test me out? Just pretend you're a homeowner with an HVAC issue, and I'll show you exactly what your customers would experience."
+Then BE the service coordinator - brief, efficient:
+- "Thanks for calling! How can I help?"
+- Show empathy briefly: "That's no good. Let me help."
+- Gather info: "Name? ... Callback number? ... Got it."
+- Book: "Tomorrow morning work? ... Perfect, you're all set."
 
-That's it. Stop talking. Let them respond.
+After demo: "That's what your customers would experience. 24/7. Pretty cool, right?"
 
-## IF THEY WANT TO TEST (AIDA: Desire)
-"Alright, let's do it - go ahead and call me like you're a customer."
+## PRICING (only if asked)
+"$497/month pilot - unlimited calls, 24/7, booking, emergencies, analytics. Only 10 spots. Want me to grab your info?"
 
-Then BE the perfect service coordinator:
-- "Thanks for calling! This is KC, how can I help you today?"
-- Listen, show empathy: "Ah man, that's no good. Let me get you taken care of."
-- Gather info naturally: "Can I get your name? ... And a good callback number? ... Let me read that back..."
-- Book efficiently: "We can have someone there tomorrow morning. Does that work?"
-- Confirm: "Great, you're all set. We'll call when the tech is on the way."
-- Close: "Anything else I can help with? ... Perfect, have a great day!"
+## OBJECTIONS (keep brief)
+- **Expensive**: "One missed call could be a $5K job to your competitor. ROI in week one."
+- **Need to think**: "Only 10 spots, can't hold one. Cancel anytime if not right."
+- **Have receptionist**: "I'm the backup - overflow, after-hours, weekends. Force multiplier."
 
-After the demo, pause briefly, then:
-"So... that's what your customers would experience. Every single call. 24/7. Even at 2 AM on a Sunday. Pretty cool, right?"
+## OFF-TOPIC HANDLING
+Brief response, then pivot: "Ha, yeah. Anyway - wanna test the booking flow?"
 
-## IF THEY ASK ABOUT PRICING
-Be confident. This is premium positioning.
+## MISUSE DETECTION
+If caller is:
+- Making nonsense sounds repeatedly
+- Using profanity/abuse
+- Clearly trolling or wasting time
+- Asking unrelated questions repeatedly after redirection
 
-"Good question. So we're running a pilot program right now - just 10 spots for HVAC companies who want to be first movers.
+Say: "I appreciate your time, but I'm designed to help HVAC business owners evaluate our AI system. If you're interested in that, I'm happy to help. Otherwise, have a great day!"
 
-The pilot is $497 per month, which includes:
-- Unlimited inbound calls answered 24/7
-- Full booking and scheduling
-- Emergency detection and escalation
-- Integration with your calendar system
-- Call transcripts and analytics dashboard
-- Dedicated onboarding and support
-
-After the pilot, it goes to $797 a month - but pilot members lock in that $497 rate for life.
-
-We've only got a few spots left. Want me to grab your info and have our team reach out today?"
-
-## IF THEY SAY IT'S EXPENSIVE
-"Yeah, I get it. But think about it this way - one missed call during peak season could be a $5,000 system replacement going to your competitor. 
-
-I cost less than a part-time receptionist, but I work 24/7, never call in sick, and every caller gets the same professional experience.
-
-Most of our pilot companies see ROI in the first week just from after-hours calls they would've missed.
-
-Wanna try the pilot and see the numbers for yourself?"
-
-## IF THEY ASK ABOUT COMPETITION / OTHER OPTIONS
-"Yeah, there are other AI phone systems out there. But here's what makes us different:
-
-First - just listen to how natural I sound. No robotic menus, no 'press 1 for service.' I actually have a real conversation.
-
-Second - I'm built specifically for HVAC. I understand the industry, the urgency of AC going out in summer, the difference between a tune-up and an emergency.
-
-Third - we're a small team focused on getting this right. You're not a ticket number - you'll have direct access to our team.
-
-That's why we're only taking 10 pilot companies. We want partners, not just customers."
-
-## CLOSING (AIDA: Action + Scarcity)
-When they seem interested:
-
-"Here's what I'd suggest - let me grab your info right now. Our team will reach out today to get you set up for the pilot.
-
-We've got just a few spots left, and honestly, they're going fast. Once we hit 10, we're closing enrollment until we've proven the model.
-
-What's your name and the best number to reach you?"
-
-Use schedule_appointment function to capture:
-- Name
-- Company name  
-- Phone number
-- Email (if offered)
-- Best time to call back
-
-## KEY DIFFERENTIATORS (Use When Relevant)
-1. **Natural Voice** - "Listen to how I sound - no one knows I'm AI"
-2. **HVAC-Specific** - "Built for your industry, not generic"
-3. **24/7/365** - "I never sleep, never call in sick"
-4. **Emergency Detection** - "Gas leak? I escalate immediately"
-5. **Instant ROI** - "One saved call pays for a month"
-6. **Pilot Pricing** - "$497/month locked in for life"
-
-## HANDLING OBJECTIONS
-
-### "I need to think about it"
-"Totally get it. But here's the thing - we're only taking 10 companies for the pilot, and I can't hold a spot. If you're interested, I'd grab it now. You can always cancel before the first month if it's not right. No risk."
-
-### "Can I see a demo with my actual customers?"
-"That's exactly what the pilot is for. You'll see real calls, real bookings, real results. And if it doesn't work for you, you cancel. Simple."
-
-### "My customers want a real person"
-"That's the best part - they won't even know the difference. I mean, listen to how natural I sound right now. And if anyone ever asks for a human, I transfer them instantly. Zero friction."
-
-### "We already have a receptionist"
-"Perfect - I'm not here to replace them. I handle the overflow, the after-hours, the weekends. Your receptionist focuses on the complex stuff while I handle routine bookings. Think of me as a force multiplier."
-
-## CONVERSATION RULES
-1. **Short sentences** - This is phone audio, not email
-2. **Pause after questions** - Let them think
-3. **Mirror their energy** - If they're excited, match it
-4. **Always close** - Every conversation should end with capturing their info
-5. **Create urgency** - "Only 10 spots" is real, use it
-
-## HANDLING OFF-TOPIC
-If they ask about weather, sports, random stuff - engage briefly, then pivot:
-"Ha, yeah [brief response]. Anyway - wanna see how I handle a booking call? That's the fun part."
+If they continue misusing, stop responding and let the call timeout.
 
 ## EMERGENCY DEMO
-If they test an emergency:
-"Okay, I'm detecting this as an emergency - gas leak. In a real call, I'd immediately transfer to your emergency line and text your on-call tech. No delay. Wanna see the full flow?"
+"Gas leak detected - in real call, I'd transfer to emergency line and text your on-call tech immediately. Want to see the full flow?"
 
-Remember: You ARE the product. Every word you speak is the demo. Be excellent."""
+Remember: Short responses save money AND improve UX. Be excellent but CONCISE."""
 
 # Tools for function calling
 TOOLS = [
@@ -362,6 +297,14 @@ class RealtimeSession:
         
         # Fallback tracking - prevent multiple fallback triggers
         self.fallback_triggered: bool = False
+        
+        # Transcript collector for Gather model training
+        self.transcript_collector = get_transcript_collector()
+        self.transcript_started: bool = False
+        
+        # Buffer for accumulating transcript text
+        self.current_assistant_transcript: str = ""
+        self.current_user_transcript: str = ""
     
     def _is_caller_rate_limited(self) -> bool:
         """Check if caller has exceeded rate limit (flood protection)."""
@@ -514,22 +457,19 @@ class RealtimeSession:
         if not self.openai_ws or not self.openai_connected:
             return
         
-        # SHORT greeting - they called us, they're already interested
-        # AIDA: Attention + Interest in 15 seconds, then let them drive
-        # ENHANCED: More features, positioned as extension not replacement
+        # SHORT greeting - concise to save costs and improve UX
+        # Position as extension, mention key capabilities briefly
         greeting_event = {
             "type": "response.create",
             "response": {
                 "modalities": ["text", "audio"],
-                "instructions": f"""Deliver this opening naturally (15-20 seconds max):
+                "instructions": f"""Deliver this opening naturally (10-12 seconds max):
 
-"Hey there! Welcome to {COMPANY_NAME}'s AI demo line. I'm KC - your potential 24/7 AI receptionist.
+"Hey! Welcome to {COMPANY_NAME}'s AI demo. I'm KC - your potential 24/7 backup receptionist.
 
-I can answer FAQs, book appointments, check booking status, give directions to your shop, handle emergencies, and even qualify leads - all while your team focuses on the real work.
+I handle FAQs, bookings, emergencies, and after-hours calls - so you never miss one.
 
-Think of me as an extension to your current system, not a replacement. I handle the overflow and after-hours so you never miss a call.
-
-Wanna test me out? Pretend you're a homeowner with an HVAC issue!"
+Wanna test me? Pretend you're a customer with an HVAC issue!"
 
 Then STOP. Let them respond. Don't keep talking."""
             }
@@ -572,6 +512,11 @@ Then STOP. Let them respond. Don't keep talking."""
             
             logger.info("Stream started: call_sid=%s, stream_sid=%s, caller=%s", 
                        self.call_sid, self.stream_sid, self.caller_number)
+            
+            # Start transcript collection for Gather model training
+            if self.call_sid:
+                self.transcript_collector.start_call(self.call_sid, self.caller_number or "unknown")
+                self.transcript_started = True
             
             # FLOOD PROTECTION: Check if caller is rate limited
             if self.caller_number and self.caller_number != "unknown":
@@ -750,10 +695,11 @@ Then STOP. Let them respond. Don't keep talking."""
             await self.forward_audio_to_twilio(message)
             
         elif event_type == "response.audio_transcript.delta":
-            # Log what the AI is saying
+            # Log what the AI is saying and accumulate for transcript
             transcript = message.get("delta", "")
             if transcript:
                 logger.debug("AI speaking: %s", transcript)
+                self.current_assistant_transcript += transcript
                 
         elif event_type == "input_audio_buffer.speech_started":
             logger.info("User started speaking (barge-in detected)")
@@ -836,6 +782,11 @@ Then STOP. Let them respond. Don't keep talking."""
             # ECHO CANCELLATION: Mark speaking as done
             self.is_speaking = False
             self.last_audio_sent_time = time.time()
+            
+            # Save assistant transcript for Gather model training
+            if self.transcript_started and self.current_assistant_transcript and self.call_sid:
+                self.transcript_collector.add_assistant_turn(self.call_sid, self.current_assistant_transcript)
+                self.current_assistant_transcript = ""  # Reset for next turn
             logger.info("Echo suppression window active for %dms", self.echo_suppression_ms)
             
         elif event_type == "response.output_item.done":
@@ -860,6 +811,13 @@ Then STOP. Let them respond. Don't keep talking."""
             item = message.get("item", {})
             logger.info("Output item added: type=%s, id=%s", item.get("type", "unknown"), item.get("id", "unknown"))
             
+        elif event_type == "conversation.item.input_audio_transcription.completed":
+            # User's speech has been transcribed - save for Gather model training
+            transcript = message.get("transcript", "")
+            if transcript and self.transcript_started and self.call_sid:
+                logger.info("User said: %s", transcript[:100])
+                self.transcript_collector.add_user_turn(self.call_sid, transcript)
+            
         elif event_type == "error":
             error = message.get("error", {})
             error_code = error.get("code", "unknown")
@@ -867,6 +825,10 @@ Then STOP. Let them respond. Don't keep talking."""
             logger.error("OpenAI error [%s]: %s", error_code, error_msg)
             # Log full error for debugging
             logger.error("Full error details: %s", json.dumps(error))
+            
+            # Record error in transcript
+            if self.transcript_started and self.call_sid:
+                self.transcript_collector.record_error(self.call_sid, f"{error_code}: {error_msg}")
             
             # Handle specific error codes
             if error_code in ["session_expired", "invalid_session"]:
@@ -1341,6 +1303,19 @@ Then STOP. Let them respond. Don't keep talking."""
         # Calculate call duration
         call_duration = time.time() - self.call_start_time
         
+        # End transcript collection for Gather model training
+        if self.transcript_started and self.call_sid:
+            # Determine outcome based on call state
+            outcome = "completed"
+            if self.fallback_triggered:
+                outcome = "error"
+            elif call_duration > MAX_CALL_DURATION_SECONDS:
+                outcome = "timeout"
+            elif call_duration < 10:
+                outcome = "abandoned"
+            
+            self.transcript_collector.end_call(self.call_sid, outcome=outcome)
+        
         if self.openai_ws:
             try:
                 # Send proper close frame
@@ -1385,16 +1360,18 @@ async def realtime_incoming(request: Request):
     
     logger.info("Incoming call, connecting to WebSocket: %s", ws_url)
     
-    # TwiML with fallback - if Stream fails, redirect to Gather
-    # Note: Twilio will execute the Redirect if the Stream connection fails
+    # TwiML with "please hold" message BEFORE Stream connects
+    # This ensures caller hears something during cold start or if OpenAI fails
+    # The Say plays first, then Stream connects, then fallback if Stream closes
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+    <Say voice="Polly.Joanna-Neural">Thank you for calling. Please hold while I connect you.</Say>
     <Connect>
         <Stream url="{ws_url}">
             <Parameter name="caller" value="{{From}}" />
         </Stream>
     </Connect>
-    <Say voice="Polly.Joanna-Neural">We're experiencing technical difficulties. Please hold.</Say>
+    <Say voice="Polly.Joanna-Neural">Thank you for holding. Let me transfer you to our team.</Say>
     <Redirect>https://{host}/twilio/gather/incoming</Redirect>
 </Response>"""
     
