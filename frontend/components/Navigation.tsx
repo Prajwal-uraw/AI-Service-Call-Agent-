@@ -12,10 +12,7 @@ export default function Navigation() {
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_role');
-      window.location.href = '/login';
+      logout();
     }
   };
 
@@ -34,7 +31,6 @@ export default function Navigation() {
               <button
                 onMouseEnter={() => setShowMultiTenant(true)}
                 onMouseLeave={() => setShowMultiTenant(false)}
-                onClick={() => setShowMultiTenant(!showMultiTenant)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <LayoutDashboard size={16} />
@@ -60,7 +56,6 @@ export default function Navigation() {
               <button
                 onMouseEnter={() => setShowCRM(true)}
                 onMouseLeave={() => setShowCRM(false)}
-                onClick={() => setShowCRM(!showCRM)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <Users size={16} />
@@ -86,7 +81,6 @@ export default function Navigation() {
               <button
                 onMouseEnter={() => setShowAdmin(true)}
                 onMouseLeave={() => setShowAdmin(false)}
-                onClick={() => setShowAdmin(!showAdmin)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <Briefcase size={16} />
