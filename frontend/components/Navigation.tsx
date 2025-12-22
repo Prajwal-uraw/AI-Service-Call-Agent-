@@ -103,20 +103,20 @@ export default function Navigation() {
                     </div>
                   )}
                 </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-700 hover:text-red-600 font-medium"
+                >
+                  Logout
+                </button>
               </>
             )}
-            <a href="/video" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Video Calls
-            </a>
-            <a href="/calendar" className="text-gray-700 hover:text-blue-600 transition-colors">
-              Calendar
-            </a>
-            <button
-              onClick={handleLogout}
-              className="text-gray-700 hover:text-red-600 font-medium"
-            >
-              Logout
-            </button>
+
+            {!isLoggedIn && (
+              <a
+                href="/login"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Login
               </a>
