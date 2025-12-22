@@ -32,17 +32,20 @@ export default function Navigation() {
             <Link href="/admin/analytics" className="text-gray-700 hover:text-blue-600 font-medium">
               Analytics
             </Link>
+            <Link href="/crm/pipeline" className="text-gray-700 hover:text-blue-600 font-medium">
+              CRM Pipeline
+            </Link>
+            <Link href="/crm/scrapers" className="text-gray-700 hover:text-blue-600 font-medium">
+              Scrapers
+            </Link>
+            <Link href="/crm/contacts" className="text-gray-700 hover:text-blue-600 font-medium">
+              Contacts
+            </Link>
+            <Link href="/crm/tasks" className="text-gray-700 hover:text-blue-600 font-medium">
+              Tasks
+            </Link>
           </div>
           
           <a 
             href="tel:+15551234567" 
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            <Phone size={20} />
-            <span className="hidden sm:inline">(555) 123-4567</span>
-          </a>
-        </div>
-      </div>
-    </nav>
-  );
-}
+            className="flex items-center gap-2 b
