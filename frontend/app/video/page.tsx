@@ -202,6 +202,7 @@ export default function VideoCallsPage() {
                           type="text"
                           value={createdRoom.room_url}
                           readOnly
+                          aria-label="Room URL"
                           className="flex-1 border rounded-lg px-4 py-2 bg-gray-50"
                         />
                         <Button
