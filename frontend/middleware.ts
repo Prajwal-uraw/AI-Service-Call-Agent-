@@ -1,38 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Protected routes that require authentication
-const protectedRoutes = [
-  '/crm',
-  '/admin',
-];
-
-// Public routes that don't require authentication
-const publicRoutes = [
-  '/',
-  '/login',
-  '/calculator',
-  '/demo',
-];
+// NOTE: Auth is handled client-side via localStorage for demo purposes
+// For production, implement proper cookie-based authentication here
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // Check if the route is protected
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  
-  if (isProtectedRoute) {
-    // Check for auth token in cookies or headers
-    const authToken = request.cookies.get('auth_token')?.value;
-    
-    // If no auth token, redirect to login
-    if (!authToken) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-  
+  // Allow all routes - auth is handled client-side
   return NextResponse.next();
 }
 

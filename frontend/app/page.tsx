@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Phone, Zap, Shield } from "lucide-react";
+import Navigation from "@/components/Navigation";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 pt-20">
       <div className="container mx-auto px-6 py-20">
         <div className="text-center max-w-4xl mx-auto">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
@@ -48,6 +51,7 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

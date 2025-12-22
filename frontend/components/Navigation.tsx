@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Phone, ChevronDown, LayoutDashboard, Users, Settings, CreditCard, Briefcase } from 'lucide-react';
+import { logout } from '@/lib/auth';
 
 export default function Navigation() {
   const [showMultiTenant, setShowMultiTenant] = useState(false);
@@ -21,7 +21,9 @@ export default function Navigation() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Kestrel Voice Operations" width={40} height={40} className="w-10 h-10" />
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Phone className="w-6 h-6 text-white" />
+            </div>
             <div className="text-xl font-bold text-blue-600">Kestrel Voice Operations</div>
           </Link>
           
@@ -29,8 +31,7 @@ export default function Navigation() {
             {/* Multi-Tenant Dropdown */}
             <div className="relative">
               <button
-                onMouseEnter={() => setShowMultiTenant(true)}
-                onMouseLeave={() => setShowMultiTenant(false)}
+                onClick={() => setShowMultiTenant(!showMultiTenant)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <LayoutDashboard size={16} />
@@ -39,8 +40,6 @@ export default function Navigation() {
               </button>
               {showMultiTenant && (
                 <div
-                  onMouseEnter={() => setShowMultiTenant(true)}
-                  onMouseLeave={() => setShowMultiTenant(false)}
                   className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
                 >
                   <Link href="/onboarding" className="block px-4 py-2 hover:bg-gray-50">Onboarding</Link>
@@ -54,8 +53,7 @@ export default function Navigation() {
             {/* CRM Dropdown */}
             <div className="relative">
               <button
-                onMouseEnter={() => setShowCRM(true)}
-                onMouseLeave={() => setShowCRM(false)}
+                onClick={() => setShowCRM(!showCRM)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <Users size={16} />
@@ -64,8 +62,6 @@ export default function Navigation() {
               </button>
               {showCRM && (
                 <div
-                  onMouseEnter={() => setShowCRM(true)}
-                  onMouseLeave={() => setShowCRM(false)}
                   className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
                 >
                   <Link href="/crm/pipeline" className="block px-4 py-2 hover:bg-gray-50">Pipeline</Link>
@@ -79,8 +75,7 @@ export default function Navigation() {
             {/* Admin Dropdown */}
             <div className="relative">
               <button
-                onMouseEnter={() => setShowAdmin(true)}
-                onMouseLeave={() => setShowAdmin(false)}
+                onClick={() => setShowAdmin(!showAdmin)}
                 className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
               >
                 <Briefcase size={16} />
@@ -89,8 +84,6 @@ export default function Navigation() {
               </button>
               {showAdmin && (
                 <div
-                  onMouseEnter={() => setShowAdmin(true)}
-                  onMouseLeave={() => setShowAdmin(false)}
                   className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
                 >
                   <Link href="/admin/portal" className="block px-4 py-2 hover:bg-gray-50">Portal</Link>

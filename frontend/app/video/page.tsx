@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Navigation from "@/components/Navigation";
 import { 
   Video, 
   Users, 
@@ -56,8 +57,10 @@ export default function VideoCallsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <Navigation />
+      <div className="min-h-screen bg-gray-50 p-8 pt-24">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Video Calls</h1>
@@ -374,7 +377,8 @@ export default function VideoCallsPage() {
             </CardContent>
           </Card>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

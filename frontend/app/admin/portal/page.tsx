@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import AdminShell from "@/components/AdminShell";
 import { 
   Users, 
   DollarSign, 
@@ -17,7 +18,11 @@ import {
   CheckCircle,
   Clock,
   Target,
-  Zap
+  Zap,
+  Phone,
+  Calendar,
+  Activity,
+  BarChart3
 } from "lucide-react";
 
 export default function AdminPortalPage() {
@@ -116,135 +121,190 @@ export default function AdminPortalPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-8">
+    <AdminShell>
+      <div>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Enterprise Admin Portal</h1>
-            <p className="text-gray-600">Internal command center for Kestrel Voice Operations</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" className="relative">
-              <Mail className="h-4 w-4 mr-2" />
-              Inbox
-              {stats.unread_emails > 0 && (
-                <Badge className="absolute -top-2 -right-2 bg-red-500">{stats.unread_emails}</Badge>
-              )}
-            </Button>
-            <Button variant="outline" className="relative">
-              <Bell className="h-4 w-4 mr-2" />
-              Alerts
-              {stats.pending_tasks > 0 && (
-                <Badge className="absolute -top-2 -right-2 bg-orange-500">{stats.pending_tasks}</Badge>
-              )}
-            </Button>
-            <Button onClick={() => setAiGuruOpen(!aiGuruOpen)} className="bg-purple-600 hover:bg-purple-700">
-              <Sparkles className="h-4 w-4 mr-2" />
-              AI Guru
-            </Button>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-100 mb-2">Operations Dashboard</h1>
+              <p className="text-slate-400 text-sm flex items-center gap-2">
+                <span>Last updated: {new Date().toLocaleTimeString()}</span>
+                <span className="text-slate-600">•</span>
+                <span>{stats.active_tenants} active tenants</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button onClick={() => setAiGuruOpen(!aiGuruOpen)} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Sparkles className="h-4 w-4 mr-2" />
+                AI Guru
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6 border-b">
-          {["overview", "tenants", "revenue", "team", "inbox"].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 px-4 font-medium transition-colors ${
-                activeTab === tab
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+          {/* Active Tenants Card */}
+          <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Active Tenants
+              </CardTitle>
+              <Users className="h-5 w-5 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-400 mb-2">{stats.active_tenants}</div>
+              <p className="text-xs text-slate-500 mb-3">of {stats.total_tenants} total</p>
+              <div className="bg-slate-700 rounded-full h-2 mb-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${(stats.active_tenants / stats.total_tenants) * 100}%` }}
+                />
+              </div>
+              <div className="flex items-center text-sm text-green-600">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                <span>+2 this month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* MRR Card */}
+          <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">
+                Monthly Revenue
+              </CardTitle>
+              <DollarSign className="h-5 w-5 text-green-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-400 mb-2">${stats.mrr.toLocaleString()}</div>
+              <p className="text-xs text-slate-500 mb-3">${stats.arr.toLocaleString()} ARR</p>
+              <div className="bg-slate-700 rounded-full h-2 mb-2">
+                <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }} />
+              </div>
+              <div className="flex items-center text-sm text-green-400">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                <span>+18% from last month</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Calls Today Card */}
+          <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">
+                Calls Today
+              </CardTitle>
+              <Phone className="h-5 w-5 text-purple-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-400 mb-2">{stats.total_calls_today}</div>
+              <p className="text-xs text-slate-500 mb-3">Across all tenants</p>
+              <div className="bg-slate-700 rounded-full h-2 mb-2">
+                <div className="bg-purple-500 h-2 rounded-full" style={{ width: '60%' }} />
+              </div>
+              <div className="flex items-center text-sm text-purple-400">
+                <Activity className="h-4 w-4 mr-1" />
+                <span>Peak: 2-4 PM</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Health Score Card */}
+          <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-slate-400">
+                System Health
+              </CardTitle>
+              <AlertCircle className={`h-5 w-5 ${stats.avg_health_score >= 80 ? 'text-green-400' : 'text-yellow-400'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold mb-2 ${stats.avg_health_score >= 80 ? 'text-green-400' : 'text-yellow-400'}`}>
+                {stats.avg_health_score}
+              </div>
+              <p className="text-xs text-slate-500 mb-3">{stats.churn_rate}% churn rate</p>
+              <div className="bg-slate-700 rounded-full h-2 mb-2">
+                <div 
+                  className={`h-2 rounded-full ${stats.avg_health_score >= 80 ? 'bg-green-500' : 'bg-yellow-500'}`}
+                  style={{ width: `${stats.avg_health_score}%` }}
+                />
+              </div>
+              <Badge className={stats.avg_health_score >= 80 ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-yellow-900/30 text-yellow-400 border-yellow-700'}>
+                {stats.avg_health_score >= 80 ? '✓ Excellent' : '⚠️ Monitor'}
+              </Badge>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+        {/* Main Content Grid */}
+        <div className="grid lg:grid-cols-3 gap-8 mt-8">
+          {/* Recent Activity - Takes 2 columns */}
           <div className="lg:col-span-2 space-y-6">
             {activeTab === "overview" && (
               <>
-                {/* Key Metrics */}
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-gray-600">Active Tenants</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-blue-600">{stats.active_tenants}</div>
-                      <p className="text-xs text-gray-500 mt-1">of {stats.total_tenants} total</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-gray-600">MRR</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-green-600">${stats.mrr.toLocaleString()}</div>
-                      <p className="text-xs text-gray-500 mt-1">${stats.arr.toLocaleString()} ARR</p>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-gray-600">Avg Health</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-purple-600">{stats.avg_health_score}</div>
-                      <p className="text-xs text-gray-500 mt-1">{stats.churn_rate}% churn rate</p>
-                    </CardContent>
-                  </Card>
-                </div>
 
                 {/* Recent Activity */}
-                <Card>
+                <Card className="bg-slate-800 border-slate-700">
                   <CardHeader>
-                    <CardTitle>Today's Activity</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="text-xl font-bold text-slate-100">Recent Activity</span>
+                      <Badge variant="outline" className="text-sm border-slate-600 text-slate-300">{stats.total_calls_today} events today</Badge>
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-600">
                         <div className="flex items-center gap-3">
-                          <div className="bg-blue-100 p-2 rounded">
-                            <Users className="h-5 w-5 text-blue-600" />
+                          <div className="bg-blue-600 p-2.5 rounded-lg">
+                            <Users className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="font-medium">New tenant signed up</p>
-                            <p className="text-sm text-gray-600">Acme Plumbing - Professional Plan</p>
+                            <p className="font-semibold text-slate-100">New tenant signed up</p>
+                            <p className="text-sm text-slate-400">Acme Plumbing - Professional Plan</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">2h ago</span>
+                        <span className="text-xs text-slate-500 font-medium">2h ago</span>
                       </div>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-600">
                         <div className="flex items-center gap-3">
-                          <div className="bg-green-100 p-2 rounded">
-                            <DollarSign className="h-5 w-5 text-green-600" />
+                          <div className="bg-green-600 p-2.5 rounded-lg">
+                            <DollarSign className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="font-medium">Payment received</p>
-                            <p className="text-sm text-gray-600">$2,497 from Premium customer</p>
+                            <p className="font-semibold text-slate-100">Payment received</p>
+                            <p className="text-sm text-slate-400">$2,497 from Premium customer</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">4h ago</span>
+                        <span className="text-xs text-slate-500 font-medium">4h ago</span>
                       </div>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-600">
                         <div className="flex items-center gap-3">
-                          <div className="bg-orange-100 p-2 rounded">
-                            <AlertCircle className="h-5 w-5 text-orange-600" />
+                          <div className="bg-orange-600 p-2.5 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <p className="font-medium">Health score dropped</p>
-                            <p className="text-sm text-gray-600">Smith HVAC - from 85 to 62</p>
+                            <p className="font-semibold text-slate-100">Health score dropped</p>
+                            <p className="text-sm text-slate-400">Smith HVAC - from 85 to 62</p>
                           </div>
                         </div>
-                        <span className="text-sm text-gray-500">6h ago</span>
+                        <span className="text-xs text-slate-500 font-medium">6h ago</span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-600">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-purple-600 p-2.5 rounded-lg">
+                            <Phone className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-slate-100">High call volume</p>
+                            <p className="text-sm text-slate-400">234 calls handled today</p>
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-500 font-medium">Just now</span>
                       </div>
                     </div>
                   </CardContent>
@@ -335,14 +395,15 @@ export default function AdminPortalPage() {
             )}
           </div>
 
-          {/* AI Guru Sidebar */}
+          {/* AI Guru Sidebar - Takes 1 column */}
           <div className="space-y-6">
-            <Card className="border-2 border-purple-200">
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-purple-600" />
-                  AI Guru
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Sparkles className="h-6 w-6 text-blue-400" />
+                  <span className="text-slate-100 font-bold">AI Guru</span>
                 </CardTitle>
+                <p className="text-sm text-slate-400 mt-1">Your AI business advisor</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Role Selector */}
@@ -422,28 +483,32 @@ export default function AdminPortalPage() {
             </Card>
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="bg-slate-800 border-slate-700">
               <CardHeader>
-                <CardTitle className="text-sm">Quick Actions</CardTitle>
+                <CardTitle className="text-lg font-bold text-slate-100">Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  View Pending Tasks ({stats.pending_tasks})
+              <CardContent className="space-y-3">
+                <Button variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500 transition-colors">
+                  <CheckCircle className="h-4 w-4 mr-2 text-blue-400" />
+                  <span className="font-medium">View Pending Tasks ({stats.pending_tasks})</span>
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Set Reminder
+                <Button variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500 transition-colors">
+                  <Calendar className="h-4 w-4 mr-2 text-green-400" />
+                  <span className="font-medium">Schedule Meeting</span>
                 </Button>
-                <Button variant="outline" size="sm" className="w-full justify-start">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Team Chat
+                <Button variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500 transition-colors">
+                  <BarChart3 className="h-4 w-4 mr-2 text-purple-400" />
+                  <span className="font-medium">View Analytics</span>
+                </Button>
+                <Button variant="outline" size="sm" className="w-full justify-start bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500 transition-colors">
+                  <MessageSquare className="h-4 w-4 mr-2 text-orange-400" />
+                  <span className="font-medium">Team Chat</span>
                 </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
-    </div>
+    </AdminShell>
   );
 }
