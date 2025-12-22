@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Phone, ChevronDown, LayoutDashboard, Users, Settings, CreditCard, Briefcase } from 'lucide-react';
 
 export default function Navigation() {
@@ -11,6 +12,9 @@ export default function Navigation() {
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user_email');
+      localStorage.removeItem('user_role');
       window.location.href = '/login';
     }
   };
@@ -20,7 +24,8 @@ export default function Navigation() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="text-2xl font-bold text-blue-600">Kestrel AI</div>
+            <Image src="/logo.svg" alt="Kestrel Voice Operations" width={40} height={40} className="w-10 h-10" />
+            <div className="text-xl font-bold text-blue-600">Kestrel Voice Operations</div>
           </Link>
           
           <div className="hidden md:flex items-center gap-6">

@@ -56,7 +56,7 @@ export default function CalendarPage() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Schedule a Demo with Kestrel AI</CardTitle>
+                  <CardTitle>Schedule a Demo with Kestrel Voice Operations</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-white rounded-lg">

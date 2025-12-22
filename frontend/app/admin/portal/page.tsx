@@ -122,7 +122,7 @@ export default function AdminPortalPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2">Enterprise Admin Portal</h1>
-            <p className="text-gray-600">Internal command center for Kestrel AI</p>
+            <p className="text-gray-600">Internal command center for Kestrel Voice Operations</p>
           </div>
           <div className="flex items-center gap-4">
             <Button variant="outline" className="relative">
