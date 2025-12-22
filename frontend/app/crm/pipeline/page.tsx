@@ -41,8 +41,12 @@ interface Stage {
 
 export default function PipelinePage() {
   const [pipeline, setPipeline] = useState<Stage[]>([]);
+  const [leadsByStage, setLeadsByStage] = useState<Record<string, Lead[]>>({});
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [bulkActionMode, setBulkActionMode] = useState(false);
 
   useEffect(() => {
     fetchPipeline();

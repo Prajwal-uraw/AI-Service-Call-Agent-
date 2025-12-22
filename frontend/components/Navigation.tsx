@@ -37,11 +37,14 @@ export default function Navigation() {
             <Link href="/admin/signals" className="text-gray-700 hover:text-blue-600 font-medium">
               Pain Signals
             </Link>
-            <Link href="/admin/analytics" className="text-gray-700 hover:text-blue-600 font-medium">
+            <Link href="/admin/analytics-enhanced" className="text-gray-700 hover:text-blue-600 font-medium">
               Analytics
             </Link>
             <Link href="/crm/pipeline" className="text-gray-700 hover:text-blue-600 font-medium">
               CRM Pipeline
+            </Link>
+            <Link href="/crm/email-campaigns" className="text-gray-700 hover:text-blue-600 font-medium">
+              Email Campaigns
             </Link>
             <Link href="/crm/scrapers" className="text-gray-700 hover:text-blue-600 font-medium">
               Scrapers
