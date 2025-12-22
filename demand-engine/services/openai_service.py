@@ -8,6 +8,8 @@ import asyncio
 from typing import Optional, AsyncGenerator, Dict, Any, List
 from openai import AsyncOpenAI
 import logging
+from utils.retry_logic import retry_async
+from utils.error_logger import ErrorLogger
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ class OpenAIService:
         
     # ==================== SPEECH-TO-TEXT (STT) ====================
     
+    @retry_async(max_attempts=3, delay=1.0, exceptions=(Exception,))
     async def transcribe_audio(
         self, 
         audio_data: bytes, 
@@ -73,7 +76,12 @@ class OpenAIService:
             }
             
         except Exception as e:
-            logger.error(f"STT error: {e}")
+            ErrorLogger.log_external_api_error(
+                e, 
+                "OpenAI Whisper", 
+                "/v1/audio/transcriptions",
+                {"language": language, "audio_size": len(audio_data)}
+            )
             raise
     
     async def transcribe_streaming(
@@ -104,11 +112,12 @@ class OpenAIService:
     
     # ==================== LANGUAGE MODEL (LLM) ====================
     
+    @retry_async(max_attempts=2, delay=0.5, exceptions=(Exception,))
     async def generate_response(
         self,
         messages: List[Dict[str, str]],
-        system_prompt: str,
-        use_premium: bool = True,
+        system_prompt: Optional[str] = None,
+        use_premium: bool = False,
         max_tokens: int = 150,
         temperature: float = 0.7
     ) -> Dict[str, Any]:

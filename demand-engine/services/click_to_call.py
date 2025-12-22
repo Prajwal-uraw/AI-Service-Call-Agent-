@@ -9,6 +9,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Dial
+from utils.retry_logic import retry_async
+from utils.error_logger import ErrorLogger
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ class ClickToCallService:
         else:
             self.client = Client(self.account_sid, self.auth_token)
     
+    @retry_async(max_attempts=2, delay=1.0, exceptions=(Exception,))
     async def initiate_call(
         self,
         to_number: str,
@@ -97,7 +100,12 @@ class ClickToCallService:
             return call_log
             
         except Exception as e:
-            logger.error(f"Error initiating call: {e}")
+            ErrorLogger.log_external_api_error(
+                e,
+                "Twilio",
+                "/Calls",
+                {"to": to_number, "from": self.from_number}
+            )
             raise
     
     async def get_call_status(self, call_sid: str) -> Dict[str, Any]:

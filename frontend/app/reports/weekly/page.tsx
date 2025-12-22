@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Phone, TrendingUp, Clock, AlertCircle, Download, Calendar, Users, Zap } from "lucide-react";
+import { useToast } from "@/components/Toast";
+import { StatsSkeleton, ChartSkeleton } from "@/components/LoadingSkeleton";
 
 interface WeeklyReport {
   week_start: string;
@@ -30,6 +32,7 @@ export default function WeeklyReportPage() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState<string>("");
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchReport();
@@ -43,10 +46,15 @@ export default function WeeklyReportPage() {
         : "http://localhost:8000/api/call-workflow/reports/weekly";
       
       const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Failed to fetch report");
+      }
       const data = await response.json();
       setReport(data);
+      showToast("success", "Report loaded successfully");
     } catch (error) {
       console.error("Error fetching report:", error);
+      showToast("error", "Failed to load report. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -54,15 +62,23 @@ export default function WeeklyReportPage() {
 
   const exportReport = async (format: "pdf" | "csv") => {
     try {
+      showToast("info", `Generating ${format.toUpperCase()} export...`);
       const url = `http://localhost:8000/api/call-workflow/reports/weekly/export?format=${format}`;
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+      
       const data = await response.json();
       
       if (data.download_url) {
         window.open(data.download_url, "_blank");
+        showToast("success", `${format.toUpperCase()} export ready!`);
       }
     } catch (error) {
       console.error("Error exporting report:", error);
+      showToast("error", `Failed to export ${format.toUpperCase()}. Please try again.`);
     }
   };
 
@@ -79,8 +95,17 @@ export default function WeeklyReportPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 mb-2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse"></div>
+          </div>
+          <StatsSkeleton />
+          <div className="mt-8">
+            <ChartSkeleton />
+          </div>
+        </div>
       </div>
     );
   }

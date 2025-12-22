@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Phone, Check, AlertCircle, Settings, TestTube, Save } from "lucide-react";
+import { useToast } from "@/components/Toast";
 
 export default function ForwardingOnboardingPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -14,8 +15,29 @@ export default function ForwardingOnboardingPage() {
   const [testing, setTesting] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const { showToast } = useToast();
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    if (!phone) {
+      setErrors({ phone: "Phone number is required" });
+      return false;
+    }
+    if (!phoneRegex.test(phone.replace(/[\s()-]/g, ""))) {
+      setErrors({ phone: "Invalid phone number format. Use E.164 format (e.g., +1234567890)" });
+      return false;
+    }
+    setErrors({});
+    return true;
+  };
 
   const testForwarding = async () => {
+    if (!validatePhoneNumber(forwardNumber)) {
+      showToast("error", "Please enter a valid phone number");
+      return;
+    }
+
     setTesting(true);
     try {
       const response = await fetch("http://localhost:8000/api/call-workflow/forwarding/test", {
@@ -26,16 +48,31 @@ export default function ForwardingOnboardingPage() {
 
       if (response.ok) {
         setTestSuccess(true);
+        showToast("success", "Test call initiated successfully!");
         setTimeout(() => setStep(3), 2000);
+      } else {
+        const error = await response.json();
+        showToast("error", error.detail || "Test call failed");
       }
     } catch (error) {
       console.error("Test failed:", error);
+      showToast("error", "Failed to initiate test call. Please check your connection.");
     } finally {
       setTesting(false);
     }
   };
 
   const saveConfiguration = async () => {
+    if (!validatePhoneNumber(forwardNumber)) {
+      showToast("error", "Please enter a valid phone number");
+      return;
+    }
+
+    if (missedCallSms && smsTemplate.length > 160) {
+      showToast("error", "SMS template must be 160 characters or less");
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await fetch("http://localhost:8000/api/call-workflow/forwarding/configure", {
@@ -50,11 +87,17 @@ export default function ForwardingOnboardingPage() {
       });
 
       if (response.ok) {
-        alert("Configuration saved successfully!");
+        showToast("success", "Configuration saved successfully!");
+        setTimeout(() => {
+          window.location.href = "/admin/portal";
+        }, 1500);
+      } else {
+        const error = await response.json();
+        showToast("error", error.detail || "Failed to save configuration");
       }
     } catch (error) {
       console.error("Save failed:", error);
-      alert("Failed to save configuration");
+      showToast("error", "Failed to save configuration. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -118,10 +161,21 @@ export default function ForwardingOnboardingPage() {
               <input
                 type="tel"
                 value={forwardNumber}
-                onChange={(e) => setForwardNumber(e.target.value)}
+                onChange={(e) => {
+                  setForwardNumber(e.target.value);
+                  if (errors.phone) setErrors({});
+                }}
                 placeholder="+1 (555) 123-4567"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg ${
+                  errors.phone ? "border-red-500" : "border-gray-300"
+                }`}
               />
+              {errors.phone && (
+                <p className="text-sm text-red-600 mt-1 flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-1" />
+                  {errors.phone}
+                </p>
+              )}
               <p className="text-sm text-gray-500 mt-2">
                 Use E.164 format (e.g., +1234567890)
               </p>

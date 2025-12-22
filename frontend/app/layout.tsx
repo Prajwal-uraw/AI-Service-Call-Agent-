@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Navigation from "@/components/Navigation";
+import { ToastProvider } from "@/components/Toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kestrel - HVAC AI Call Agent | Custom AI Receptionist for HVAC Companies",
-  description: "Stop losing $200K/year to missed calls. Kestrel is a custom-built AI receptionist that answers in 200ms, books appointments 24/7, and handles emergencies. Live in 48 hours.",
+  title: "Kestrel AI - Demand Engine",
+  description: "AI-powered demand generation and lead qualification",
   keywords: "Kestrel, HVAC AI, AI receptionist, HVAC automation, missed calls, after-hours calls, HVAC business, AI call agent",
   icons: {
     icon: '/favicon.png',
