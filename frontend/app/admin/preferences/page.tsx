@@ -12,7 +12,7 @@ export default function PreferencesPage() {
           <p className="text-slate-400 mt-2">Customize your experience</p>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <div className="flex items-start gap-4 mb-6">
             <Bell className="w-6 h-6 text-blue-400 mt-1" />
             <div className="flex-1">
@@ -29,7 +29,7 @@ export default function PreferencesPage() {
               { label: 'Push notifications', description: 'Browser notifications for real-time updates' },
               { label: 'Weekly reports', description: 'Receive weekly performance summaries' },
             ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
+              <div key={item.label} className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
                 <div>
                   <h3 className="font-medium text-slate-100">{item.label}</h3>
                   <p className="text-sm text-slate-400 mt-1">{item.description}</p>
@@ -43,7 +43,7 @@ export default function PreferencesPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <div className="flex items-start gap-4 mb-6">
             <Moon className="w-6 h-6 text-blue-400 mt-1" />
             <div className="flex-1">
@@ -62,7 +62,7 @@ export default function PreferencesPage() {
                 {['Light', 'Dark', 'Auto'].map((theme) => (
                   <button
                     key={theme}
-                    className={`p-4 rounded-lg border-2 transition-colors ${
+                    className={`p-4 rounded-xl border-2 transition-all backdrop-blur-sm ${
                       theme === 'Dark'
                         ? 'border-blue-600 bg-slate-900/50'
                         : 'border-slate-700 bg-slate-900/30 hover:border-slate-600'
@@ -76,7 +76,7 @@ export default function PreferencesPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <div className="flex items-start gap-4 mb-6">
             <Globe className="w-6 h-6 text-blue-400 mt-1" />
             <div className="flex-1">
@@ -91,7 +91,7 @@ export default function PreferencesPage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Timezone
               </label>
-              <select className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-100 outline-none">
+              <select className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none">
                 <option>America/New_York (EST)</option>
                 <option>America/Chicago (CST)</option>
                 <option>America/Denver (MST)</option>
@@ -102,7 +102,7 @@ export default function PreferencesPage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Language
               </label>
-              <select className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-slate-100 outline-none">
+              <select className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none">
                 <option>English (US)</option>
                 <option>English (UK)</option>
                 <option>Spanish</option>

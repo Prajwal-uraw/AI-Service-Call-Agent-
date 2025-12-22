@@ -25,7 +25,7 @@ export default function TenantsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Total Tenants</p>
@@ -34,7 +34,7 @@ export default function TenantsPage() {
               <Building className="w-8 h-8 text-blue-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Active</p>
@@ -43,7 +43,7 @@ export default function TenantsPage() {
               <CheckCircle className="w-8 h-8 text-green-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Trial</p>
@@ -52,7 +52,7 @@ export default function TenantsPage() {
               <AlertCircle className="w-8 h-8 text-yellow-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Total MRR</p>
@@ -63,7 +63,7 @@ export default function TenantsPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden shadow-lg">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-900/50">

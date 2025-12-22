@@ -12,14 +12,14 @@ export default function ProfilePage() {
           <p className="text-slate-400 mt-2">Manage your account information</p>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-6">Personal Information</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Full Name
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <User className="w-5 h-5 text-slate-400" />
                 <input
                   type="text"
@@ -32,7 +32,7 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Email Address
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <Mail className="w-5 h-5 text-slate-400" />
                 <input
                   type="email"
@@ -45,7 +45,7 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Phone Number
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <Phone className="w-5 h-5 text-slate-400" />
                 <input
                   type="tel"
@@ -62,14 +62,14 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-6">Security</h2>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Current Password
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <Key className="w-5 h-5 text-slate-400" />
                 <input
                   type="password"
@@ -82,7 +82,7 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 New Password
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <Key className="w-5 h-5 text-slate-400" />
                 <input
                   type="password"
@@ -95,7 +95,7 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-slate-300 mb-2">
                 Confirm New Password
               </label>
-              <div className="flex items-center gap-3 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3">
+              <div className="flex items-center gap-3 bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3">
                 <Key className="w-5 h-5 text-slate-400" />
                 <input
                   type="password"
@@ -112,7 +112,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <div className="flex items-start gap-4">
             <Shield className="w-6 h-6 text-blue-400 mt-1" />
             <div className="flex-1">

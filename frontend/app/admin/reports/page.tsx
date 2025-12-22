@@ -25,7 +25,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Total Reports</p>
@@ -34,7 +34,7 @@ export default function ReportsPage() {
               <FileText className="w-8 h-8 text-blue-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">This Month</p>
@@ -43,7 +43,7 @@ export default function ReportsPage() {
               <Calendar className="w-8 h-8 text-green-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Downloads</p>
@@ -52,7 +52,7 @@ export default function ReportsPage() {
               <Download className="w-8 h-8 text-purple-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Scheduled</p>
@@ -63,11 +63,11 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-4">Recent Reports</h2>
           <div className="space-y-3">
             {reports.map((report) => (
-              <div key={report.id} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg hover:bg-slate-900/70 transition-colors">
+              <div key={report.id} className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5 hover:bg-slate-900/50 transition-all">
                 <div className="flex items-center gap-4">
                   <FileText className="w-8 h-8 text-blue-400" />
                   <div>
@@ -90,10 +90,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-4">Scheduled Reports</h2>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
               <div>
                 <h3 className="font-semibold text-slate-100">Weekly Performance Summary</h3>
                 <p className="text-sm text-slate-400 mt-1">Every Monday at 9:00 AM</p>
@@ -102,7 +102,7 @@ export default function ReportsPage() {
                 Edit Schedule
               </button>
             </div>
-            <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
               <div>
                 <h3 className="font-semibold text-slate-100">Monthly Revenue Report</h3>
                 <p className="text-sm text-slate-400 mt-1">1st of every month at 8:00 AM</p>
