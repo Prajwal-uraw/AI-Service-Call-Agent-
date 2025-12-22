@@ -133,6 +133,27 @@ export default function SignalsPage() {
     return "text-gray-600";
   };
 
+  const convertToLead = async (signalId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/conversion/convert-signal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signal_id: signalId })
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Signal converted to lead successfully! Lead ID: ${data.lead_id}`);
+        fetchSignals(); // Refresh list
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error("Failed to convert signal:", error);
+      alert("Failed to convert signal to lead");
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -368,30 +389,17 @@ export default function SignalsPage() {
                             <div>Keyword only</div>
                           )}
                         </div>
-                        <div className="flex flex-col gap-1 mt-2">
-                          {signal.url && (
-                            <a
-                              href={signal.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline text-xs flex items-center gap-1"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              View Source <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                          {!signal.alerted && (signal.combined_score || signal.keyword_score) >= 70 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                convertToLead(signal.id);
-                              }}
-                              className="text-green-600 hover:underline text-xs flex items-center gap-1"
-                            >
-                              <UserPlus className="h-3 w-3" /> Convert to Lead
-                            </button>
-                          )}
-                        </div>
+                        {signal.url && (
+                          <a
+                            href={signal.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline text-xs flex items-center gap-1 mt-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View Source <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

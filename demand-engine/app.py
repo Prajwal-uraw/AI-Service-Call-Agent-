@@ -13,6 +13,12 @@ from admin.api import router as admin_router
 from admin.signals_api import router as signals_router
 from admin.conversion_api import router as conversion_router
 from admin.analytics_api import router as analytics_router
+from crm.contacts_api import router as contacts_router
+from crm.activities_api import router as activities_router
+from crm.tasks_api import router as tasks_router
+from crm.pipeline_api import router as pipeline_router
+from crm.email_marketing_api import router as email_marketing_router
+from crm.scrapers_api import router as scrapers_router
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +53,14 @@ app.include_router(calculator_router, prefix="/api")
 app.include_router(pdf_router)
 app.include_router(admin_router)
 app.include_router(signals_router)
+app.include_router(conversion_router)
+app.include_router(analytics_router)
+app.include_router(contacts_router)
+app.include_router(activities_router)
+app.include_router(tasks_router)
+app.include_router(pipeline_router)
+app.include_router(email_marketing_router)
+app.include_router(scrapers_router)
 
 @app.get("/")
 async def root():
