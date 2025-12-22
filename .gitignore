@@ -115,6 +115,45 @@ NOTES.md
 scratch/
 
 # ===========================================
+# Node.js
+# ===========================================
+node_modules/
+frontend/node_modules/
+*.lock
+package-lock.json
+
+# ===========================================
+# Next.js Build Files
+# ===========================================
+.next/
+frontend/.next/
+out/
+.vercel
+
+# ===========================================
+# Personal Notes & Documentation
+# ===========================================
+*_AUDIT.md
+*_STRATEGY.md
+CHECKPOINT*.md
+PRODUCT_AUDIT.md
+CALL_WORKFLOW_AUDIT.md
+AI_DEMO_AGENT_STRATEGY.md
+INTEGRATION_AUDIT.md
+
+# ===========================================
+# Local Reports & Summaries (Not for Git)
+# ===========================================
+*_REPORT.md
+*_SUMMARY.md
+*_GUIDE.md
+ENTERPRISE_OPS_CONSOLE_IMPLEMENTATION.md
+FIXES_SUMMARY.md
+LOGIN_FIX_REPORT.md
+SYSTEM_AUDIT_REPORT.md
+TROUBLESHOOTING_GUIDE.md
+
+# ===========================================
 # Secrets / API Credentials (DO NOT COMMIT)
 # ===========================================
 credentials.json
