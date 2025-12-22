@@ -129,6 +129,9 @@ export default function Navigation() {
             <a href="/demo" className="text-gray-700 hover:text-blue-600 transition-colors">
               Demo
             </a>
+            <a href="/reports/weekly" className="text-gray-700 hover:text-blue-600 transition-colors">
+              Reports
+            </a>
             <button
               onClick={handleLogout}
               className="text-gray-700 hover:text-red-600 font-medium"

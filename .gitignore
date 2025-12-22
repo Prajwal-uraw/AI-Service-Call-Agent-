@@ -121,3 +121,22 @@ node_modules/
 frontend/node_modules/
 *.lock
 package-lock.json
+
+# ===========================================
+# Next.js Build Files
+# ===========================================
+.next/
+frontend/.next/
+out/
+.vercel
+
+# ===========================================
+# Personal Notes & Documentation
+# ===========================================
+*_AUDIT.md
+*_STRATEGY.md
+CHECKPOINT*.md
+PRODUCT_AUDIT.md
+CALL_WORKFLOW_AUDIT.md
+AI_DEMO_AGENT_STRATEGY.md
+INTEGRATION_AUDIT.md
