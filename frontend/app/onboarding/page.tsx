@@ -166,6 +166,7 @@ export default function OnboardingPage() {
               <select
                 value={formData.industry}
                 onChange={(e) => updateField("industry", e.target.value)}
+                aria-label="Select your industry"
                 className="w-full border rounded-lg px-4 py-3 text-lg"
               >
                 <option value="hvac">HVAC</option>

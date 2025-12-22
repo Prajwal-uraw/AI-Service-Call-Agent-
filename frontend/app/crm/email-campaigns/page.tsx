@@ -372,7 +372,7 @@ export default function EmailCampaignsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Target Audience</label>
-                  <select className="w-full border rounded-lg px-4 py-2">
+                  <select aria-label="Select target audience" className="w-full border rounded-lg px-4 py-2">
                     <option value="">All leads</option>
                     <option value="hot">Hot leads only</option>
                     <option value="warm">Warm leads only</option>

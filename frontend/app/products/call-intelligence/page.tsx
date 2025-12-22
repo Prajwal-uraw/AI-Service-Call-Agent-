@@ -175,6 +175,8 @@ export default function CallIntelligencePage() {
                           </div>
                           <button
                             onClick={() => dismissSignal(signal.id)}
+                            title="Dismiss signal"
+                            aria-label="Dismiss signal"
                             className="text-gray-400 hover:text-gray-600 ml-4"
                           >
                             <XCircle className="w-6 h-6" />

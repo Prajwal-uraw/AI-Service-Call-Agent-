@@ -224,7 +224,7 @@ export default function CalendarPage() {
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium">Duration</label>
-                  <select className="w-full border rounded-lg px-4 py-2">
+                  <select aria-label="Select meeting duration" className="w-full border rounded-lg px-4 py-2">
                     <option>15 minutes</option>
                     <option>30 minutes</option>
                     <option>45 minutes</option>
