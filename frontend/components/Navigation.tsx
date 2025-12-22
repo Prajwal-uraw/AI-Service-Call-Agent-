@@ -104,6 +104,28 @@ export default function Navigation() {
             <a href="/calendar" className="text-gray-700 hover:text-blue-600 transition-colors">
               Calendar
             </a>
+            <a href="/book-ai-demo" className="text-gray-700 hover:text-blue-600 transition-colors">
+              Book AI Demo
+            </a>
+            <div className="relative group">
+              <button className="text-gray-700 hover:text-blue-600 transition-colors">
+                Products ▾
+              </button>
+              <div className="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <a href="/products/call-intelligence" className="block px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="font-semibold text-gray-900">AI Call Intelligence</div>
+                  <div className="text-xs text-gray-600">Real-time coaching</div>
+                </a>
+                <a href="/products/follow-up-autopilot" className="block px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="font-semibold text-gray-900">Follow-Up Autopilot</div>
+                  <div className="text-xs text-gray-600">Auto-generate emails</div>
+                </a>
+                <a href="/products/click-to-call" className="block px-4 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="font-semibold text-gray-900">Click-to-Call Dialer</div>
+                  <div className="text-xs text-gray-600">Call + auto-log</div>
+                </a>
+              </div>
+            </div>
             <a href="/demo" className="text-gray-700 hover:text-blue-600 transition-colors">
               Demo
             </a>
