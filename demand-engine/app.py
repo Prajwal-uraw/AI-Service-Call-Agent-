@@ -10,6 +10,7 @@ import logging
 from calculator.api import router as calculator_router
 from pdf_generator.router import router as pdf_router
 from admin.api import router as admin_router
+from admin.signals_api import router as signals_router
 
 # Configure logging
 logging.basicConfig(
@@ -43,6 +44,7 @@ app.add_middleware(
 app.include_router(calculator_router, prefix="/api")
 app.include_router(pdf_router)
 app.include_router(admin_router)
+app.include_router(signals_router)
 
 @app.get("/")
 async def root():
