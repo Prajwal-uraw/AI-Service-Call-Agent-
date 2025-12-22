@@ -1,16 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Phone } from 'lucide-react';
+import { Phone, ChevronDown, LayoutDashboard, Users, Settings, CreditCard, Briefcase } from 'lucide-react';
 
 export default function Navigation() {
-  const router = useRouter();
-  const isLoggedIn = typeof window !== 'undefined' && isAuthenticated();
+  const [showMultiTenant, setShowMultiTenant] = useState(false);
+  const [showCRM, setShowCRM] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const handleLogout = () => {
-    logout();
-    router.push('/login');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   return (
@@ -18,52 +20,101 @@ export default function Navigation() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logo.svg" alt="Kestrel - HVAC AI Call Agent" width={160} height={46} priority />
+            <div className="text-2xl font-bold text-blue-600">Kestrel AI</div>
           </Link>
           
-          <div className="hidden md:flex items-center gap-8">
-            <Link href="/#how-it-works" className="text-gray-700 hover:text-blue-600 font-medium">
-              How It Works
-            </Link>
-            <Link href="/#pricing" className="text-gray-700 hover:text-blue-600 font-medium">
-              Pricing
-            </Link>
-            <Link href="/calculator" className="text-gray-700 hover:text-blue-600 font-medium">
-              ROI Calculator
-            </Link>
+          <div className="hidden md:flex items-center gap-6">
+            {/* Multi-Tenant Dropdown */}
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowMultiTenant(true)}
+                onMouseLeave={() => setShowMultiTenant(false)}
+                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
+              >
+                <LayoutDashboard size={16} />
+                Multi-Tenant
+                <ChevronDown size={16} />
+              </button>
+              {showMultiTenant && (
+                <div
+                  onMouseEnter={() => setShowMultiTenant(true)}
+                  onMouseLeave={() => setShowMultiTenant(false)}
+                  className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
+                >
+                  <Link href="/onboarding" className="block px-4 py-2 hover:bg-gray-50">Onboarding</Link>
+                  <Link href="/dashboard" className="block px-4 py-2 hover:bg-gray-50">Dashboard</Link>
+                  <Link href="/settings" className="block px-4 py-2 hover:bg-gray-50">Settings</Link>
+                  <Link href="/billing" className="block px-4 py-2 hover:bg-gray-50">Billing</Link>
+                </div>
+              )}
+            </div>
+
+            {/* CRM Dropdown */}
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowCRM(true)}
+                onMouseLeave={() => setShowCRM(false)}
+                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
+              >
+                <Users size={16} />
+                CRM
+                <ChevronDown size={16} />
+              </button>
+              {showCRM && (
+                <div
+                  onMouseEnter={() => setShowCRM(true)}
+                  onMouseLeave={() => setShowCRM(false)}
+                  className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
+                >
+                  <Link href="/crm/pipeline" className="block px-4 py-2 hover:bg-gray-50">Pipeline</Link>
+                  <Link href="/crm/email-campaigns" className="block px-4 py-2 hover:bg-gray-50">Email Campaigns</Link>
+                  <Link href="/crm/scrapers" className="block px-4 py-2 hover:bg-gray-50">Scrapers</Link>
+                  <Link href="/crm/tasks" className="block px-4 py-2 hover:bg-gray-50">Tasks</Link>
+                </div>
+              )}
+            </div>
+
+            {/* Admin Dropdown */}
+            <div className="relative">
+              <button
+                onMouseEnter={() => setShowAdmin(true)}
+                onMouseLeave={() => setShowAdmin(false)}
+                className="flex items-center gap-1 text-gray-700 hover:text-blue-600 font-medium"
+              >
+                <Briefcase size={16} />
+                Admin
+                <ChevronDown size={16} />
+              </button>
+              {showAdmin && (
+                <div
+                  onMouseEnter={() => setShowAdmin(true)}
+                  onMouseLeave={() => setShowAdmin(false)}
+                  className="absolute top-full left-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50"
+                >
+                  <Link href="/admin/portal" className="block px-4 py-2 hover:bg-gray-50">Portal</Link>
+                  <Link href="/admin/signals" className="block px-4 py-2 hover:bg-gray-50">Pain Signals</Link>
+                  <Link href="/admin/analytics-enhanced" className="block px-4 py-2 hover:bg-gray-50">Analytics</Link>
+                </div>
+              )}
+            </div>
+
             <Link href="/demo" className="text-gray-700 hover:text-blue-600 font-medium">
-              Live Demo
+              Demo
             </Link>
-            <Link href="/admin/signals" className="text-gray-700 hover:text-blue-600 font-medium">
-              Pain Signals
-            </Link>
-            <Link href="/admin/analytics-enhanced" className="text-gray-700 hover:text-blue-600 font-medium">
-              Analytics
-            </Link>
-            <Link href="/crm/pipeline" className="text-gray-700 hover:text-blue-600 font-medium">
-              CRM Pipeline
-            </Link>
-            <Link href="/crm/email-campaigns" className="text-gray-700 hover:text-blue-600 font-medium">
-              Email Campaigns
-            </Link>
-            <Link href="/crm/scrapers" className="text-gray-700 hover:text-blue-600 font-medium">
-              Scrapers
-            </Link>
-            <Link href="/crm/contacts" className="text-gray-700 hover:text-blue-600 font-medium">
-              Contacts
-            </Link>
-            <Link href="/crm/tasks" className="text-gray-700 hover:text-blue-600 font-medium">
-              Tasks
-            </Link>
+            <button
+              onClick={handleLogout}
+              className="text-gray-700 hover:text-red-600 font-medium"
+            >
+              Logout
+            </button>
+            <a 
+              href="tel:+15551234567" 
+              className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              <Phone size={20} />
+              <span className="hidden sm:inline">(555) 123-4567</span>
+            </a>
           </div>
-          
-          <a 
-            href="tel:+15551234567" 
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-          >
-            <Phone size={20} />
-            <span className="hidden sm:inline">(555) 123-4567</span>
-          </a>
         </div>
       </div>
     </nav>

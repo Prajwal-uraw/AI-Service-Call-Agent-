@@ -27,7 +27,7 @@ export default function LoginPage() {
         localStorage.setItem("user_email", email);
         localStorage.setItem("user_role", "admin");
         
-        router.push("/crm/pipeline");
+        router.push("/admin/portal");
       } else {
         setError("Please enter email and password");
       }
