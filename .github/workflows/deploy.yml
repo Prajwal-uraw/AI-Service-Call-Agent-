@@ -122,32 +122,3 @@ jobs:
           DAILY_API_KEY: ${{ secrets.DAILY_API_KEY }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-
-  notify:
-    name: Notify Deployment Status
-    needs: [deploy-frontend, deploy-backend]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-      - name: Send Slack notification
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
-        uses: slackapi/slack-github-action@v1.25.0
-        with:
-          payload: |
-            {
-              "text": "Deployment ${{ job.status }}: ${{ github.repository }}",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Deployment Status:* ${{ job.status }}\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}"
-                  }
-                }
-              ]
-            }
-        # SLACK_WEBHOOK_URL and SLACK_WEBHOOK_TYPE are provided via env above
