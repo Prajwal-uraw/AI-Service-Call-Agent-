@@ -156,7 +156,7 @@ jobs:
 
   notify:
     name: Notify Deployment Status
-    needs: [deploy-frontend, deploy-backend]
+    needs: [deploy-backend]
     runs-on: ubuntu-latest
     if: always()
     
