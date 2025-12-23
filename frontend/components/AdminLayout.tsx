@@ -112,7 +112,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <div className="space-y-0.5">
               <div className="px-2 py-1 flex items-center justify-between">
                 <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">CRM</span>
-                <button className="p-0.5 hover:bg-neutral-800 rounded transition-colors">
+                <button className="p-0.5 hover:bg-neutral-800 rounded transition-colors" aria-label="Add new CRM item">
                   <Plus className="w-3 h-3 text-neutral-500" />
                 </button>
               </div>
