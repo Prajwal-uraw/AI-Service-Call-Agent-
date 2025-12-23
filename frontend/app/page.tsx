@@ -2,6 +2,7 @@
 
 import Navigation from "@/components/Navigation";
 import Hero from "@/components/Hero";
+import TrustedBySection from "@/components/TrustedBySection";
 import ProblemSection from "@/components/ProblemSection";
 import DifferentiatorSection from "@/components/DifferentiatorSection";
 import CustomBuildSection from "@/components/CustomBuildSection";
@@ -18,6 +19,7 @@ export default function Home() {
       <Navigation />
       <div className="min-h-screen bg-white">
         <Hero />
+        <TrustedBySection />
         <ProblemSection />
         <DifferentiatorSection />
         <CustomBuildSection />
