@@ -6,14 +6,14 @@ Create, read, update, delete voice agent customers
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import secrets
 import string
 import hashlib
 
-from app.database import get_db
-from app.models.db_models import Tenant, TenantUser, TenantAPIKey
+# Import the get_db dependency from the application context
+get_db = None  # This will be set by the application
 
 router = APIRouter(prefix="/api/admin/tenants", tags=["Admin - Tenants"])
 
