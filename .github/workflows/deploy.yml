@@ -112,8 +112,8 @@ jobs:
           pip install --no-cache-dir -r requirements.txt
           # Explicitly install FastAPI and uvicorn to ensure they're available
           pip install fastapi uvicorn
-          # Install Modal
-          pip install modal
+          # Install latest version of Modal
+          pip install --upgrade modal
 
       - name: Verify installations
         working-directory: ./demand-engine
