@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api/admin/tenants", tags=["Admin - Tenants"])
 class TenantCreate(BaseModel):
     """Create new tenant (voice agent customer)"""
     company_name: str = Field(..., min_length=2, max_length=255)
-    slug: str = Field(..., min_length=2, max_length=100, regex="^[a-z0-9-]+$")
+    slug: str = Field(..., min_length=2, max_length=100, pattern="^[a-z0-9-]+$")
     owner_name: str
     owner_email: EmailStr
     owner_phone: Optional[str] = None
