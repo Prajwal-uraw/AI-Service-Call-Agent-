@@ -19,19 +19,18 @@ export default function Hero() {
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-6 animate-fade-in" style={{animationDelay: '0.2s'}}>
               <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
-              <span className="text-sm font-medium text-blue-900">Trusted by 500+ service businesses</span>
+              <span className="text-sm font-medium text-blue-900">Proven in HVAC. Scaling to Service Industries.</span>
             </div>
             
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
-              <span className="block mb-2 animate-fade-in" style={{animationDelay: '0.3s'}}>Never miss a call.</span>
+              <span className="block mb-2 animate-fade-in" style={{animationDelay: '0.3s'}}>Autonomous Voice Operations Platform</span>
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animate-fade-in" style={{animationDelay: '0.4s'}}>
-                Never lose revenue.
+                for Service Businesses
               </span>
             </h1>
             
             <p className="text-xl md:text-2xl text-neutral-600 mb-10 leading-relaxed max-w-3xl mx-auto animate-fade-in" style={{animationDelay: '0.5s'}}>
-              AI voice agents that answer every call, book appointments instantly, and follow up automatically. 
-              <span className="font-semibold text-neutral-900">Built for HVAC, plumbing, and home service businesses.</span>
+              <span className="font-semibold text-neutral-900">Proven in HVAC.</span> Built to answer every call, qualify intent, and resolve workflows without human lift.
             </p>
             
             {/* CTA Buttons */}
@@ -40,14 +39,14 @@ export default function Hero() {
                 href="/calendar"
                 className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
               >
-                Get Started Free
+                Book Workflow Demo
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </a>
               <a 
                 href="#demo"
                 className="inline-flex items-center justify-center gap-2 bg-white hover:bg-neutral-50 text-neutral-900 border-2 border-neutral-200 hover:border-neutral-300 px-8 py-4 rounded-lg text-lg font-semibold transition-all"
               >
-                Watch Demo
+                See Platform in 48 Hours
               </a>
             </div>
             
@@ -75,28 +74,28 @@ export default function Hero() {
                 <Zap className="w-5 h-5 text-amber-500" />
                 <div className="text-4xl font-bold text-neutral-900">200ms</div>
               </div>
-              <div className="text-sm text-neutral-600">Average response time</div>
+              <div className="text-sm text-neutral-600">Response Speed — Enterprise-grade</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <Clock className="w-5 h-5 text-blue-500" />
                 <div className="text-4xl font-bold text-neutral-900">24/7</div>
               </div>
-              <div className="text-sm text-neutral-600">Always available</div>
+              <div className="text-sm text-neutral-600">Coverage — No missed calls, no overtime</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <TrendingUp className="w-5 h-5 text-green-500" />
                 <div className="text-4xl font-bold text-neutral-900">40%</div>
               </div>
-              <div className="text-sm text-neutral-600">More appointments</div>
+              <div className="text-sm text-neutral-600">Outcome — More booked appointments</div>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <BarChart3 className="w-5 h-5 text-purple-500" />
                 <div className="text-4xl font-bold text-neutral-900">$2M+</div>
               </div>
-              <div className="text-sm text-neutral-600">Revenue recovered</div>
+              <div className="text-sm text-neutral-600">Economic Impact — Revenue leakage recovered</div>
             </div>
           </div>
         </div>

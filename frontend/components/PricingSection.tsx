@@ -12,10 +12,10 @@ export default function PricingSection() {
             Enterprise Voice Operations
           </div>
           <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 bg-clip-text text-transparent">
-            Simple, Transparent Pricing
+            Outcome-Based Pricing
           </h2>
           <p className="text-xl text-neutral-600 max-w-2xl mx-auto mb-8">
-            No free trials. Start with a demo and 1-week call analysis to see real results.
+            Start with workflow validation. Deploy deterministic voice operations at scale.
           </p>
         </div>
         
@@ -24,9 +24,9 @@ export default function PricingSection() {
           <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-8 md:p-12 text-white shadow-2xl border border-brand-500/20">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex-1">
-                <h3 className="text-3xl font-bold mb-3">Start with a Demo + Free 1-Week Call Analysis</h3>
+                <h3 className="text-3xl font-bold mb-3">Start with Workflow Validation</h3>
                 <p className="text-brand-100 text-lg">
-                  See how we handle your actual calls. No credit card required. No commitment.
+                  See our platform handle your actual call patterns. 1-week analysis included.
                 </p>
               </div>
               <div className="flex-shrink-0">
@@ -34,7 +34,7 @@ export default function PricingSection() {
                   href="/calendar"
                   className="inline-flex items-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-brand-50 transition-all shadow-lg hover:shadow-xl hover:scale-105"
                 >
-                  Book Demo Call
+                  Book Workflow Demo
                   <ArrowRight className="w-5 h-5" />
                 </a>
               </div>
@@ -48,8 +48,8 @@ export default function PricingSection() {
           {/* DIY */}
           <div className="bg-white rounded-2xl border border-neutral-200 hover:border-brand-300 hover:shadow-xl transition-all p-8">
             <div className="mb-6">
-              <h3 className="text-2xl font-bold text-neutral-900 mb-2">DIY</h3>
-              <p className="text-neutral-600">Self-service setup & management</p>
+              <h3 className="text-2xl font-bold text-neutral-900 mb-2">Autonomous Intake</h3>
+              <p className="text-neutral-600">Deterministic appointment & lead workflows</p>
             </div>
             <div className="mb-6">
               <div className="flex items-baseline gap-2">
@@ -80,7 +80,7 @@ export default function PricingSection() {
               href="/calendar"
               className="block w-full bg-neutral-900 hover:bg-neutral-800 text-white py-3 rounded-xl font-semibold text-center transition-all"
             >
-              Get Started
+              Request Demo
             </a>
             <p className="text-center text-xs text-neutral-500 mt-4">
               1-5 technicians
@@ -93,8 +93,8 @@ export default function PricingSection() {
               Most Popular
             </div>
             <div className="mb-6">
-              <h3 className="text-2xl font-bold text-neutral-900 mb-2">Professional</h3>
-              <p className="text-neutral-600">For growing service businesses</p>
+              <h3 className="text-2xl font-bold text-neutral-900 mb-2">Integrated Operations</h3>
+              <p className="text-neutral-600">Enterprise routing, CRM sync, multi-location</p>
             </div>
             <div className="mb-6">
               <div className="flex items-baseline gap-2">
@@ -139,8 +139,8 @@ export default function PricingSection() {
           {/* Custom/Enterprise */}
           <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl border border-neutral-700 hover:shadow-2xl transition-all p-8 text-white">
             <div className="mb-6">
-              <h3 className="text-2xl font-bold mb-2">Custom</h3>
-              <p className="text-neutral-300">For multi-location operations</p>
+              <h3 className="text-2xl font-bold mb-2">VoiceOps Premium</h3>
+              <p className="text-neutral-300">Custom workflow encoding, SLA, voice variants</p>
             </div>
             <div className="mb-6">
               <div className="flex items-baseline gap-2">

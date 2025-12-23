@@ -12,11 +12,11 @@ export default function FinalCTA() {
       <div className="container mx-auto px-6 text-center relative z-10">
         
         <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 max-w-4xl mx-auto leading-tight">
-          Ready to stop losing revenue?
+          Deploy Voice Operations in 48 Hours
         </h2>
         
         <p className="text-xl md:text-2xl text-neutral-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Join 500+ service businesses recovering millions in lost revenue. Get started in 48 hours.
+          Proven infrastructure handling thousands of calls monthly. Start with workflow validation.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
@@ -24,25 +24,25 @@ export default function FinalCTA() {
             href="/calendar"
             className="group inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
           >
-            Get Started Free
+            Book Workflow Demo
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </a>
           <a 
             href="#pricing"
             className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 hover:border-white/50 px-8 py-4 rounded-lg text-lg font-semibold transition-all backdrop-blur-sm"
           >
-            View Pricing
+            See Platform Pricing
           </a>
         </div>
         
         <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-neutral-400">
           <div className="flex items-center gap-2">
             <Check className="text-green-400 w-5 h-5" />
-            <span>No credit card required</span>
+            <span>Demo + call analysis included</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="text-green-400 w-5 h-5" />
-            <span>Setup in 48 hours</span>
+            <span>Deploy in 48 hours</span>
           </div>
           <div className="flex items-center gap-2">
             <Check className="text-green-400 w-5 h-5" />

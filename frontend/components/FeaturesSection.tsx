@@ -6,50 +6,50 @@ export default function FeaturesSection() {
   const features = [
     {
       icon: Phone,
-      title: "Instant Call Answering",
-      description: "Answer every call in under 200ms. No hold music, no missed opportunities. Your AI agent picks up instantly, every time.",
+      title: "Autonomous Intake & Qualification",
+      description: "Automate structured collection, booking, and routing according to your operational rules. Sub-200ms response ensures zero call abandonment.",
       color: "blue"
     },
     {
       icon: Calendar,
-      title: "Smart Scheduling",
-      description: "Books appointments directly into your calendar. Checks availability, confirms details, and sends reminders automatically.",
+      title: "Deterministic Workflows",
+      description: "Deploy repeatable, verifiable voice workflows that force consistent outcomes and reduce variance across all call types.",
       color: "green"
     },
     {
       icon: MessageSquare,
-      title: "Natural Conversations",
-      description: "Sounds human, understands context, handles objections. Trained specifically for HVAC, plumbing, and home services.",
+      title: "Outcome-Anchored Routing",
+      description: "Prioritize escalation, human fallback, or booking based on rules you control. Every call reaches the right resolution path.",
       color: "purple"
     },
     {
       icon: BarChart3,
-      title: "Real-Time Analytics",
-      description: "Track every call, conversion rate, and revenue impact. See exactly what's working and optimize continuously.",
+      title: "Operational Telemetry",
+      description: "Track and measure key voice ops metrics: resolution rate, escalation load, revenue impact. Full audit trail for every interaction.",
       color: "amber"
     },
     {
       icon: Clock,
-      title: "24/7 Availability",
-      description: "Never miss an after-hours emergency call. Your AI works nights, weekends, and holidays without overtime pay.",
+      title: "Enterprise-Grade Availability",
+      description: "99.9% uptime SLA with multi-region redundancy. Zero downtime deployments ensure continuous operations.",
       color: "indigo"
     },
     {
       icon: Zap,
-      title: "Instant Follow-Ups",
-      description: "Automatically sends quotes, confirmations, and reminders. Keeps leads warm until they convert.",
+      title: "Workflow Orchestration",
+      description: "Trigger downstream actions across CRM, scheduling, and notification systems. Fully programmable post-call automation.",
       color: "orange"
     },
     {
       icon: Shield,
-      title: "Enterprise Security",
-      description: "SOC 2 certified, HIPAA compliant. Your customer data is encrypted and protected at all times.",
+      title: "Compliance & Security",
+      description: "SOC 2 Type II certified, HIPAA compliant. End-to-end encryption with complete data sovereignty controls.",
       color: "red"
     },
     {
       icon: Users,
-      title: "CRM Integration",
-      description: "Syncs with ServiceTitan, Housecall Pro, Jobber, and more. All data flows seamlessly into your existing tools.",
+      title: "Platform Integration",
+      description: "Native connectors for ServiceTitan, Housecall Pro, Jobber. RESTful API for custom integrations and data pipelines.",
       color: "teal"
     }
   ];
@@ -73,10 +73,10 @@ export default function FeaturesSection() {
             <span className="text-sm font-medium text-blue-900">Everything you need</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-4">
-            Built for service businesses
+            Voice Operations Infrastructure
           </h2>
           <p className="text-xl text-neutral-600 max-w-3xl mx-auto">
-            Every feature designed to maximize bookings, minimize no-shows, and scale your operations without hiring more staff
+            Platform capabilities that deliver deterministic, verifiable workflows at scale
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export default function FeaturesSection() {
             href="/calendar"
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl"
           >
-            See it in action
+            Request Workflow Validation
           </a>
         </div>
       </div>
