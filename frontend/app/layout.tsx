@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import { ToastProvider } from "@/components/ui/toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,9 +16,11 @@ export const metadata: Metadata = {
     icon: [
       { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { url: "/website-favicon.png", type: "image/png" },
+      { url: "/website-favicon.png", sizes: "192x192", type: "image/png" },
     ],
-    apple: [{ url: "/website-favicon.png", type: "image/png" }],
+    apple: [
+      { url: "/website-favicon.png", sizes: "180x180", type: "image/png" }
+    ],
   },
 };
 
@@ -28,18 +31,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
-        <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
-        <link rel="icon" href="/website-favicon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/website-favicon.png" />
-      </head>
       <body suppressHydrationWarning className={inter.className}>
-        <ErrorBoundary>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <ErrorBoundary>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </ErrorBoundary>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,8 +1,9 @@
 "use client";
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { 
   LayoutDashboard, 
   Phone, 
@@ -22,8 +23,13 @@ import {
   BarChart3,
   Inbox,
   ChevronDown,
-  Plus
+  Plus,
+  PhoneOutgoing,
+  Brain,
+  HelpCircle,
+  Activity
 } from 'lucide-react';
+import FeedbackWidget from './FeedbackWidget';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -32,12 +38,16 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
 
   const navigation = {
     main: [
       { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { name: 'Inbox', href: '/inbox', icon: Inbox },
       { name: 'Calls', href: '/calls', icon: Phone },
+      { name: 'Outbound Calls', href: '/admin/outbound-calls', icon: PhoneOutgoing },
       { name: 'Appointments', href: '/appointments', icon: Calendar },
     ],
     crm: [
@@ -51,8 +61,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       { name: 'Video Meetings', href: '/meetings', icon: Video },
     ],
     tools: [
+      { name: 'Call Intelligence', href: '/admin/call-intelligence', icon: Brain },
       { name: 'Scrapers', href: '/scrapers', icon: Database },
       { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+      { name: 'Help Center', href: '/help', icon: HelpCircle },
+      { name: 'System Status', href: '/status', icon: Activity },
       { name: 'Settings', href: '/settings', icon: Settings },
     ],
   };
@@ -241,6 +254,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Feedback Widget */}
+      <FeedbackWidget />
     </div>
   );
 }

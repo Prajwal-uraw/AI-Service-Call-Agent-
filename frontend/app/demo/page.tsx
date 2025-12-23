@@ -1,28 +1,65 @@
-import { Phone } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const slides = [
+  {
+    title: "Experience The Difference In The First 3 Seconds",
+    subtitle: "Call Kestrel right now. You'll hear why our HVAC AI call agent is 10x faster than Vapi, Bland, or any DIY platform you've tried.",
+    color: "from-blue-900 to-blue-700"
+  },
+  {
+    title: "Never Miss Another Call",
+    subtitle: "24/7 AI receptionist that answers every call instantly, books appointments, and follows up automatically.",
+    color: "from-purple-900 to-purple-700"
+  },
+  {
+    title: "Built For HVAC Professionals",
+    subtitle: "Industry-specific knowledge, emergency routing, and seamless integration with your existing systems.",
+    color: "from-green-900 to-green-700"
+  }
+];
 
 export default function DemoPage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 to-blue-700 text-white flex items-center">
-      <div className="container mx-auto px-6 text-center">
+    <main className={`min-h-screen bg-gradient-to-br ${slides[currentSlide].color} text-white flex items-center transition-all duration-1000 relative`}>
+      <div className="container mx-auto px-6 text-center relative z-10">
         
         <p className="text-blue-200 text-sm uppercase tracking-wide mb-4 animate-pulse">
           🔴 LIVE DEMO - CALL RIGHT NOW
         </p>
         
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-          Experience The Difference<br/>
-          In The First 3 Seconds
+        <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight animate-fade-in">
+          {slides[currentSlide].title}
         </h1>
         
-        <p className="text-2xl md:text-3xl text-blue-100 mb-12 max-w-4xl mx-auto">
-          Call Kestrel right now. You'll hear why our HVAC AI call agent is 10x faster 
-          than Vapi, Bland, or any DIY platform you've tried.
+        <p className="text-2xl md:text-3xl text-blue-100 mb-12 max-w-4xl mx-auto animate-fade-in">
+          {slides[currentSlide].subtitle}
         </p>
         
-        <div className="mb-12">
+        <div className="mb-12 animate-bounce-subtle">
           <a
             href="tel:+15551234567"
-            className="inline-flex items-center gap-4 bg-orange-500 hover:bg-orange-600 text-white px-12 py-6 rounded-lg text-3xl font-bold transition-colors shadow-2xl"
+            className="inline-flex items-center gap-4 bg-orange-500 hover:bg-orange-600 text-white px-12 py-6 rounded-lg text-3xl font-bold transition-all shadow-2xl hover:scale-105 transform"
           >
             <Phone size={40} />
             (555) 123-4567
@@ -74,14 +111,43 @@ export default function DemoPage() {
         <div className="mt-12">
           <p className="text-blue-200 mb-4">Want to see it custom-built for YOUR business?</p>
           <a
-            href="/"
-            className="inline-block bg-white text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors"
+            href="/book-ai-demo"
+            className="inline-block bg-white text-blue-900 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-all hover:scale-105 transform shadow-lg"
           >
-            Schedule Your Custom Demo →
+            Book Your Custom Demo →
           </a>
         </div>
         
+        {/* Slide indicators */}
+        <div className="flex justify-center gap-2 mt-8">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all ${
+                index === currentSlide ? 'bg-white w-8' : 'bg-white/50'
+              }`}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
       </div>
+
+      {/* Navigation arrows */}
+      <button
+        onClick={prevSlide}
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur p-3 rounded-full transition-all z-20"
+        aria-label="Previous slide"
+      >
+        <ChevronLeft size={32} />
+      </button>
+      <button
+        onClick={nextSlide}
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 backdrop-blur p-3 rounded-full transition-all z-20"
+        aria-label="Next slide"
+      >
+        <ChevronRight size={32} />
+      </button>
     </main>
   );
 }

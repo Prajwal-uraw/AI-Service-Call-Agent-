@@ -309,14 +309,16 @@ export default function ForwardingOnboardingPage() {
               {/* SMS Template */}
               {missedCallSms && (
                 <div className="ml-9">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="sms-template" className="block text-sm font-medium text-gray-700 mb-2">
                     Missed Call SMS Template
                   </label>
                   <textarea
+                    id="sms-template"
                     value={smsTemplate}
                     onChange={(e) => setSmsTemplate(e.target.value)}
                     rows={3}
                     maxLength={160}
+                    aria-label="Missed Call SMS Template"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-sm text-gray-500 mt-1">

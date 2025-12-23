@@ -52,8 +52,6 @@ export default function TwilioInsightsPage() {
   const [error, setError] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     // Try to get phone number from environment or prompt user
     const defaultNumber = process.env.NEXT_PUBLIC_TWILIO_PHONE_NUMBER;
@@ -70,12 +68,12 @@ export default function TwilioInsightsPage() {
     setError(null);
 
     try {
-      // Fetch all data in parallel
+      // Fetch all data in parallel using local API routes
       const [historyRes, statusRes, costRes, uptimeRes] = await Promise.all([
-        fetch(`${apiUrl}/api/twilio/insights/call-history?phone_number=${number}&days=7`),
-        fetch(`${apiUrl}/api/twilio/insights/number-status/${encodeURIComponent(number)}`),
-        fetch(`${apiUrl}/api/twilio/insights/cost-summary?phone_number=${number}&days=30`),
-        fetch(`${apiUrl}/api/twilio/insights/uptime-metrics?phone_number=${number}&days=7`)
+        fetch(`/api/twilio/insights/call-history?phone_number=${encodeURIComponent(number)}&days=7`),
+        fetch(`/api/twilio/insights/number-status/${encodeURIComponent(number)}`),
+        fetch(`/api/twilio/insights/cost-summary?phone_number=${encodeURIComponent(number)}&days=30`),
+        fetch(`/api/twilio/insights/uptime-metrics?phone_number=${encodeURIComponent(number)}&days=7`)
       ]);
 
       if (historyRes.ok) {

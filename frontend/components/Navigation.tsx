@@ -49,11 +49,11 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 z-50 group">
             <Image 
-              src="/website-logo.png" 
+              src="/website-logo-wide.png" 
               alt="Kestrel" 
-              width={180} 
-              height={45}
-              className="h-9 w-auto group-hover:opacity-80 transition-opacity"
+              width={240} 
+              height={60}
+              className="h-12 w-auto group-hover:opacity-80 transition-opacity"
               priority
             />
           </Link>

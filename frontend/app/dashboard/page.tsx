@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { 
   Phone, Calendar, TrendingUp, AlertCircle, Clock, Users, DollarSign, ArrowUpRight,
-  Target, Mail, MessageSquare, Bot, CheckCircle, XCircle, PhoneIncoming, PhoneOutgoing
+  Target, Mail, MessageSquare, Bot, CheckCircle, XCircle, PhoneIncoming, PhoneOutgoing, Database, Video
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { createClient } from '@/lib/supabase/client';
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
+  const [scrapedLeads, setScrapedLeads] = useState<any[]>([]);
+  const supabase = createClient();
 
   // Call statistics data for charts
   const callVolumeData = [
@@ -65,8 +68,25 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1000);
+    fetchScrapedLeads();
     return () => clearTimeout(timer);
   }, []);
+
+  const fetchScrapedLeads = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('signals')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (data) {
+        setScrapedLeads(data);
+      }
+    } catch (error) {
+      console.error('Error fetching scraped leads:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -311,6 +331,63 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Scraped Leads from Supabase */}
+        {scrapedLeads.length > 0 && (
+          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="w-5 h-5 text-blue-600" />
+                <h3 className="text-base font-semibold text-neutral-900">Scraped Leads</h3>
+              </div>
+              <a href="/admin/scraping" className="text-sm text-blue-600 hover:text-blue-700 font-medium">View all</a>
+            </div>
+            <div className="p-6 space-y-4">
+              {scrapedLeads.map((lead) => (
+                <div key={lead.id} className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
+                  <div className="flex-1">
+                    <div className="font-medium text-neutral-900">{lead.business_name || 'Unknown Business'}</div>
+                    <div className="text-sm text-neutral-600 mt-1">
+                      {lead.phone && <span className="mr-3">📞 {lead.phone}</span>}
+                      {lead.city && lead.state && <span>{lead.city}, {lead.state}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right mr-4">
+                      <div className={`text-xs font-medium px-2 py-1 rounded ${
+                        lead.pain_score >= 70 ? 'bg-red-100 text-red-700' :
+                        lead.pain_score >= 50 ? 'bg-amber-100 text-amber-700' :
+                        'bg-green-100 text-green-700'
+                      }`}>
+                        Score: {lead.pain_score || 0}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => window.open(`tel:${lead.phone}`, '_self')}
+                      className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      title="Call"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </button>
+                    <button 
+                      className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      title="Video Call"
+                    >
+                      <Video className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => window.open(`mailto:${lead.email}`, '_self')}
+                      className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      title="Email"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="bg-white border border-neutral-200 rounded-lg p-6">

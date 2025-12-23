@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import ErrorMessage from "@/components/ErrorMessage";
+import { parseError, logError } from "@/lib/errors";
 import { 
   Building2, 
   User, 
@@ -139,7 +142,9 @@ export default function OnboardingPage() {
       setStep(6);
       
     } catch (err: any) {
-      setError(err.message);
+      const appError = parseError(err);
+      logError(appError, 'OnboardingPage.handleSubmit');
+      setError(appError.userMessage);
     } finally {
       setLoading(false);
     }
@@ -495,9 +500,12 @@ export default function OnboardingPage() {
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-6">
-                {error}
-              </div>
+              <ErrorMessage 
+                message={error} 
+                type="error"
+                dismissible
+                onDismiss={() => setError("")}
+              />
             )}
             
             {renderStep()}
@@ -530,8 +538,17 @@ export default function OnboardingPage() {
                     disabled={loading}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                   >
-                    {loading ? "Creating Account..." : "Complete Setup"}
-                    <CheckCircle className="ml-2" size={20} />
+                    {loading ? (
+                      <>
+                        <LoadingSpinner size="sm" />
+                        <span className="ml-2">Creating Account...</span>
+                      </>
+                    ) : (
+                      <>
+                        Complete Setup
+                        <CheckCircle className="ml-2" size={20} />
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
