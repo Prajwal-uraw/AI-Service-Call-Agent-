@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "name": "kestrel-hvac-frontend",
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/next"
-    }
-  ]
+  "name": "kestrel-hvac-ai",
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["iad1"]
 }
