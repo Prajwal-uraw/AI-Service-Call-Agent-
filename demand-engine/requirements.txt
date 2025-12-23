@@ -48,6 +48,9 @@ reportlab>=4.0.0
 
 # Email & Storage (Phase 2 Session 8)
 resend>=0.7.0
+
+# Twilio Integration
+twilio>=8.0.0
 httpx>=0.24.0,<0.26.0
 
 # Development
