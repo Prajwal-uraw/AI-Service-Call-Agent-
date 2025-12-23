@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
-import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from "lucide-react";
+import { useState } from 'react';
+import Navigation from '@/components/Navigation';
+import Footer from '@/components/Footer';
+import { Mail, Phone, MapPin, Clock, Send, CheckCircle, MessageSquare, Calendar } from 'lucide-react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -53,15 +53,16 @@ export default function ContactPage() {
       <Navigation />
       <div className="min-h-screen bg-white">
         {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white py-24 mt-16">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20"></div>
+        <section className="relative bg-neutral-900 text-white py-24 mt-16 overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full blur-3xl animate-float-delayed"></div>
           <div className="container mx-auto px-6 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-6xl font-bold mb-6">
-                Let's Talk About Your Business
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-neutral-300 bg-clip-text text-transparent">
+                Let's Talk
               </h1>
-              <p className="text-xl md:text-2xl text-slate-300 leading-relaxed">
-                Get in touch with our team to learn how Kestrel can transform your voice operations.
+              <p className="text-xl md:text-2xl text-neutral-300 leading-relaxed max-w-2xl mx-auto">
+                Ready to transform your service operations? Schedule a demo or reach out to our team.
               </p>
             </div>
           </div>
@@ -107,22 +108,24 @@ export default function ContactPage() {
           </div>
         </section>
 
-        {/* Contact Form Section */}
-        <section className="py-20">
+        {/* Contact Form & Info */}
+        <section className="py-24 bg-neutral-50">
           <div className="container mx-auto px-6">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-6xl mx-auto grid lg:grid-cols-5 gap-12">
               <div className="grid md:grid-cols-2 gap-12">
                 {/* Left Column - Info */}
                 <div>
-                  <h2 className="text-3xl font-bold mb-6">Get Started Today</h2>
+                  <h2 className="text-3xl font-bold mb-2 text-neutral-900">Send us a message</h2>
+                  <p className="text-neutral-600 mb-8">We'll get back to you within 24 hours</p>
                   <p className="text-lg text-gray-600 mb-8 leading-relaxed">
                     Fill out the form and our team will reach out within 2 hours during business hours. 
                     We'll discuss your specific needs and show you how Kestrel can help.
                   </p>
-                  
-                  <div className="space-y-6">
-                    <div className="flex items-start gap-4">
-                      <div className="bg-blue-100 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  {/* Contact Info */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-neutral-200">
+                      <div className="bg-orange-50 p-3 rounded-lg">
+                        <Clock className="h-6 w-6 text-orange-600" />
                         <CheckCircle className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
@@ -132,9 +135,9 @@ export default function ContactPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="bg-green-100 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-neutral-200">
+                      <div className="bg-green-50 p-3 rounded-lg">
+                        <Phone className="h-6 w-6 text-green-600" />
                       </div>
                       <div>
                         <h3 className="font-semibold mb-1">Custom Demo</h3>
@@ -143,31 +146,16 @@ export default function ContactPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="bg-purple-100 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="h-5 w-5 text-purple-600" />
+                    <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-neutral-200">
+                      <div className="bg-purple-50 p-3 rounded-lg">
+                        <MapPin className="h-6 w-6 text-purple-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold mb-1">ROI Analysis</h3>
-                        <p className="text-gray-600 text-sm">
-                          We'll calculate your potential revenue impact and cost savings
-                        </p>
-                      </div>
+                        <p className="font-semibold text-neutral-900">Email</p>
+                        <p className="text-neutral-600">hello@kestrel.ai</p>
+                        We'll calculate your potential revenue impact and cost savings
+                      </p>
                     </div>
-                  </div>
-
-                  <div className="mt-8 p-6 bg-blue-50 rounded-xl border border-blue-100">
-                    <h3 className="font-semibold mb-2">Prefer to talk now?</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Call us directly for immediate assistance
-                    </p>
-                    <a 
-                      href="tel:+18885551234"
-                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      <Phone className="h-5 w-5" />
-                      (888) 555-1234
-                    </a>
                   </div>
                 </div>
 
@@ -287,7 +275,7 @@ export default function ContactPage() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-all duration-200 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full bg-neutral-900 text-white py-4 rounded-lg font-semibold hover:bg-neutral-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2 group"
                       >
                         {loading ? (
                           <>
@@ -297,7 +285,7 @@ export default function ContactPage() {
                         ) : (
                           <>
                             Send Message
-                            <Send className="h-5 w-5" />
+                            <Send className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                           </>
                         )}
                       </button>
