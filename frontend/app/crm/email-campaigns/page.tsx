@@ -100,12 +100,12 @@ export default function EmailCampaignsPage() {
 
   const getOpenRate = (campaign: EmailCampaign) => {
     if (campaign.total_sent === 0) return 0;
-    return ((campaign.total_opened / campaign.total_sent) * 100).toFixed(1);
+    return (campaign.total_opened / campaign.total_sent) * 100;
   };
 
   const getClickRate = (campaign: EmailCampaign) => {
     if (campaign.total_sent === 0) return 0;
-    return ((campaign.total_clicked / campaign.total_sent) * 100).toFixed(1);
+    return (campaign.total_clicked / campaign.total_sent) * 100;
   };
 
   return (
@@ -163,7 +163,7 @@ export default function EmailCampaignsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
               {campaigns.length > 0
-                ? (campaigns.reduce((sum, c) => sum + parseFloat(getOpenRate(c)), 0) / campaigns.length).toFixed(1)
+                ? (campaigns.reduce((sum, c) => sum + getOpenRate(c), 0) / campaigns.length).toFixed(1)
                 : 0}%
             </div>
             <p className="text-xs text-gray-500">Across all campaigns</p>
@@ -177,7 +177,7 @@ export default function EmailCampaignsPage() {
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
               {campaigns.length > 0
-                ? (campaigns.reduce((sum, c) => sum + parseFloat(getClickRate(c)), 0) / campaigns.length).toFixed(1)
+                ? (campaigns.reduce((sum, c) => sum + getClickRate(c), 0) / campaigns.length).toFixed(1)
                 : 0}%
             </div>
             <p className="text-xs text-gray-500">Across all campaigns</p>
@@ -258,23 +258,20 @@ export default function EmailCampaignsPage() {
                       <div>
                         <p className="text-xs text-gray-600">Opened</p>
                         <p className="text-lg font-semibold text-green-600">
-                          {campaign.total_opened} ({getOpenRate(campaign)}%)
+                          {campaign.total_opened} ({getOpenRate(campaign).toFixed(1)}%)
                         </p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Clicked</p>
                         <p className="text-lg font-semibold text-blue-600">
-                          {campaign.total_clicked} ({getClickRate(campaign)}%)
+                          {campaign.total_clicked} ({getClickRate(campaign).toFixed(1)}%)
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-600">Performance</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-semibold">
-                            {parseFloat(getOpenRate(campaign)) > 20 ? 'Good' : 'Average'}
-                          </span>
-                        </div>
+                        <p className="text-xs text-gray-600">Recipients</p>
+                        <p className="text-lg font-semibold">
+                          {campaign.total_recipients}
+                        </p>
                       </div>
                     </div>
                   )}

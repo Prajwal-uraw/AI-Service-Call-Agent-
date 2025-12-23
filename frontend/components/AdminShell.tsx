@@ -73,17 +73,18 @@ export default function AdminShell({ children }: AdminShellProps) {
   const isActive = (href: string) => pathname === href;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-700 to-slate-800 text-slate-100">
       {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700 z-[60]">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-slate-800/40 backdrop-blur-md border-b border-white/10 z-[60] shadow-lg">
         <div className="h-full px-6 flex items-center justify-between">
           {/* Left: Logo + Environment */}
           <div className="flex items-center gap-6">
             <Link href="/admin/portal" className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Phone className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-semibold text-slate-100">Kestrel Ops</span>
+              <img 
+                src="/website-logo-wide.png" 
+                alt="Kestrel" 
+                className="h-8 w-auto max-w-[180px] object-contain"
+              />
             </Link>
             
             <div className="flex items-center gap-2">
@@ -91,7 +92,7 @@ export default function AdminShell({ children }: AdminShellProps) {
               <span className={`px-2 py-1 rounded text-xs font-medium ${
                 environment === 'production' 
                   ? 'bg-green-900/30 text-green-400 border border-green-700' 
-                  : 'bg-yellow-900/30 text-yellow-400 border border-yellow-700'
+                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 backdrop-blur-sm'
               }`}>
                 {environment.toUpperCase()}
               </span>
@@ -112,15 +113,22 @@ export default function AdminShell({ children }: AdminShellProps) {
 
           {/* Right: Notifications + User */}
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-slate-400 hover:text-slate-100 hover:bg-slate-700 rounded-lg transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            {/* Search */}
+            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm" aria-label="Search">
+              <Search className="w-5 h-5 text-slate-300" />
+            </button>
+            
+            {/* Notifications */}
+            <button className="p-2 hover:bg-white/10 rounded-lg transition-colors relative backdrop-blur-sm" aria-label="Notifications">
+              <Bell className="w-5 h-5 text-slate-300" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-400 rounded-full shadow-lg"></span>
             </button>
 
             <div className="relative">
               <button 
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-3 p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg transition-colors backdrop-blur-sm"
+                aria-label="User menu"
               >
                 <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5 text-slate-300" />
@@ -133,7 +141,7 @@ export default function AdminShell({ children }: AdminShellProps) {
               </button>
 
               {showUserMenu && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-2 z-[100]">
+                <div className="absolute top-full right-0 mt-2 w-56 bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-2 z-[100]">
                   <Link href="/admin/profile" className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">
                     Profile Settings
                   </Link>
@@ -155,7 +163,7 @@ export default function AdminShell({ children }: AdminShellProps) {
       </header>
 
       {/* Sidebar */}
-      <aside className="fixed top-16 left-0 bottom-0 w-64 bg-slate-800 border-r border-slate-700 overflow-y-auto z-[50]">
+      <aside className="fixed top-16 left-0 bottom-0 w-64 bg-slate-800/40 backdrop-blur-xl border-r border-white/10 overflow-y-auto z-[50]">
         <nav className="p-4 space-y-6">
           {navigation.map((section) => (
             <div key={section.section}>
@@ -170,10 +178,10 @@ export default function AdminShell({ children }: AdminShellProps) {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                         active
-                          ? 'bg-blue-600 text-white'
-                          : 'text-slate-300 hover:bg-slate-700 hover:text-slate-100'
+                          ? 'bg-blue-500/30 text-blue-200 border border-blue-400/30 backdrop-blur-sm shadow-lg'
+                          : 'text-slate-300 hover:bg-white/10 hover:text-slate-100 backdrop-blur-sm'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -187,7 +195,7 @@ export default function AdminShell({ children }: AdminShellProps) {
         </nav>
 
         {/* System Status Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/50 border-t border-slate-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/30 backdrop-blur-md border-t border-white/10">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">API Status</span>

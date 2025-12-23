@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Brain, TrendingUp, AlertCircle, Target, Zap, Phone, Users, DollarSign, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Brain, TrendingUp, AlertCircle, Target, Zap, Phone, Users, DollarSign, Clock, CheckCircle2, XCircle, Volume2 } from "lucide-react";
 
 interface CallAnalysis {
   call_id: string;

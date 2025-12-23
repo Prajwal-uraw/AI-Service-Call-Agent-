@@ -48,7 +48,7 @@ export default function VideoSessionsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Total Sessions</p>
@@ -57,7 +57,7 @@ export default function VideoSessionsPage() {
               <Video className="w-8 h-8 text-blue-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Active Now</p>
@@ -66,7 +66,7 @@ export default function VideoSessionsPage() {
               <Users className="w-8 h-8 text-green-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Avg Duration</p>
@@ -75,7 +75,7 @@ export default function VideoSessionsPage() {
               <Clock className="w-8 h-8 text-purple-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Recordings</p>
@@ -86,11 +86,11 @@ export default function VideoSessionsPage() {
           </div>
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-4">Recent Sessions</h2>
           <div className="space-y-4">
             {sessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg hover:bg-slate-900/70 transition-colors">
+              <div key={session.id} className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5 hover:bg-slate-900/50 transition-all">
                 <div className="flex items-center gap-4 flex-1">
                   <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
                     <Video className="w-6 h-6 text-blue-400" />

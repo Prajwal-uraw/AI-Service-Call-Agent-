@@ -42,7 +42,7 @@ export default function SystemHealthPage() {
             const StatusIcon = getStatusIcon(service.status);
             const ServiceIcon = service.icon;
             return (
-              <div key={service.name} className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+              <div key={service.name} className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg hover:bg-slate-800/60 transition-all">
                 <div className="flex items-center justify-between mb-4">
                   <ServiceIcon className="w-8 h-8 text-blue-400" />
                   <StatusIcon className={`w-6 h-6 ${getStatusColor(service.status)}`} />
@@ -69,10 +69,10 @@ export default function SystemHealthPage() {
           })}
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-4">Recent Incidents</h2>
           <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 bg-slate-900/50 rounded-lg">
+            <div className="flex items-start gap-4 p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
               <AlertTriangle className="w-5 h-5 text-yellow-400 mt-1" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">
@@ -84,7 +84,7 @@ export default function SystemHealthPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-4 p-4 bg-slate-900/50 rounded-lg">
+            <div className="flex items-start gap-4 p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
               <CheckCircle className="w-5 h-5 text-green-400 mt-1" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-1">

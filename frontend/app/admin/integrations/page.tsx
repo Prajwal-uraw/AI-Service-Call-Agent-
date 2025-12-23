@@ -1,18 +1,18 @@
 'use client';
 
 import AdminShell from '@/components/AdminShell';
-import { Zap, CheckCircle, XCircle, Settings } from 'lucide-react';
+import { Database, Brain, Phone, Video, Mail, MessageSquare, Wrench, Home, CheckCircle, XCircle, Settings } from 'lucide-react';
 
 export default function IntegrationsPage() {
   const integrations = [
-    { name: 'Supabase', status: 'connected', description: 'Database and authentication', icon: '🗄️' },
-    { name: 'OpenAI', status: 'connected', description: 'AI voice and intelligence', icon: '🤖' },
-    { name: 'Twilio', status: 'connected', description: 'Phone calls and SMS', icon: '📞' },
-    { name: 'Daily.co', status: 'connected', description: 'Video conferencing', icon: '📹' },
-    { name: 'Resend', status: 'connected', description: 'Email delivery', icon: '📧' },
-    { name: 'Slack', status: 'disconnected', description: 'Team notifications', icon: '💬' },
-    { name: 'ServiceTitan', status: 'disconnected', description: 'HVAC CRM integration', icon: '🔧' },
-    { name: 'Housecall Pro', status: 'disconnected', description: 'Field service management', icon: '🏠' },
+    { name: 'Supabase', status: 'connected', description: 'Database and authentication', icon: Database },
+    { name: 'OpenAI', status: 'connected', description: 'AI voice and intelligence', icon: Brain },
+    { name: 'Twilio', status: 'connected', description: 'Phone calls and SMS', icon: Phone },
+    { name: 'Daily.co', status: 'connected', description: 'Video conferencing', icon: Video },
+    { name: 'Resend', status: 'connected', description: 'Email delivery', icon: Mail },
+    { name: 'Slack', status: 'disconnected', description: 'Team notifications', icon: MessageSquare },
+    { name: 'ServiceTitan', status: 'disconnected', description: 'HVAC CRM integration', icon: Wrench },
+    { name: 'Housecall Pro', status: 'disconnected', description: 'Field service management', icon: Home },
   ];
 
   return (
@@ -25,9 +25,11 @@ export default function IntegrationsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {integrations.map((integration) => (
-            <div key={integration.name} className="bg-slate-800 border border-slate-700 rounded-lg p-6 hover:border-slate-600 transition-colors">
+            <div key={integration.name} className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:bg-slate-800/60 hover:border-white/20 transition-all shadow-lg">
               <div className="flex items-start justify-between mb-4">
-                <div className="text-4xl">{integration.icon}</div>
+                <div className="w-12 h-12 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5 flex items-center justify-center">
+                  <integration.icon className="w-6 h-6 text-blue-300" />
+                </div>
                 {integration.status === 'connected' ? (
                   <CheckCircle className="w-6 h-6 text-green-400" />
                 ) : (
@@ -42,7 +44,11 @@ export default function IntegrationsPage() {
                     <span className="px-3 py-1 bg-green-600/20 text-green-400 text-xs font-medium rounded-full">
                       Connected
                     </span>
-                    <button className="ml-auto text-slate-400 hover:text-slate-200 transition-colors">
+                    <button
+                      className="ml-auto text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label={`${integration.name} settings`}
+                      title={`${integration.name} settings`}
+                    >
                       <Settings className="w-4 h-4" />
                     </button>
                   </>
@@ -56,7 +62,7 @@ export default function IntegrationsPage() {
           ))}
         </div>
 
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+        <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-bold text-slate-100 mb-4">API Usage</h2>
           <div className="space-y-4">
             {[
@@ -64,7 +70,7 @@ export default function IntegrationsPage() {
               { service: 'Twilio', calls: 12456, cost: '$89.23', limit: 'Unlimited' },
               { service: 'Daily.co', calls: 3421, cost: '$45.67', limit: '10K/month' },
             ].map((usage) => (
-              <div key={usage.service} className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
+              <div key={usage.service} className="flex items-center justify-between p-4 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
                 <div>
                   <h3 className="font-semibold text-slate-100">{usage.service}</h3>
                   <p className="text-sm text-slate-400 mt-1">{usage.calls.toLocaleString()} calls this month</p>

@@ -13,7 +13,7 @@ export default function DatabasePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Total Records</p>
@@ -22,7 +22,7 @@ export default function DatabasePage() {
               <Database className="w-8 h-8 text-blue-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Storage Used</p>
@@ -31,7 +31,7 @@ export default function DatabasePage() {
               <HardDrive className="w-8 h-8 text-purple-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Avg Query Time</p>
@@ -40,7 +40,7 @@ export default function DatabasePage() {
               <Zap className="w-8 h-8 text-green-400" />
             </div>
           </div>
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-lg hover:bg-slate-800/60 transition-all">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-400">Connections</p>
@@ -52,7 +52,7 @@ export default function DatabasePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
             <h2 className="text-xl font-bold text-slate-100 mb-4">Table Statistics</h2>
             <div className="space-y-3">
               {[
@@ -61,7 +61,7 @@ export default function DatabasePage() {
                 { name: 'users', rows: 1243, size: '856KB' },
                 { name: 'video_sessions', rows: 3421, size: '3.8GB' },
               ].map((table) => (
-                <div key={table.name} className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
+                <div key={table.name} className="flex items-center justify-between p-3 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5">
                   <span className="text-sm font-medium text-slate-100">{table.name}</span>
                   <div className="flex items-center gap-4 text-sm text-slate-400">
                     <span>{table.rows.toLocaleString()} rows</span>
@@ -72,7 +72,7 @@ export default function DatabasePage() {
             </div>
           </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+          <div className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg">
             <h2 className="text-xl font-bold text-slate-100 mb-4">Recent Queries</h2>
             <div className="space-y-3">
               {[
@@ -96,7 +96,7 @@ export default function DatabasePage() {
           </div>
         </div>
 
-        <div className="bg-yellow-900/20 border border-yellow-700 rounded-lg p-4">
+        <div className="bg-yellow-900/20 backdrop-blur-md border border-yellow-600/30 rounded-xl p-4 shadow-lg">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5" />
             <div>

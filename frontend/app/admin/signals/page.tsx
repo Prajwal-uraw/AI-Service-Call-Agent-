@@ -5,14 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import SignalDetailModal from "@/components/SignalDetailModal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { 
   AlertCircle, 
   TrendingUp, 
@@ -224,73 +216,78 @@ export default function SignalsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Tier</label>
-              <Select value={tierFilter} onValueChange={setTierFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tiers</SelectItem>
-                  <SelectItem value="hot">Hot</SelectItem>
-                  <SelectItem value="warm">Warm</SelectItem>
-                  <SelectItem value="qualified">Qualified</SelectItem>
-                  <SelectItem value="cold">Cold</SelectItem>
-                </SelectContent>
-              </Select>
+              <label htmlFor="tier-filter" className="text-sm font-medium mb-2 block">Tier</label>
+              <select
+                id="tier-filter"
+                value={tierFilter}
+                onChange={(e) => setTierFilter(e.target.value)}
+                className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Tiers</option>
+                <option value="hot">Hot</option>
+                <option value="warm">Warm</option>
+                <option value="qualified">Qualified</option>
+                <option value="cold">Cold</option>
+              </select>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Intent</label>
-              <Select value={intentFilter} onValueChange={setIntentFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Intents</SelectItem>
-                  <SelectItem value="emergency">Emergency</SelectItem>
-                  <SelectItem value="seeking_help">Seeking Help</SelectItem>
-                  <SelectItem value="comparing_options">Comparing Options</SelectItem>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="complaining">Complaining</SelectItem>
-                </SelectContent>
-              </Select>
+              <label htmlFor="intent-filter" className="text-sm font-medium mb-2 block">Intent</label>
+              <select
+                id="intent-filter"
+                value={intentFilter}
+                onChange={(e) => setIntentFilter(e.target.value)}
+                className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Intents</option>
+                <option value="emergency">Emergency</option>
+                <option value="seeking_help">Seeking Help</option>
+                <option value="comparing_options">Comparing Options</option>
+                <option value="planning">Planning</option>
+                <option value="complaining">Complaining</option>
+              </select>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={alertedFilter} onValueChange={setAlertedFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="false">Pending</SelectItem>
-                  <SelectItem value="true">Alerted</SelectItem>
-                </SelectContent>
-              </Select>
+              <label htmlFor="status-filter" className="text-sm font-medium mb-2 block">Status</label>
+              <select
+                id="status-filter"
+                value={alertedFilter}
+                onChange={(e) => setAlertedFilter(e.target.value)}
+                className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Status</option>
+                <option value="false">Pending</option>
+                <option value="true">Alerted</option>
+              </select>
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Min Score</label>
-              <Input
+              <label htmlFor="min-score" className="text-sm font-medium mb-2 block">Min Score</label>
+              <input
+                id="min-score"
                 type="number"
                 min="0"
                 max="100"
                 value={minScore}
                 onChange={(e) => setMinScore(parseInt(e.target.value) || 0)}
                 placeholder="0"
+                className="w-full h-10 rounded-md border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">Search</label>
+              <label htmlFor="search-signals" className="text-sm font-medium mb-2 block">Search</label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                <Input
+                <input
+                  id="search-signals"
+                  type="text"
                   placeholder="Search signals..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
+                  aria-label="Search signals"
                 />
               </div>
             </div>

@@ -6,8 +6,5 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
-  "regions": ["iad1"],
-  "env": {
-    "NEXT_PUBLIC_API_URL": "https://haiec--hvac-voice-agent-fastapi-app.modal.run/"
-  }
+  "regions": ["iad1"]
 }
