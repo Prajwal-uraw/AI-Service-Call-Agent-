@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Phone, TrendingUp, Clock, AlertCircle, Download, Calendar, Users, Zap } from "lucide-react";
-import { useToast } from "@/components/Toast";
+import { Phone, TrendingUp, Clock, AlertCircle, Download, Calendar, Users, Zap, XCircle } from "lucide-react";
 import { StatsSkeleton, ChartSkeleton } from "@/components/LoadingSkeleton";
 
 interface WeeklyReport {
@@ -32,7 +31,7 @@ export default function WeeklyReportPage() {
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedWeek, setSelectedWeek] = useState<string>("");
-  const { showToast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchReport();
@@ -51,10 +50,11 @@ export default function WeeklyReportPage() {
       }
       const data = await response.json();
       setReport(data);
-      showToast("success", "Report loaded successfully");
+      setError(null);
     } catch (error) {
       console.error("Error fetching report:", error);
-      showToast("error", "Failed to load report. Please try again.");
+      setError("Failed to load report. Please try again.");
+      setTimeout(() => setError(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export default function WeeklyReportPage() {
 
   const exportReport = async (format: "pdf" | "csv") => {
     try {
-      showToast("info", `Generating ${format.toUpperCase()} export...`);
+      setError(null);
       const url = `http://localhost:8000/api/call-workflow/reports/weekly/export?format=${format}`;
       const response = await fetch(url);
       
@@ -74,11 +74,11 @@ export default function WeeklyReportPage() {
       
       if (data.download_url) {
         window.open(data.download_url, "_blank");
-        showToast("success", `${format.toUpperCase()} export ready!`);
       }
     } catch (error) {
       console.error("Error exporting report:", error);
-      showToast("error", `Failed to export ${format.toUpperCase()}. Please try again.`);
+      setError(`Failed to export ${format.toUpperCase()}. Please try again.`);
+      setTimeout(() => setError(null), 5000);
     }
   };
 

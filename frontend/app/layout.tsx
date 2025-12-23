@@ -8,9 +8,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kestrel AI - AI Voice Agent for Home Service Businesses",
+  title: "Kestrel VoiceOps - AI Voice Agent for Home Service Businesses",
   description: "AI voice agents that answer every call, book appointments instantly, and follow up automatically. Built for HVAC, plumbing, and home service businesses.",
-  keywords: "Kestrel AI, Voice Agent, AI receptionist, HVAC automation, missed calls, after-hours calls, home service business, AI call agent, appointment booking",
+  keywords: "Kestrel VoiceOps, Voice Agent, AI receptionist, HVAC automation, missed calls, after-hours calls, home service business, AI call agent, appointment booking",
   icons: {
     icon: [
       { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
