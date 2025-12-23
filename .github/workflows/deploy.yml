@@ -103,8 +103,21 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Modal
-        run: pip install modal
+      - name: Install backend dependencies
+        working-directory: ./demand-engine
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
+          # Explicitly install FastAPI and uvicorn to ensure they're available
+          pip install fastapi uvicorn
+          # Install Modal
+          pip install modal
+
+      - name: Verify installations
+        working-directory: ./demand-engine
+        run: |
+          pip list | grep -E "fastapi|uvicorn|modal"
+          python -c "import fastapi; print(f'FastAPI version: {fastapi.__version__}')"
 
       - name: Deploy to Modal
         working-directory: ./demand-engine
