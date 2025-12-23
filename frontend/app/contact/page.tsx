@@ -151,10 +151,11 @@ export default function ContactPage() {
                         <MapPin className="h-6 w-6 text-purple-600" />
                       </div>
                       <div>
-                        <p className="font-semibold text-neutral-900">Email</p>
-                        <p className="text-neutral-600">hello@kestrel.ai</p>
-                        We'll calculate your potential revenue impact and cost savings
-                      </p>
+                        <h3 className="font-semibold mb-1">ROI Analysis</h3>
+                        <p className="text-gray-600 text-sm">
+                          We'll calculate your potential revenue impact and cost savings
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
