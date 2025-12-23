@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Phone, ChevronDown, LayoutDashboard, Users, Settings, CreditCard, Briefcase } from 'lucide-react';
-import { logout, isAuthenticated } from '@/lib/auth';
+import { logout, isAuthenticated } from '@/libs/auth';
 
 export default function Navigation() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);

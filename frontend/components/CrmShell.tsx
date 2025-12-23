@@ -16,7 +16,7 @@ import {
   LayoutDashboard,
   Briefcase,
 } from 'lucide-react';
-import { logout } from '@/lib/auth';
+import { logout } from '@/libs/auth';
 
 interface CrmShellProps {
   children: ReactNode;

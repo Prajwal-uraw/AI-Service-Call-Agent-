@@ -22,7 +22,7 @@ import {
   FileText,
   Shield
 } from 'lucide-react';
-import { logout } from '@/lib/auth';
+import { logout } from '@/libs/auth';
 
 interface AdminShellProps {
   children: ReactNode;
