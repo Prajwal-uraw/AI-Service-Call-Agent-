@@ -1,18 +1,18 @@
 'use client';
 
 import AdminShell from '@/components/AdminShell';
-import { Zap, CheckCircle, XCircle, Settings } from 'lucide-react';
+import { Database, Brain, Phone, Video, Mail, MessageSquare, Wrench, Home, CheckCircle, XCircle, Settings } from 'lucide-react';
 
 export default function IntegrationsPage() {
   const integrations = [
-    { name: 'Supabase', status: 'connected', description: 'Database and authentication', icon: '🗄️' },
-    { name: 'OpenAI', status: 'connected', description: 'AI voice and intelligence', icon: '🤖' },
-    { name: 'Twilio', status: 'connected', description: 'Phone calls and SMS', icon: '📞' },
-    { name: 'Daily.co', status: 'connected', description: 'Video conferencing', icon: '📹' },
-    { name: 'Resend', status: 'connected', description: 'Email delivery', icon: '📧' },
-    { name: 'Slack', status: 'disconnected', description: 'Team notifications', icon: '💬' },
-    { name: 'ServiceTitan', status: 'disconnected', description: 'HVAC CRM integration', icon: '🔧' },
-    { name: 'Housecall Pro', status: 'disconnected', description: 'Field service management', icon: '🏠' },
+    { name: 'Supabase', status: 'connected', description: 'Database and authentication', icon: Database },
+    { name: 'OpenAI', status: 'connected', description: 'AI voice and intelligence', icon: Brain },
+    { name: 'Twilio', status: 'connected', description: 'Phone calls and SMS', icon: Phone },
+    { name: 'Daily.co', status: 'connected', description: 'Video conferencing', icon: Video },
+    { name: 'Resend', status: 'connected', description: 'Email delivery', icon: Mail },
+    { name: 'Slack', status: 'disconnected', description: 'Team notifications', icon: MessageSquare },
+    { name: 'ServiceTitan', status: 'disconnected', description: 'HVAC CRM integration', icon: Wrench },
+    { name: 'Housecall Pro', status: 'disconnected', description: 'Field service management', icon: Home },
   ];
 
   return (
@@ -27,7 +27,9 @@ export default function IntegrationsPage() {
           {integrations.map((integration) => (
             <div key={integration.name} className="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 hover:bg-slate-800/60 hover:border-white/20 transition-all shadow-lg">
               <div className="flex items-start justify-between mb-4">
-                <div className="text-4xl">{integration.icon}</div>
+                <div className="w-12 h-12 bg-slate-900/30 backdrop-blur-md rounded-xl border border-white/5 flex items-center justify-center">
+                  <integration.icon className="w-6 h-6 text-blue-300" />
+                </div>
                 {integration.status === 'connected' ? (
                   <CheckCircle className="w-6 h-6 text-green-400" />
                 ) : (
@@ -42,7 +44,11 @@ export default function IntegrationsPage() {
                     <span className="px-3 py-1 bg-green-600/20 text-green-400 text-xs font-medium rounded-full">
                       Connected
                     </span>
-                    <button className="ml-auto text-slate-400 hover:text-slate-200 transition-colors">
+                    <button
+                      className="ml-auto text-slate-400 hover:text-slate-200 transition-colors"
+                      aria-label={`${integration.name} settings`}
+                      title={`${integration.name} settings`}
+                    >
                       <Settings className="w-4 h-4" />
                     </button>
                   </>

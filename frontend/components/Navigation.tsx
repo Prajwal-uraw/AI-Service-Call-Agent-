@@ -29,11 +29,10 @@ export default function Navigation() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
             <img 
-              src="/kestrel-logo.svg" 
-              alt="Kestrel Voice Operations" 
-              className="h-10 w-auto"
+              src="/website-logo-wide.png" 
+              alt="Kestrel" 
+              className="h-9 w-auto max-w-[180px] object-contain"
             />
-            <div className="text-xl font-bold text-blue-600">Kestrel Voice Operations</div>
           </Link>
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">

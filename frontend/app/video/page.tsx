@@ -203,6 +203,7 @@ export default function VideoCallsPage() {
                           value={createdRoom.room_url}
                           readOnly
                           aria-label="Room URL"
+                          title="Room URL"
                           className="flex-1 border rounded-lg px-4 py-2 bg-gray-50"
                         />
                         <Button
@@ -222,8 +223,9 @@ export default function VideoCallsPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Invite Message</label>
+                      <label htmlFor="invite-message" className="block text-sm font-medium mb-2">Invite Message</label>
                       <textarea
+                        id="invite-message"
                         value={createdRoom.invite_message}
                         readOnly
                         rows={6}

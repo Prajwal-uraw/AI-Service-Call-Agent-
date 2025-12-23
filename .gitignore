@@ -115,6 +115,11 @@ NOTES.md
 scratch/
 
 # ===========================================
+# Personal design/assets (do not commit)
+# ===========================================
+frontend/share/
+
+# ===========================================
 # Node.js
 # ===========================================
 node_modules/
@@ -140,6 +145,8 @@ PRODUCT_AUDIT.md
 CALL_WORKFLOW_AUDIT.md
 AI_DEMO_AGENT_STRATEGY.md
 INTEGRATION_AUDIT.md
+API_KEYS_SETUP_GUIDE.md
+SECRETS_MANAGEMENT_GUIDE.md
 
 # ===========================================
 # Local Reports & Summaries (Not for Git)

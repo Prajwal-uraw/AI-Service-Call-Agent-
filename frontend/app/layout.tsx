@@ -12,8 +12,12 @@ export const metadata: Metadata = {
   description: "AI-powered voice operations and call management",
   keywords: "Kestrel, Voice Operations, AI receptionist, HVAC automation, missed calls, after-hours calls, HVAC business, AI call agent",
   icons: {
-    icon: '/favicon.svg',
-    apple: '/logo.svg',
+    icon: [
+      { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/website-favicon.png", type: "image/png" },
+    ],
+    apple: [{ url: "/website-favicon.png", type: "image/png" }],
   },
 };
 
@@ -25,7 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="icon" href="/favicon-16.png" sizes="16x16" type="image/png" />
+        <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/website-favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/website-favicon.png" />
       </head>
       <body suppressHydrationWarning className={inter.className}>
         <ErrorBoundary>

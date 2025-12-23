@@ -35,7 +35,13 @@ export default function PreferencesPage() {
                   <p className="text-sm text-slate-400 mt-1">{item.description}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" defaultChecked />
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    defaultChecked
+                    aria-label={item.label}
+                    title={item.label}
+                  />
                   <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
@@ -88,10 +94,13 @@ export default function PreferencesPage() {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="timezone" className="block text-sm font-medium text-slate-300 mb-2">
                 Timezone
               </label>
-              <select className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none">
+              <select
+                id="timezone"
+                className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none"
+              >
                 <option>America/New_York (EST)</option>
                 <option>America/Chicago (CST)</option>
                 <option>America/Denver (MST)</option>
@@ -99,10 +108,13 @@ export default function PreferencesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
+              <label htmlFor="language" className="block text-sm font-medium text-slate-300 mb-2">
                 Language
               </label>
-              <select className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none">
+              <select
+                id="language"
+                className="w-full bg-slate-900/30 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 text-slate-100 outline-none"
+              >
                 <option>English (US)</option>
                 <option>English (UK)</option>
                 <option>Spanish</option>

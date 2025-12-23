@@ -157,12 +157,12 @@ export default function AdminPortalPage() {
             <CardContent>
               <div className="text-3xl font-bold text-blue-400 mb-2">{stats.active_tenants}</div>
               <p className="text-xs text-slate-500 mb-3">of {stats.total_tenants} total</p>
-              <div className="bg-slate-700 rounded-full h-2 mb-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{ width: `${(stats.active_tenants / stats.total_tenants) * 100}%` }}
-                />
-              </div>
+              <progress
+                className="w-full h-2 rounded-full overflow-hidden bg-slate-700 mb-2"
+                value={stats.active_tenants}
+                max={stats.total_tenants}
+                aria-label="Active tenants"
+              />
               <div className="flex items-center text-sm text-green-600">
                 <TrendingUp className="h-4 w-4 mr-1" />
                 <span>+2 this month</span>
@@ -181,9 +181,12 @@ export default function AdminPortalPage() {
             <CardContent>
               <div className="text-3xl font-bold text-green-400 mb-2">${stats.mrr.toLocaleString()}</div>
               <p className="text-xs text-slate-500 mb-3">${stats.arr.toLocaleString()} ARR</p>
-              <div className="bg-slate-700 rounded-full h-2 mb-2">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }} />
-              </div>
+              <progress
+                className="w-full h-2 rounded-full overflow-hidden bg-slate-700 mb-2"
+                value={75}
+                max={100}
+                aria-label="Monthly revenue progress"
+              />
               <div className="flex items-center text-sm text-green-400">
                 <TrendingUp className="h-4 w-4 mr-1" />
                 <span>+18% from last month</span>
@@ -202,9 +205,12 @@ export default function AdminPortalPage() {
             <CardContent>
               <div className="text-3xl font-bold text-purple-400 mb-2">{stats.total_calls_today}</div>
               <p className="text-xs text-slate-500 mb-3">Across all tenants</p>
-              <div className="bg-slate-700 rounded-full h-2 mb-2">
-                <div className="bg-purple-500 h-2 rounded-full" style={{ width: '60%' }} />
-              </div>
+              <progress
+                className="w-full h-2 rounded-full overflow-hidden bg-slate-700 mb-2"
+                value={60}
+                max={100}
+                aria-label="Calls today progress"
+              />
               <div className="flex items-center text-sm text-purple-400">
                 <Activity className="h-4 w-4 mr-1" />
                 <span>Peak: 2-4 PM</span>
@@ -225,12 +231,12 @@ export default function AdminPortalPage() {
                 {stats.avg_health_score}
               </div>
               <p className="text-xs text-slate-500 mb-3">{stats.churn_rate}% churn rate</p>
-              <div className="bg-slate-700 rounded-full h-2 mb-2">
-                <div 
-                  className={`h-2 rounded-full ${stats.avg_health_score >= 80 ? 'bg-green-500' : 'bg-yellow-500'}`}
-                  style={{ width: `${stats.avg_health_score}%` }}
-                />
-              </div>
+              <progress
+                className={`w-full h-2 rounded-full overflow-hidden bg-slate-700 mb-2 ${stats.avg_health_score >= 80 ? '[&::-webkit-progress-value]:bg-green-500 [&::-moz-progress-bar]:bg-green-500' : '[&::-webkit-progress-value]:bg-yellow-500 [&::-moz-progress-bar]:bg-yellow-500'}`}
+                value={stats.avg_health_score}
+                max={100}
+                aria-label="System health score"
+              />
               <Badge className={stats.avg_health_score >= 80 ? 'bg-green-900/30 text-green-400 border-green-700' : 'bg-yellow-900/30 text-yellow-400 border-yellow-700'}>
                 {stats.avg_health_score >= 80 ? '✓ Excellent' : '⚠️ Monitor'}
               </Badge>

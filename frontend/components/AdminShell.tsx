@@ -81,11 +81,10 @@ export default function AdminShell({ children }: AdminShellProps) {
           <div className="flex items-center gap-6">
             <Link href="/admin/portal" className="flex items-center gap-3">
               <img 
-                src="/kestrel-logo.svg" 
+                src="/website-logo-wide.png" 
                 alt="Kestrel" 
-                className="h-8 w-auto"
+                className="h-8 w-auto max-w-[180px] object-contain"
               />
-              <span className="text-lg font-semibold text-slate-100">Kestrel Ops</span>
             </Link>
             
             <div className="flex items-center gap-2">

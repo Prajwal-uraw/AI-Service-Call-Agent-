@@ -1,6 +1,6 @@
 "use client";
 
-import Navigation from "@/components/Navigation";
+import CrmShell from "@/components/CrmShell";
 
 export default function CRMLayout({
   children,
@@ -8,9 +8,6 @@ export default function CRMLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      <Navigation />
-      {children}
-    </>
+    <CrmShell>{children}</CrmShell>
   );
 }
