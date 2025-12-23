@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '18'
   PYTHON_VERSION: '3.11'
   DEPLOYMENT_THROTTLE_MINUTES: 60
 
