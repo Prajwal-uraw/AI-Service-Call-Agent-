@@ -4,15 +4,69 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - 'demand-engine/**'
+      - 'hvac_agent/**'
   workflow_dispatch:
+
+# Prevent concurrent deployments and ensure 1 hour minimum between auto-deployments
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '18'
   PYTHON_VERSION: '3.11'
+  DEPLOYMENT_THROTTLE_MINUTES: 60
 
 jobs:
+  check-throttle:
+    name: Check Deployment Throttle
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    
+    steps:
+      - name: Check last deployment time
+        id: check
+        run: |
+          # For manual deployments, always allow
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment - proceeding"
+            exit 0
+          fi
+          
+          # For automatic deployments, check throttle
+          LAST_DEPLOY=$(gh api /repos/${{ github.repository }}/actions/runs \
+            --jq '.workflow_runs[] | select(.name=="Deploy to Production" and .conclusion=="success") | .updated_at' \
+            | head -n 1)
+          
+          if [ -z "$LAST_DEPLOY" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "No previous deployment found - proceeding"
+            exit 0
+          fi
+          
+          LAST_DEPLOY_EPOCH=$(date -d "$LAST_DEPLOY" +%s)
+          CURRENT_EPOCH=$(date +%s)
+          DIFF_MINUTES=$(( ($CURRENT_EPOCH - $LAST_DEPLOY_EPOCH) / 60 ))
+          
+          if [ $DIFF_MINUTES -ge ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "Last deployment was $DIFF_MINUTES minutes ago - proceeding"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "Last deployment was only $DIFF_MINUTES minutes ago - skipping (throttle: ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} minutes)"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   test:
     name: Run Tests
+    needs: check-throttle
+    if: needs.check-throttle.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -67,9 +121,9 @@ jobs:
 
   deploy-frontend:
     name: Deploy Frontend to Vercel
-    needs: test
+    needs: [check-throttle, test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: needs.check-throttle.outputs.should_deploy == 'true' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
@@ -90,9 +144,9 @@ jobs:
 
   deploy-backend:
     name: Deploy Backend to Modal
-    needs: test
+    needs: [check-throttle, test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: needs.check-throttle.outputs.should_deploy == 'true' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code

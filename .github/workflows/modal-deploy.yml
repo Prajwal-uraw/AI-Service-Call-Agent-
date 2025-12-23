@@ -1,9 +1,11 @@
 name: Modal Deployment
 
+# Disabled - consolidated into deploy.yml to prevent redundant runs
+# This workflow is kept for reference but will not trigger automatically
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  # push:
+  #   branches: [main]
 
 jobs:
   deploy:
