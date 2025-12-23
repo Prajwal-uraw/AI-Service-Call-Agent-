@@ -13,6 +13,7 @@ function SuccessContent() {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
+    // Simulate verification
     setTimeout(() => {
       setLoading(false);
     }, 1500);
