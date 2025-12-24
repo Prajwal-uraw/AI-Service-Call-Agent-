@@ -34,7 +34,7 @@ Add to `frontend/.env.local`:
 DAILY_API_KEY=your_daily_api_key_here
 
 # OpenAI API Key (you already have this)
-OPENAI_API_KEY=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
+OPENAI_API_KEY=your_openai_api_key_here
 
 # Email Service (optional - for sending emails)
 SMTP_HOST=smtp.gmail.com
