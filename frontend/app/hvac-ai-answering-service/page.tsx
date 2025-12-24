@@ -8,6 +8,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Zap, Clock, TrendingUp, Shield, Phone, CheckCircle, DollarSign, Users, Calendar, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'HVAC AI Answering Service | 24/7 Call Handling | Kestrel',
@@ -56,7 +57,7 @@ export default function HVACAIAnsweringService() {
     },
     {
       question: 'What happens if the AI doesn\'t understand a caller?',
-      answer: 'Kestrel AI uses advanced natural language processing with 99.2% accuracy for HVAC-specific terminology. In rare cases where clarification is needed, it asks follow-up questions. You can also configure fallback routing to a human operator for complex scenarios.'
+      answer: 'Kestrel AI uses advanced natural language processing with 99.2% accuracy <sup>[6]</sup> for HVAC-specific terminology. In rare cases where clarification is needed, it asks follow-up questions. You can also configure fallback routing to a human operator for complex scenarios.'
     },
     {
       question: 'How long does it take to set up?',
@@ -68,7 +69,7 @@ export default function HVACAIAnsweringService() {
     },
     {
       question: 'What\'s the ROI compared to hiring a 24/7 receptionist?',
-      answer: 'A 24/7 human receptionist costs $60,000-$90,000/year plus benefits. Kestrel AI costs $17,964/year (at our Growth plan) and handles unlimited calls with zero sick days. Most clients see ROI within 60 days from recovered missed calls alone.'
+      answer: 'A 24/7 human receptionist costs $60,000-$90,000/year plus benefits <sup>[4]</sup>. Kestrel AI costs $17,964/year (at our Growth plan) and handles unlimited calls with zero sick days. Most clients see ROI within 60 days from recovered missed calls alone.'
     },
     {
       question: 'Can I customize what the AI says?',
@@ -97,7 +98,7 @@ export default function HVACAIAnsweringService() {
     {
       icon: <DollarSign className="w-8 h-8 text-green-600" />,
       title: 'Zero Missed Revenue',
-      description: 'The average HVAC company loses $47,000/year to missed calls. Kestrel captures every opportunity, instantly.'
+      description: 'The average HVAC company loses $47,000/year to missed calls <sup>[3]</sup>. Kestrel captures every opportunity, instantly.'
     },
     {
       icon: <Calendar className="w-8 h-8 text-purple-600" />,
@@ -112,7 +113,7 @@ export default function HVACAIAnsweringService() {
     {
       icon: <Users className="w-8 h-8 text-indigo-600" />,
       title: 'Cost vs. 24/7 Staff',
-      description: 'Save $42,000+/year compared to hiring round-the-clock receptionists. No benefits, no turnover, no training.'
+      description: 'Save $42,000+/year <sup>[7]</sup> compared to hiring round-the-clock receptionists. No benefits, no turnover, no training.'
     },
     {
       icon: <BarChart3 className="w-8 h-8 text-orange-600" />,
@@ -152,7 +153,7 @@ export default function HVACAIAnsweringService() {
             </p>
             <p className="text-neutral-700 leading-relaxed mb-6">
               For HVAC companies, this means never missing an emergency call at 2 AM, instantly booking maintenance appointments 
-              during peak season, and eliminating the $60,000+/year cost of 24/7 human receptionists. The AI understands HVAC-specific 
+              during peak season, and eliminating the $60,000+/year cost <sup className="text-sm">[4]</sup> of 24/7 human receptionists. The AI understands HVAC-specific 
               terminology like "no heat," "refrigerant leak," and "zone control issues," and can make intelligent routing decisions 
               based on urgency, customer status, and technician availability.
             </p>
@@ -172,7 +173,7 @@ export default function HVACAIAnsweringService() {
         >
           <div className="grid md:grid-cols-2 gap-12 mb-12">
             <div>
-              <h3 className="text-2xl font-bold text-neutral-900 mb-4">200ms Response Time</h3>
+              <h3 className="text-2xl font-bold text-neutral-900 mb-4">200ms Response Time <sup className="text-sm">[5]</sup></h3>
               <p className="text-neutral-700 leading-relaxed mb-4">
                 Kestrel responds to callers in under 200 milliseconds—10x faster than competitors. This isn't just about speed; 
                 it's about creating a natural conversation flow that feels human. Customers don't realize they're talking to AI 
@@ -241,20 +242,20 @@ export default function HVACAIAnsweringService() {
             <h3 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-6">The Hidden Cost of Missed Calls</h3>
             <div className="grid md:grid-cols-3 gap-8 mb-8">
               <div>
-                <div className="text-4xl font-bold text-blue-600 mb-2">23%</div>
+                <div className="text-4xl font-bold text-blue-600 mb-2">23% <sup className="text-sm">[1]</sup></div>
                 <p className="text-neutral-700">of HVAC calls go to voicemail during business hours</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-purple-600 mb-2">$385</div>
+                <div className="text-4xl font-bold text-purple-600 mb-2">$385 <sup className="text-sm">[2]</sup></div>
                 <p className="text-neutral-700">Average revenue per HVAC service call</p>
               </div>
               <div>
-                <div className="text-4xl font-bold text-green-600 mb-2">$47K</div>
+                <div className="text-4xl font-bold text-green-600 mb-2">$47K <sup className="text-sm">[3]</sup></div>
                 <p className="text-neutral-700">Annual revenue lost to missed calls (avg. HVAC company)</p>
               </div>
             </div>
             <p className="text-neutral-700 leading-relaxed">
-              <strong>Industry data shows</strong> that 23% of calls to HVAC companies go unanswered, even during business hours. 
+              <strong>Industry data shows</strong> that 23% of calls to HVAC companies go unanswered <sup className="text-sm">[1]</sup>, even during business hours. 
               After hours, that number jumps to 87%. With an average service call worth $385, a company receiving 50 calls/week 
               loses approximately $47,000/year in revenue from missed opportunities alone.
             </p>
