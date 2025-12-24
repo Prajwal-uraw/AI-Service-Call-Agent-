@@ -25,9 +25,7 @@ image = (
 @app.function(
     image=image,
     secrets=[
-        modal.Secret.from_name("kestrel-reddit-api"),
-        modal.Secret.from_name("kestrel-openai"),
-        modal.Secret.from_name("kestrel-supabase"),
+        modal.Secret.from_name("hvac-agent-secrets"),  # Consolidated secrets
     ],
     schedule=modal.Cron("0 */6 * * *"),  # Every 6 hours
     timeout=900,  # 15 minutes max
@@ -83,9 +81,7 @@ def run_reddit_monitor():
 @app.function(
     image=image,
     secrets=[
-        modal.Secret.from_name("kestrel-openai"),
-        modal.Secret.from_name("kestrel-supabase"),
-        modal.Secret.from_name("kestrel-resend"),
+        modal.Secret.from_name("hvac-agent-secrets"),  # Consolidated secrets
     ],
     schedule=modal.Cron("0 9 * * *"),  # Daily at 9 AM UTC
     timeout=600,  # 10 minutes max
@@ -154,9 +150,7 @@ def main():
 @app.function(
     image=image,
     secrets=[
-        modal.Secret.from_name("kestrel-reddit-api"),
-        modal.Secret.from_name("kestrel-openai"),
-        modal.Secret.from_name("kestrel-supabase"),
+        modal.Secret.from_name("hvac-agent-secrets"),  # Consolidated secrets
     ],
     timeout=900,
 )
@@ -171,9 +165,7 @@ def trigger_reddit_monitor():
 @app.function(
     image=image,
     secrets=[
-        modal.Secret.from_name("kestrel-openai"),
-        modal.Secret.from_name("kestrel-supabase"),
-        modal.Secret.from_name("kestrel-resend"),
+        modal.Secret.from_name("hvac-agent-secrets"),  # Consolidated secrets
     ],
     timeout=600,
 )

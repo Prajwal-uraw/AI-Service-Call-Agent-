@@ -1,8 +1,8 @@
 # Core Dependencies
 modal==0.63.0
-praw==7.7.1
-openai==1.12.0
-supabase==2.2.0
+praw>=7.7.1
+openai>=1.50.0
+supabase>=2.9.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 tenacity>=8.2.0
@@ -13,14 +13,10 @@ uvicorn[standard]>=0.27.0
 python-multipart>=0.0.6
 
 # HTTP/Scraping
-httpx>=0.24.0,<0.26.0
-praw>=7.7.0
+httpx>=0.24.0,<0.28.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 playwright>=1.40.0
-
-# Phase 3: Pain Signal Aggregator
-praw>=7.7.0  # Reddit API
 
 # Data Processing
 pandas>=2.1.0
@@ -30,15 +26,8 @@ numpy>=1.24.0
 sendgrid>=6.11.0
 
 # Database
-supabase==2.2.0
 psycopg2-binary>=2.9.0
 SQLAlchemy>=2.0.0
-
-# AI/NLP
-openai>=1.12.0  # Required for GPT-4o-mini and JSON mode
-
-# Modal (Serverless)
-modal>=0.56.0
 
 # Calculator (Phase 2)
 email-validator>=2.1.0
@@ -51,7 +40,6 @@ resend>=0.7.0
 
 # Twilio Integration
 twilio>=8.0.0
-httpx>=0.24.0,<0.26.0
 
 # Development
 pytest>=7.4.0

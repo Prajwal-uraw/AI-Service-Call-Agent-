@@ -30,13 +30,27 @@ class LeadStageUpdate(BaseModel):
 
 @router.get("/stages")
 async def get_pipeline_stages():
-    """Get all pipeline stages"""
+    """Get all pipeline stages - returns default stages if table doesn't exist"""
     try:
         supabase = get_supabase()
         
-        response = supabase.table("pipeline_stages").select("*").eq("is_active", True).order("position").execute()
+        try:
+            response = supabase.table("pipeline_stages").select("*").eq("is_active", True).order("position").execute()
+            if response.data:
+                return response.data
+        except Exception as e:
+            print(f"pipeline_stages table not found, using defaults: {e}")
         
-        return response.data
+        # Return default stages if table doesn't exist
+        return [
+            {"id": "1", "name": "New", "color": "#3B82F6", "position": 1, "is_active": True},
+            {"id": "2", "name": "Contacted", "color": "#F59E0B", "position": 2, "is_active": True},
+            {"id": "3", "name": "Qualified", "color": "#8B5CF6", "position": 3, "is_active": True},
+            {"id": "4", "name": "Proposal", "color": "#EC4899", "position": 4, "is_active": True},
+            {"id": "5", "name": "Negotiation", "color": "#F97316", "position": 5, "is_active": True},
+            {"id": "6", "name": "Won", "color": "#10B981", "position": 6, "is_active": True},
+            {"id": "7", "name": "Lost", "color": "#EF4444", "position": 7, "is_active": True}
+        ]
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -47,32 +61,81 @@ async def get_pipeline_view(
     stage: Optional[str] = None,
     search: Optional[str] = None
 ):
-    """Get pipeline view with leads grouped by stage"""
+    """Get pipeline view with leads grouped by stage - uses signals table as fallback"""
     try:
         supabase = get_supabase()
         
-        query = supabase.table("lead_pipeline_view").select("*")
+        # Define default stages with colors
+        default_stages = {
+            "new": {"name": "New", "color": "#3B82F6", "position": 1},
+            "contacted": {"name": "Contacted", "color": "#F59E0B", "position": 2},
+            "qualified": {"name": "Qualified", "color": "#8B5CF6", "position": 3},
+            "proposal": {"name": "Proposal", "color": "#EC4899", "position": 4},
+            "negotiation": {"name": "Negotiation", "color": "#F97316", "position": 5},
+            "won": {"name": "Won", "color": "#10B981", "position": 6},
+            "lost": {"name": "Lost", "color": "#EF4444", "position": 7}
+        }
         
-        if stage:
-            query = query.eq("stage_name", stage)
-        
-        if search:
-            query = query.or_(f"business_name.ilike.%{search}%,contact_name.ilike.%{search}%,email.ilike.%{search}%")
-        
-        response = query.order("stage_position").order("lead_score", desc=True).execute()
-        
-        # Group by stage
         stages_data = {}
-        for lead in response.data or []:
-            stage_name = lead.get("stage_name") or "New"
-            if stage_name not in stages_data:
-                stages_data[stage_name] = {
-                    "name": stage_name,
-                    "color": lead.get("stage_color"),
-                    "position": lead.get("stage_position"),
-                    "leads": []
+        
+        # Initialize all stages
+        for key, stage_info in default_stages.items():
+            stages_data[stage_info["name"]] = {
+                "name": stage_info["name"],
+                "color": stage_info["color"],
+                "position": stage_info["position"],
+                "leads": []
+            }
+        
+        # Try to get from lead_pipeline_view first
+        try:
+            query = supabase.table("lead_pipeline_view").select("*")
+            if stage:
+                query = query.eq("stage_name", stage)
+            if search:
+                query = query.or_(f"business_name.ilike.%{search}%,contact_name.ilike.%{search}%,email.ilike.%{search}%")
+            
+            response = query.order("stage_position").order("lead_score", desc=True).execute()
+            
+            for lead in response.data or []:
+                stage_name = lead.get("stage_name") or "New"
+                if stage_name in stages_data:
+                    stages_data[stage_name]["leads"].append(lead)
+        except Exception as e:
+            print(f"lead_pipeline_view not found, using signals: {e}")
+        
+        # Also get from signals table as leads
+        try:
+            query = supabase.table("signals").select("*")
+            if search:
+                query = query.or_(f"business_name.ilike.%{search}%,phone.ilike.%{search}%")
+            
+            response = query.order("created_at", desc=True).execute()
+            
+            for signal in response.data or []:
+                # Map signal status to pipeline stage
+                status = signal.get("status", "new")
+                stage_name = default_stages.get(status, default_stages["new"])["name"]
+                
+                if stage and stage != stage_name:
+                    continue
+                
+                lead = {
+                    "id": signal.get("id"),
+                    "business_name": signal.get("business_name"),
+                    "contact_name": signal.get("business_name"),
+                    "email": signal.get("email"),
+                    "phone": signal.get("phone"),
+                    "lead_score": signal.get("pain_score", 0),
+                    "stage_name": stage_name,
+                    "city": signal.get("city"),
+                    "state": signal.get("state"),
+                    "source": signal.get("source"),
+                    "created_at": signal.get("created_at")
                 }
-            stages_data[stage_name]["leads"].append(lead)
+                stages_data[stage_name]["leads"].append(lead)
+        except Exception as e:
+            print(f"Error fetching signals for pipeline: {e}")
         
         # Convert to list and sort by position
         pipeline = list(stages_data.values())

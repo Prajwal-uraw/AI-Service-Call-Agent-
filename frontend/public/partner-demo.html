@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Kestrel — Partner Pitch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Inter font (Stripe-like) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #0B0D10;
+      --fg: #FFFFFF;
+      --muted: #9BA3AF;
+      --accent: #FFFFFF;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    .deck {
+      display: flex;
+      transition: transform 0.6s ease;
+    }
+
+    .slide {
+      min-width: 100vw;
+      min-height: 100vh;
+      padding: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    h1 {
+      font-size: 64px;
+      font-weight: 600;
+      line-height: 1.15;
+      margin: 0 0 24px 0;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: 40px;
+      font-weight: 500;
+      line-height: 1.2;
+      margin: 0 0 20px 0;
+      color: var(--muted);
+    }
+
+    p {
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.4;
+      margin: 0;
+      color: var(--muted);
+      max-width: 960px;
+    }
+
+    .strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    .spacer {
+      height: 40px;
+    }
+
+    /* Footer hint */
+    .hint {
+      position: absolute;
+      bottom: 32px;
+      left: 120px;
+      font-size: 14px;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    /* Mobile safety */
+    @media (max-width: 900px) {
+      .slide {
+        padding: 60px 40px;
+      }
+      h1 {
+        font-size: 42px;
+      }
+      p {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1 -->
+  <section class="slide">
+    <h1>Own the Phone.</h1>
+    <h1>Own the Market.</h1>
+  </section>
+
+  <!-- Slide 2 -->
+  <section class="slide">
+    <h1>Every business</h1>
+    <h1 class="strong">pays</h1>
+    <h1>to make the phone ring.</h1>
+  </section>
+
+  <!-- Slide 3 (WOW) -->
+  <section class="slide">
+    <h1>That ring cost $120.</h1>
+    <p>Before anyone answered.</p>
+  </section>
+
+  <!-- Slide 4 -->
+  <section class="slide">
+    <h1>Ads.</h1>
+    <h1>SEO.</h1>
+    <h1>Reputation.</h1>
+    <p>All paid for before the call.</p>
+  </section>
+
+  <!-- Slide 5 -->
+  <section class="slide">
+    <h1>The phone rings.</h1>
+    <h1>No one answers.</h1>
+    <p>That money is gone.</p>
+  </section>
+
+  <!-- Slide 6 -->
+  <section class="slide">
+    <h1>A missed call</h1>
+    <h1>isn’t silent.</h1>
+    <p>“They never picked up.”</p>
+  </section>
+
+  <!-- Slide 7 -->
+  <section class="slide">
+    <h1>The real leak</h1>
+    <h1>starts after</h1>
+    <h1>the phone rings.</h1>
+  </section>
+
+  <!-- Slide 8 -->
+  <section class="slide">
+    <h1>If you pay</h1>
+    <h1>to make the phone ring,</h1>
+    <h1>you should never miss it.</h1>
+  </section>
+
+  <!-- Slide 9 -->
+  <section class="slide">
+    <h1>We take responsibility</h1>
+    <h1>for inbound calls.</h1>
+    <p>That’s the product.</p>
+  </section>
+
+  <!-- Slide 10 -->
+  <section class="slide">
+    <h1>Not a CRM.</h1>
+    <h1>Not a chatbot.</h1>
+    <h1>Not a call center.</h1>
+  </section>
+
+  <!-- Slide 11 -->
+  <section class="slide">
+    <h1>Voice Operations</h1>
+    <h1>Infrastructure.</h1>
+  </section>
+
+  <!-- Slide 12 (Reframe WOW) -->
+  <section class="slide">
+    <h1>The phone</h1>
+    <h1>is your most expensive</h1>
+    <h1>employee.</h1>
+  </section>
+
+  <!-- Slide 13 (Latency WOW without numbers) -->
+  <section class="slide">
+    <h1>It responds fast enough</h1>
+    <h1>to interrupt a human</h1>
+    <h1>mid-sentence.</h1>
+  </section>
+
+  <!-- Slide 14 -->
+  <section class="slide">
+    <h1>Speed isn’t technical.</h1>
+    <h1>Speed is trust.</h1>
+  </section>
+
+  <!-- Slide 15 -->
+  <section class="slide">
+    <h1>You don’t sell AI.</h1>
+    <h1>You sell calls</h1>
+    <h1>that stop being missed.</h1>
+  </section>
+
+  <!-- Slide 16 -->
+  <section class="slide">
+    <h1>No retraining.</h1>
+    <h1>No scripts.</h1>
+    <h1>No software maze.</h1>
+  </section>
+
+  <!-- Slide 17 -->
+  <section class="slide">
+    <h1>When the phone</h1>
+    <h1>is handled,</h1>
+    <p>everything else organizes itself.</p>
+  </section>
+
+  <!-- Slide 18 -->
+  <section class="slide">
+    <h1>Your competitors</h1>
+    <h1>are still missing calls.</h1>
+    <h1>You won’t.</h1>
+  </section>
+
+  <!-- Slide 19 -->
+  <section class="slide">
+    <h1>One territory.</h1>
+    <h1>One operator.</h1>
+    <h1>Recurring revenue.</h1>
+  </section>
+
+  <!-- Slide 20 (Quiet Threat WOW) -->
+  <section class="slide">
+    <h1>Every territory</h1>
+    <h1>will be owned.</h1>
+    <p>By someone.</p>
+  </section>
+
+  <!-- Slide 21 -->
+  <section class="slide">
+    <h1>Operators.</h1>
+    <h1>Builders.</h1>
+    <h1>Relationship owners.</h1>
+  </section>
+
+  <!-- Slide 22 -->
+  <section class="slide">
+    <h1>Some people</h1>
+    <h1>will own the phone.</h1>
+    <h1>Others will keep missing it.</h1>
+  </section>
+
+  <!-- Slide 23 (Close) -->
+  <section class="slide">
+    <h1>Kestrel.</h1>
+  </section>
+
+</div>
+
+<div class="hint">Use ← → arrow keys</div>
+
+<script>
+  let index = 0;
+  const deck = document.getElementById('deck');
+  const total = deck.children.length;
+
+  function update() {
+    deck.style.transform = `translateX(-${index * 100}vw)`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' && index < total - 1) {
+      index++;
+      update();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      index--;
+      update();
+    }
+  });
+</script>
+
+</body>
+</html>

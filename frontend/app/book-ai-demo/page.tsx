@@ -67,10 +67,10 @@ export default function BookAIDemoPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Book Your AI Demo Call
+            Book Workflow Demo
           </h1>
           <p className="text-xl text-gray-600">
-            See our AI voice agent in action - 15 minutes, zero commitment
+            See deterministic workflows handle your call patterns - 15 minutes, zero commitment
           </p>
         </div>
 
@@ -267,7 +267,7 @@ export default function BookAIDemoPage() {
                 <CheckCircle2 className="w-12 h-12 text-green-600" />
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">You're all set!</h2>
-              <p className="text-gray-600">Your AI demo is confirmed</p>
+              <p className="text-gray-600">Your workflow demo is confirmed</p>
             </div>
 
             <div className="bg-blue-50 rounded-lg p-6 mb-6">
@@ -311,19 +311,19 @@ export default function BookAIDemoPage() {
               <ul className="space-y-2 text-sm text-gray-700">
                 <li className="flex items-start">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>You'll meet our AI Sales Advisor in a video call</span>
+                  <span>Platform demo with workflow validation specialist</span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>The AI will ask about your business needs</span>
+                  <span>Analyze your call patterns and operational requirements</span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>See a live demo of our voice agent</span>
+                  <span>See deterministic workflows handling actual scenarios</span>
                 </li>
                 <li className="flex items-start">
                   <CheckCircle2 className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" />
-                  <span>Discuss next steps (trial, pricing, or call with our team)</span>
+                  <span>Discuss deployment timeline and workflow validation results</span>
                 </li>
               </ul>
             </div>
@@ -345,33 +345,33 @@ export default function BookAIDemoPage() {
         {/* What You'll Learn */}
         {step < 3 && (
           <div className="mt-12 bg-white rounded-2xl shadow-xl p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">What you'll learn in 15 minutes:</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-6">What you'll see in 15 minutes:</h3>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🤖</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">See AI in Action</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Platform Capabilities</h4>
                 <p className="text-sm text-gray-600">
-                  Watch our AI handle real customer scenarios
+                  See deterministic workflows handle real call scenarios
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">💰</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">ROI Calculator</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Revenue Impact Analysis</h4>
                 <p className="text-sm text-gray-600">
-                  See how much revenue you're losing to missed calls
+                  Quantify revenue leakage and operational efficiency gains
                 </p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🚀</span>
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Next Steps</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Deployment Path</h4>
                 <p className="text-sm text-gray-600">
-                  Get a clear path to implementation
+                  48-hour deployment timeline and integration requirements
                 </p>
               </div>
             </div>

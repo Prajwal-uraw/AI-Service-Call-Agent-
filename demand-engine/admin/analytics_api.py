@@ -50,84 +50,72 @@ class TrendData(BaseModel):
 @router.get("/source-performance")
 async def get_source_performance(days: int = 30):
     """
-    Get performance metrics by signal source
-    
-    Args:
-        days: Number of days to analyze
-        
-    Returns:
-        Performance metrics for each source
+    Get performance metrics by signal source from both signals and reddit_signals tables
     """
     try:
         supabase = get_supabase()
+        cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
         
-        # Custom query for source performance
-        query = f"""
-        SELECT 
-            source,
-            COUNT(*) as total_signals,
-            ROUND(AVG(combined_score), 2) as avg_score,
-            COUNT(*) FILTER (WHERE converted_to_lead = TRUE) as converted_count,
-            CASE 
-                WHEN COUNT(*) > 0 
-                THEN ROUND((COUNT(*) FILTER (WHERE converted_to_lead = TRUE)::NUMERIC / COUNT(*)::NUMERIC * 100), 2)
-                ELSE 0 
-            END as conversion_rate,
-            COUNT(*) FILTER (WHERE tier = 'hot') as top_tier_count
-        FROM unified_signals_with_ai
-        WHERE created_at >= NOW() - INTERVAL '{days} days'
-        GROUP BY source
-        ORDER BY avg_score DESC
-        """
+        source_stats = {}
         
-        response = supabase.rpc("execute_sql", {"query": query}).execute()
-        
-        if not response.data:
-            # Fallback to manual aggregation
-            signals_response = supabase.table("unified_signals_with_ai").select("*").gte(
-                "created_at", 
-                (datetime.now() - timedelta(days=days)).isoformat()
+        # Try to get from signals table (scraped business data)
+        try:
+            signals_response = supabase.table("signals").select("*").gte(
+                "created_at", cutoff_date
             ).execute()
             
-            if not signals_response.data:
-                return []
-            
-            # Aggregate by source
-            source_stats = {}
-            for signal in signals_response.data:
-                source = signal["source"]
+            for signal in signals_response.data or []:
+                source = signal.get("source", "scraped")
                 if source not in source_stats:
-                    source_stats[source] = {
-                        "total": 0,
-                        "scores": [],
-                        "converted": 0,
-                        "hot": 0
-                    }
+                    source_stats[source] = {"total": 0, "scores": [], "converted": 0, "hot": 0}
                 
                 source_stats[source]["total"] += 1
-                source_stats[source]["scores"].append(signal["combined_score"])
-                if signal.get("converted_to_lead"):
+                pain_score = signal.get("pain_score", 0)
+                source_stats[source]["scores"].append(pain_score)
+                if signal.get("status") == "contacted":
                     source_stats[source]["converted"] += 1
-                if signal.get("tier") == "hot":
+                if pain_score >= 70:
                     source_stats[source]["hot"] += 1
-            
-            result = []
-            for source, stats in source_stats.items():
-                avg_score = sum(stats["scores"]) / len(stats["scores"]) if stats["scores"] else 0
-                conversion_rate = (stats["converted"] / stats["total"] * 100) if stats["total"] > 0 else 0
-                
-                result.append(SourcePerformance(
-                    source=source,
-                    total_signals=stats["total"],
-                    avg_score=round(avg_score, 2),
-                    converted_count=stats["converted"],
-                    conversion_rate=round(conversion_rate, 2),
-                    top_tier_count=stats["hot"]
-                ))
-            
-            return result
+        except Exception as e:
+            print(f"Error fetching signals: {e}")
         
-        return [SourcePerformance(**item) for item in response.data]
+        # Try to get from reddit_signals table
+        try:
+            reddit_response = supabase.table("reddit_signals").select("*").gte(
+                "created_at", cutoff_date
+            ).execute()
+            
+            for signal in reddit_response.data or []:
+                source = "reddit"
+                if source not in source_stats:
+                    source_stats[source] = {"total": 0, "scores": [], "converted": 0, "hot": 0}
+                
+                source_stats[source]["total"] += 1
+                score = signal.get("total_score", 0)
+                source_stats[source]["scores"].append(score)
+                if signal.get("alerted"):
+                    source_stats[source]["converted"] += 1
+                if signal.get("ai_tier") == "hot" or score >= 70:
+                    source_stats[source]["hot"] += 1
+        except Exception as e:
+            print(f"Error fetching reddit signals: {e}")
+        
+        # Build result
+        result = []
+        for source, stats in source_stats.items():
+            avg_score = sum(stats["scores"]) / len(stats["scores"]) if stats["scores"] else 0
+            conversion_rate = (stats["converted"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            
+            result.append(SourcePerformance(
+                source=source,
+                total_signals=stats["total"],
+                avg_score=round(avg_score, 2),
+                converted_count=stats["converted"],
+                conversion_rate=round(conversion_rate, 2),
+                top_tier_count=stats["hot"]
+            ))
+        
+        return sorted(result, key=lambda x: x.avg_score, reverse=True)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -268,46 +256,55 @@ async def get_intent_analysis(days: int = 30):
 @router.get("/trends")
 async def get_trends(days: int = 30):
     """
-    Get daily trends for signals and conversions
-    
-    Args:
-        days: Number of days to analyze
-        
-    Returns:
-        Daily trend data
+    Get daily trends for signals and conversions from both signals and reddit_signals tables
     """
     try:
         supabase = get_supabase()
+        cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
         
-        response = supabase.table("unified_signals_with_ai").select(
-            "created_at, combined_score, tier, converted_to_lead"
-        ).gte(
-            "created_at",
-            (datetime.now() - timedelta(days=days)).isoformat()
-        ).execute()
-        
-        if not response.data:
-            return []
-        
-        # Aggregate by date
         daily_stats = {}
-        for signal in response.data:
-            date = signal["created_at"][:10]  # Extract date part
+        
+        # Get from signals table (scraped business data)
+        try:
+            signals_response = supabase.table("signals").select(
+                "created_at, pain_score, status"
+            ).gte("created_at", cutoff_date).execute()
             
-            if date not in daily_stats:
-                daily_stats[date] = {
-                    "total": 0,
-                    "scores": [],
-                    "hot": 0,
-                    "converted": 0
-                }
+            for signal in signals_response.data or []:
+                date = signal["created_at"][:10]
+                if date not in daily_stats:
+                    daily_stats[date] = {"total": 0, "scores": [], "hot": 0, "converted": 0}
+                
+                daily_stats[date]["total"] += 1
+                pain_score = signal.get("pain_score", 0)
+                daily_stats[date]["scores"].append(pain_score)
+                if pain_score >= 70:
+                    daily_stats[date]["hot"] += 1
+                if signal.get("status") == "contacted":
+                    daily_stats[date]["converted"] += 1
+        except Exception as e:
+            print(f"Error fetching signals trends: {e}")
+        
+        # Get from reddit_signals table
+        try:
+            reddit_response = supabase.table("reddit_signals").select(
+                "created_at, total_score, ai_tier, alerted"
+            ).gte("created_at", cutoff_date).execute()
             
-            daily_stats[date]["total"] += 1
-            daily_stats[date]["scores"].append(signal["combined_score"])
-            if signal.get("tier") == "hot":
-                daily_stats[date]["hot"] += 1
-            if signal.get("converted_to_lead"):
-                daily_stats[date]["converted"] += 1
+            for signal in reddit_response.data or []:
+                date = signal["created_at"][:10]
+                if date not in daily_stats:
+                    daily_stats[date] = {"total": 0, "scores": [], "hot": 0, "converted": 0}
+                
+                daily_stats[date]["total"] += 1
+                score = signal.get("total_score", 0)
+                daily_stats[date]["scores"].append(score)
+                if signal.get("ai_tier") == "hot" or score >= 70:
+                    daily_stats[date]["hot"] += 1
+                if signal.get("alerted"):
+                    daily_stats[date]["converted"] += 1
+        except Exception as e:
+            print(f"Error fetching reddit trends: {e}")
         
         result = []
         for date, stats in sorted(daily_stats.items(), reverse=True):
@@ -330,51 +327,69 @@ async def get_trends(days: int = 30):
 @router.get("/summary")
 async def get_analytics_summary(days: int = 7):
     """
-    Get comprehensive analytics summary
-    
-    Args:
-        days: Number of days to analyze
-        
-    Returns:
-        Summary of all key metrics
+    Get comprehensive analytics summary from both signals and reddit_signals tables
     """
     try:
         supabase = get_supabase()
+        cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
         
-        # Get all signals in date range
-        response = supabase.table("unified_signals_with_ai").select("*").gte(
-            "created_at",
-            (datetime.now() - timedelta(days=days)).isoformat()
-        ).execute()
+        all_scores = []
+        sources = {}
+        intents = {}
+        converted = 0
+        hot_leads = 0
         
-        if not response.data:
-            return {
-                "total_signals": 0,
-                "avg_score": 0,
-                "conversion_rate": 0,
-                "top_source": None,
-                "top_intent": None
-            }
+        # Get from signals table (scraped business data)
+        try:
+            signals_response = supabase.table("signals").select("*").gte(
+                "created_at", cutoff_date
+            ).execute()
+            
+            for signal in signals_response.data or []:
+                pain_score = signal.get("pain_score", 0)
+                all_scores.append(pain_score)
+                
+                source = signal.get("source", "scraped")
+                sources[source] = sources.get(source, 0) + 1
+                
+                intent = signal.get("signal_type", "business_signal")
+                intents[intent] = intents.get(intent, 0) + 1
+                
+                if signal.get("status") == "contacted":
+                    converted += 1
+                if pain_score >= 70:
+                    hot_leads += 1
+        except Exception as e:
+            print(f"Error fetching signals summary: {e}")
         
-        signals = response.data
+        # Get from reddit_signals table
+        try:
+            reddit_response = supabase.table("reddit_signals").select("*").gte(
+                "created_at", cutoff_date
+            ).execute()
+            
+            for signal in reddit_response.data or []:
+                score = signal.get("total_score", 0)
+                all_scores.append(score)
+                
+                sources["reddit"] = sources.get("reddit", 0) + 1
+                
+                intent = signal.get("intent", "unknown")
+                if intent:
+                    intents[intent] = intents.get(intent, 0) + 1
+                
+                if signal.get("alerted"):
+                    converted += 1
+                if signal.get("ai_tier") == "hot" or score >= 70:
+                    hot_leads += 1
+        except Exception as e:
+            print(f"Error fetching reddit summary: {e}")
         
-        # Calculate summary stats
-        total = len(signals)
-        avg_score = sum(s["combined_score"] for s in signals) / total if total > 0 else 0
-        converted = sum(1 for s in signals if s.get("converted_to_lead"))
+        total = len(all_scores)
+        avg_score = sum(all_scores) / total if total > 0 else 0
         conversion_rate = (converted / total * 100) if total > 0 else 0
         
-        # Top source
-        sources = {}
-        for s in signals:
-            sources[s["source"]] = sources.get(s["source"], 0) + 1
         top_source = max(sources.items(), key=lambda x: x[1])[0] if sources else None
-        
-        # Top intent
-        intents = {}
-        for s in signals:
-            if s.get("intent"):
-                intents[s["intent"]] = intents.get(s["intent"], 0) + 1
         top_intent = max(intents.items(), key=lambda x: x[1])[0] if intents else None
         
         return {
@@ -382,7 +397,7 @@ async def get_analytics_summary(days: int = 7):
             "avg_score": round(avg_score, 2),
             "conversion_rate": round(conversion_rate, 2),
             "converted_count": converted,
-            "hot_leads": sum(1 for s in signals if s.get("tier") == "hot"),
+            "hot_leads": hot_leads,
             "top_source": top_source,
             "top_intent": top_intent,
             "sources_breakdown": sources,

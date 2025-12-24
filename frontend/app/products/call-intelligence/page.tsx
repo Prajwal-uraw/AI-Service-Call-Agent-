@@ -61,8 +61,8 @@ export default function CallIntelligencePage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">AI Call Intelligence</h1>
-              <p className="text-gray-600 mt-1">Real-time sales coaching on every call</p>
+              <h1 className="text-3xl font-bold text-gray-900">Operational Telemetry</h1>
+              <p className="text-gray-600 mt-1">Real-time voice ops metrics: resolution rate, escalation load, revenue impact</p>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -74,7 +74,7 @@ export default function CallIntelligencePage() {
                 }`}
               >
                 <Brain className="w-5 h-5" />
-                <span>{aiListening ? "AI Listening" : "Start AI Listening"}</span>
+                <span>{aiListening ? "Telemetry Active" : "Start Monitoring"}</span>
               </button>
             </div>
           </div>

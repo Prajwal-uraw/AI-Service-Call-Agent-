@@ -1334,8 +1334,42 @@ Then STOP. Let them respond. Don't keep talking."""
                    self.call_sid, self.caller_number, call_duration)
 
 
-@router.api_route("/twilio/realtime/incoming", methods=["GET", "POST"])
-async def realtime_incoming(request: Request):
+@router.post("/twilio/realtime/incoming-with-disclaimer")
+async def handle_incoming_call_with_disclaimer(request: Request):
+    """
+    TwiML endpoint with disclaimer BEFORE connecting to AI agent.
+    This is the recommended webhook for Twilio phone numbers.
+    """
+    logger.info("Incoming call with disclaimer")
+    
+    # Get company name from environment
+    company_name = os.getenv("HVAC_COMPANY_NAME", "our company")
+    disclaimer_text = os.getenv(
+        "DISCLAIMER_TEXT",
+        f"Thank you for calling {company_name}. This call may be recorded and will be handled by our AI assistant. By continuing, you consent to this interaction. Please hold while we connect you."
+    )
+    
+    # Get the WebSocket URL for streaming
+    protocol = "wss" if request.url.scheme == "https" else "ws"
+    ws_url = f"{protocol}://{request.url.netloc}/twilio/realtime/media-stream"
+    
+    # TwiML with disclaimer + stream
+    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="Polly.Joanna">{disclaimer_text}</Say>
+    <Connect>
+        <Stream url="{ws_url}">
+            <Parameter name="callSid" value="{{{{CallSid}}}}" />
+            <Parameter name="from" value="{{{{From}}}}" />
+        </Stream>
+    </Connect>
+</Response>"""
+    
+    return Response(content=twiml, media_type="application/xml")
+
+
+@router.post("/twilio/realtime/incoming")
+async def handle_incoming_call(request: Request):
     """
     Entry point for incoming calls using OpenAI Realtime API.
     

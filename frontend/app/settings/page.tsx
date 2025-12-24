@@ -1,530 +1,365 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { 
-  Building2, 
-  Phone, 
-  Bot, 
-  Clock, 
-  Save,
-  TestTube,
-  Sparkles,
-  Volume2,
-  MessageSquare
-} from "lucide-react";
+import { useState } from 'react';
+import AdminLayout from '@/components/AdminLayout';
+import { Building2, Phone, Bot, Clock, Save, Bell, Shield, CreditCard, Users } from 'lucide-react';
+
+type TabType = 'company' | 'voice' | 'ai' | 'hours' | 'notifications' | 'billing' | 'team';
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('company');
+  const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
-    // Company Info
-    company_name: "Acme HVAC Services",
-    industry: "hvac",
-    website_url: "https://acmehvac.com",
-    owner_email: "john@acmehvac.com",
-    owner_phone: "+1-555-123-4567",
-    
-    // Voice Agent Config
-    twilio_phone_number: "+1-555-ACME-123",
-    forward_to_number: "+1-555-999-8888",
-    emergency_phone: "+1-555-911-HVAC",
-    
-    // AI Settings
-    ai_model: "gpt-4o-mini",
-    ai_voice: "alloy",
+    company_name: 'Acme HVAC Services',
+    industry: 'hvac',
+    website_url: 'https://acmehvac.com',
+    owner_email: 'john@acmehvac.com',
+    owner_phone: '+1-555-123-4567',
+    twilio_phone_number: '+1-555-ACME-123',
+    forward_to_number: '+1-555-999-8888',
+    emergency_phone: '+1-555-911-HVAC',
+    ai_model: 'gpt-4o-mini',
+    ai_voice: 'alloy',
     use_elevenlabs: false,
     ai_temperature: 0.7,
-    
-    // Custom Prompts
-    greeting_message: "Thank you for calling Acme HVAC! I'm your AI assistant. How can I help you today?",
-    custom_system_prompt: "You are a professional HVAC receptionist for Acme HVAC Services. Be friendly, efficient, and always prioritize emergency situations.",
-    
-    // Business Hours
-    timezone: "America/Chicago",
-    business_hours: {
-      mon: { open: "08:00", close: "17:00", closed: false },
-      tue: { open: "08:00", close: "17:00", closed: false },
-      wed: { open: "08:00", close: "17:00", closed: false },
-      thu: { open: "08:00", close: "17:00", closed: false },
-      fri: { open: "08:00", close: "17:00", closed: false },
-      sat: { open: "09:00", close: "14:00", closed: false },
-      sun: { open: "00:00", close: "00:00", closed: true }
-    },
-    
-    // SECRET TIP #7: Sandbox Mode
-    is_test_mode: false,
-    
-    // SECRET TIP #2: Feature Flags
-    features: {
-      voice_cloning: false,
-      advanced_analytics: true,
-      sentiment_analysis: false,
-      call_recording: true,
-      voicemail: true,
-      sms_notifications: true,
-      email_notifications: true,
-      white_label: false
-    }
+    greeting_message: 'Thank you for calling Acme HVAC! How can I help you today?',
+    timezone: 'America/Chicago',
   });
 
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  const updateSetting = (key: string, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-    setSaved(false);
-  };
-
-  const updateFeature = (feature: string, enabled: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      features: { ...prev.features, [feature]: enabled }
-    }));
-    setSaved(false);
-  };
-
-  const updateBusinessHours = (day: string, field: string, value: any) => {
-    setSettings(prev => ({
-      ...prev,
-      business_hours: {
-        ...prev.business_hours,
-        [day]: { ...prev.business_hours[day as keyof typeof prev.business_hours], [field]: value }
-      }
-    }));
-    setSaved(false);
-  };
+  const tabs = [
+    { id: 'company' as TabType, label: 'Company', icon: Building2 },
+    { id: 'voice' as TabType, label: 'Voice Agent', icon: Phone },
+    { id: 'ai' as TabType, label: 'AI Settings', icon: Bot },
+    { id: 'hours' as TabType, label: 'Business Hours', icon: Clock },
+    { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
+    { id: 'billing' as TabType, label: 'Billing', icon: CreditCard },
+    { id: 'team' as TabType, label: 'Team', icon: Users },
+  ];
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   };
 
-  const aiModels = [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast & Cost-Effective)" },
-    { value: "gpt-4o", label: "GPT-4o (Most Capable)" },
-    { value: "gpt-4-turbo", label: "GPT-4 Turbo (Balanced)" }
-  ];
-
-  const aiVoices = [
-    { value: "alloy", label: "Alloy (Neutral)" },
-    { value: "echo", label: "Echo (Male)" },
-    { value: "shimmer", label: "Shimmer (Female)" },
-    { value: "nova", label: "Nova (Energetic)" },
-    { value: "onyx", label: "Onyx (Deep)" }
-  ];
-
-  const days = [
-    { key: "mon", label: "Monday" },
-    { key: "tue", label: "Tuesday" },
-    { key: "wed", label: "Wednesday" },
-    { key: "thu", label: "Thursday" },
-    { key: "fri", label: "Friday" },
-    { key: "sat", label: "Saturday" },
-    { key: "sun", label: "Sunday" }
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Settings</h1>
-            <p className="text-gray-600">Manage your voice agent configuration</p>
-          </div>
-          <Button 
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {saving ? (
-              <>Saving...</>
-            ) : saved ? (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Saved!
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-neutral-900">Settings</h1>
+          <p className="text-sm text-neutral-600 mt-1">Manage your account and preferences</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Settings */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Company Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  Company Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Company Name</label>
-                  <input
-                    type="text"
-                    value={settings.company_name}
-                    onChange={(e) => updateSetting("company_name", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
-                  />
-                </div>
-                
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Industry</label>
-                    <select
-                      value={settings.industry}
-                      onChange={(e) => updateSetting("industry", e.target.value)}
-                      className="w-full border rounded-lg px-4 py-2"
-                    >
-                      <option value="hvac">HVAC</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="both">HVAC & Plumbing</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Website</label>
-                    <input
-                      type="url"
-                      value={settings.website_url}
-                      onChange={(e) => updateSetting("website_url", e.target.value)}
-                      className="w-full border rounded-lg px-4 py-2"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Phone Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5" />
-                  Phone Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Twilio Phone Number</label>
-                  <input
-                    type="tel"
-                    value={settings.twilio_phone_number}
-                    onChange={(e) => updateSetting("twilio_phone_number", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
-                    placeholder="+1-555-123-4567"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Your dedicated voice agent number</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Forward To Number</label>
-                  <input
-                    type="tel"
-                    value={settings.forward_to_number}
-                    onChange={(e) => updateSetting("forward_to_number", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
-                    placeholder="+1-555-999-8888"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Transfer calls here when AI can't handle</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Emergency Phone</label>
-                  <input
-                    type="tel"
-                    value={settings.emergency_phone}
-                    onChange={(e) => updateSetting("emergency_phone", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
-                    placeholder="+1-555-911-HVAC"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">For urgent situations (gas leaks, no heat, etc.)</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bot className="h-5 w-5" />
-                  AI Configuration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">AI Model</label>
-                  <select
-                    value={settings.ai_model}
-                    onChange={(e) => updateSetting("ai_model", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
+        <div className="flex gap-6">
+          {/* Sidebar Tabs */}
+          <div className="w-64 flex-shrink-0">
+            <nav className="space-y-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-neutral-900 text-white'
+                        : 'text-neutral-600 hover:bg-neutral-100'
+                    }`}
                   >
-                    {aiModels.map(model => (
-                      <option key={model.value} value={model.value}>{model.label}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">AI Voice</label>
-                  <select
-                    value={settings.ai_voice}
-                    onChange={(e) => updateSetting("ai_voice", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2"
-                  >
-                    {aiVoices.map(voice => (
-                      <option key={voice.value} value={voice.value}>{voice.label}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Greeting Message</label>
-                  <textarea
-                    value={settings.greeting_message}
-                    onChange={(e) => updateSetting("greeting_message", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2 h-24"
-                    placeholder="Thank you for calling..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">First thing customers hear</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Custom System Prompt</label>
-                  <textarea
-                    value={settings.custom_system_prompt}
-                    onChange={(e) => updateSetting("custom_system_prompt", e.target.value)}
-                    className="w-full border rounded-lg px-4 py-2 h-32"
-                    placeholder="You are a professional HVAC receptionist..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Instructions for AI behavior</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Business Hours */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Business Hours
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {days.map(day => (
-                  <div key={day.key} className="flex items-center gap-4">
-                    <div className="w-24 font-medium">{day.label}</div>
-                    
-                    <Switch
-                      checked={!settings.business_hours[day.key as keyof typeof settings.business_hours].closed}
-                      onCheckedChange={(checked) => updateBusinessHours(day.key, "closed", !checked)}
-                    />
-                    
-                    {!settings.business_hours[day.key as keyof typeof settings.business_hours].closed ? (
-                      <>
-                        <input
-                          type="time"
-                          value={settings.business_hours[day.key as keyof typeof settings.business_hours].open}
-                          onChange={(e) => updateBusinessHours(day.key, "open", e.target.value)}
-                          className="border rounded px-3 py-1"
-                        />
-                        <span className="text-gray-500">to</span>
-                        <input
-                          type="time"
-                          value={settings.business_hours[day.key as keyof typeof settings.business_hours].close}
-                          onChange={(e) => updateBusinessHours(day.key, "close", e.target.value)}
-                          className="border rounded px-3 py-1"
-                        />
-                      </>
-                    ) : (
-                      <span className="text-gray-400">Closed</span>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                    <Icon className="w-5 h-5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            
-            {/* SECRET TIP #7: Sandbox Mode */}
-            <Card className="border-2 border-yellow-200 bg-yellow-50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-800">
-                  <TestTube className="h-5 w-5" />
-                  Sandbox Mode
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-yellow-900">Test Mode</p>
-                      <p className="text-xs text-yellow-700 mt-1">
-                        Test without affecting production data or billing
-                      </p>
+          {/* Content Area */}
+          <div className="flex-1">
+            <div className="bg-white border border-neutral-200 rounded-lg">
+              {/* Company Settings */}
+              {activeTab === 'company' && (
+                <div className="p-6 space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-neutral-900 mb-4">Company Information</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Company Name</label>
+                        <input
+                          type="text"
+                          value={settings.company_name}
+                          onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Industry</label>
+                        <select
+                          value={settings.industry}
+                          onChange={(e) => setSettings({ ...settings, industry: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        >
+                          <option value="hvac">HVAC</option>
+                          <option value="plumbing">Plumbing</option>
+                          <option value="electrical">Electrical</option>
+                          <option value="general">General Contractor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Website URL</label>
+                        <input
+                          type="url"
+                          value={settings.website_url}
+                          onChange={(e) => setSettings({ ...settings, website_url: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">Owner Email</label>
+                          <input
+                            type="email"
+                            value={settings.owner_email}
+                            onChange={(e) => setSettings({ ...settings, owner_email: e.target.value })}
+                            className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-neutral-700 mb-2">Owner Phone</label>
+                          <input
+                            type="tel"
+                            value={settings.owner_phone}
+                            onChange={(e) => setSettings({ ...settings, owner_phone: e.target.value })}
+                            className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Switch
-                      checked={settings.is_test_mode}
-                      onCheckedChange={(checked) => updateSetting("is_test_mode", checked)}
-                    />
                   </div>
-                  
-                  {settings.is_test_mode && (
-                    <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-3">
-                      <p className="text-xs text-yellow-800 font-medium mb-2">⚠️ Sandbox Active</p>
-                      <ul className="text-xs text-yellow-700 space-y-1">
-                        <li>• Calls won't be billed</li>
-                        <li>• SMS won't be sent</li>
-                        <li>• Data marked as TEST</li>
-                        <li>• Safe to experiment</li>
-                      </ul>
+                </div>
+              )}
+
+              {/* Voice Agent Settings */}
+              {activeTab === 'voice' && (
+                <div className="p-6 space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-neutral-900 mb-4">Voice Agent Configuration</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Twilio Phone Number</label>
+                        <input
+                          type="tel"
+                          value={settings.twilio_phone_number}
+                          onChange={(e) => setSettings({ ...settings, twilio_phone_number: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">Your main business phone number</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Forward To Number</label>
+                        <input
+                          type="tel"
+                          value={settings.forward_to_number}
+                          onChange={(e) => setSettings({ ...settings, forward_to_number: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">Where to forward calls when AI can't handle them</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Emergency Phone</label>
+                        <input
+                          type="tel"
+                          value={settings.emergency_phone}
+                          onChange={(e) => setSettings({ ...settings, emergency_phone: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">Emergency contact number</p>
+                      </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Settings */}
+              {activeTab === 'ai' && (
+                <div className="p-6 space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold text-neutral-900 mb-4">AI Configuration</h2>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">AI Model</label>
+                        <select
+                          value={settings.ai_model}
+                          onChange={(e) => setSettings({ ...settings, ai_model: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        >
+                          <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
+                          <option value="gpt-4o">GPT-4o (Advanced)</option>
+                          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Voice</label>
+                        <select
+                          value={settings.ai_voice}
+                          onChange={(e) => setSettings({ ...settings, ai_voice: e.target.value })}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        >
+                          <option value="alloy">Alloy (Neutral)</option>
+                          <option value="echo">Echo (Male)</option>
+                          <option value="nova">Nova (Female)</option>
+                          <option value="shimmer">Shimmer (Warm)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-neutral-700 mb-2">Greeting Message</label>
+                        <textarea
+                          value={settings.greeting_message}
+                          onChange={(e) => setSettings({ ...settings, greeting_message: e.target.value })}
+                          rows={3}
+                          className="w-full px-4 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                        />
+                        <p className="text-xs text-neutral-500 mt-1">First message customers hear when calling</p>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg">
+                        <div>
+                          <div className="font-medium text-neutral-900">Use ElevenLabs Voice</div>
+                          <div className="text-sm text-neutral-600">Higher quality, additional cost</div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settings.use_elevenlabs}
+                            onChange={(e) => setSettings({ ...settings, use_elevenlabs: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-neutral-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Business Hours */}
+              {activeTab === 'hours' && (
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-neutral-900 mb-4">Business Hours</h2>
+                  <div className="space-y-3">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                      <div key={day} className="flex items-center gap-4 p-4 border border-neutral-200 rounded-lg">
+                        <div className="w-28 font-medium text-neutral-900">{day}</div>
+                        <input type="time" defaultValue="08:00" className="px-3 py-2 border border-neutral-300 rounded-lg" />
+                        <span className="text-neutral-500">to</span>
+                        <input type="time" defaultValue="17:00" className="px-3 py-2 border border-neutral-300 rounded-lg" />
+                        <label className="flex items-center gap-2 ml-auto">
+                          <input type="checkbox" className="w-4 h-4" />
+                          <span className="text-sm text-neutral-600">Closed</span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notifications */}
+              {activeTab === 'notifications' && (
+                <div className="p-6 space-y-4">
+                  <h2 className="text-lg font-semibold text-neutral-900 mb-4">Notification Preferences</h2>
+                  {[
+                    { title: 'Missed Calls', desc: 'Get notified when a call is missed' },
+                    { title: 'New Appointments', desc: 'Alert when new appointment is booked' },
+                    { title: 'High-Value Leads', desc: 'Notify for leads over $5,000' },
+                    { title: 'System Alerts', desc: 'Important system notifications' },
+                  ].map((item) => (
+                    <div key={item.title} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+                      <div>
+                        <div className="font-medium text-neutral-900">{item.title}</div>
+                        <div className="text-sm text-neutral-600">{item.desc}</div>
+                      </div>
+                      <input type="checkbox" defaultChecked className="w-5 h-5" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Billing */}
+              {activeTab === 'billing' && (
+                <div className="p-6">
+                  <h2 className="text-lg font-semibold text-neutral-900 mb-4">Billing & Subscription</h2>
+                  <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-6 mb-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="text-2xl font-bold text-neutral-900">Professional Plan</div>
+                        <div className="text-neutral-600">$299/month</div>
+                      </div>
+                      <button className="px-4 py-2 border border-neutral-300 rounded-lg text-sm font-medium hover:bg-white transition-colors">
+                        Change Plan
+                      </button>
+                    </div>
+                    <div className="text-sm text-neutral-600">Next billing date: January 1, 2025</div>
+                  </div>
+                  <button className="text-sm text-neutral-600 hover:text-neutral-900 font-medium">
+                    View billing history →
+                  </button>
+                </div>
+              )}
+
+              {/* Team */}
+              {activeTab === 'team' && (
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-neutral-900">Team Members</h2>
+                    <button className="px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors">
+                      Invite Member
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { name: 'John Doe', email: 'john@acmehvac.com', role: 'Owner' },
+                      { name: 'Jane Smith', email: 'jane@acmehvac.com', role: 'Admin' },
+                    ].map((member) => (
+                      <div key={member.email} className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                            {member.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-neutral-900">{member.name}</div>
+                            <div className="text-sm text-neutral-600">{member.email}</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-neutral-600">{member.role}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Save Button */}
+              <div className="border-t border-neutral-200 p-6">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-neutral-900 text-white rounded-lg font-semibold hover:bg-neutral-800 transition-all disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      <span>Save Changes</span>
+                    </>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* SECRET TIP #2: Feature Flags */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  Beta Features
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                
-                {/* Voice Cloning */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">AI Voice Cloning</p>
-                      <Badge variant="outline" className="text-xs">BETA</Badge>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Use ElevenLabs to clone your voice
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.features.voice_cloning}
-                    onCheckedChange={(checked) => updateFeature("voice_cloning", checked)}
-                  />
-                </div>
-
-                {/* Advanced Analytics */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">Advanced Analytics</p>
-                      <Badge className="bg-green-100 text-green-800 text-xs">ACTIVE</Badge>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Detailed call insights & trends
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.features.advanced_analytics}
-                    onCheckedChange={(checked) => updateFeature("advanced_analytics", checked)}
-                  />
-                </div>
-
-                {/* Sentiment Analysis */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">Sentiment Analysis</p>
-                      <Badge variant="outline" className="text-xs">BETA</Badge>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Detect customer emotions in calls
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.features.sentiment_analysis}
-                    onCheckedChange={(checked) => updateFeature("sentiment_analysis", checked)}
-                  />
-                </div>
-
-                {/* White Label */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">White Label</p>
-                      <Badge className="bg-purple-100 text-purple-800 text-xs">PRO</Badge>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Custom domain & branding
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.features.white_label}
-                    onCheckedChange={(checked) => updateFeature("white_label", checked)}
-                    disabled={true}
-                  />
-                </div>
-
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-gray-500">
-                    💡 Beta features are tested on 10% of customers first
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Standard Features */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Standard Features</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Call Recording</span>
-                  <Switch
-                    checked={settings.features.call_recording}
-                    onCheckedChange={(checked) => updateFeature("call_recording", checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Voicemail</span>
-                  <Switch
-                    checked={settings.features.voicemail}
-                    onCheckedChange={(checked) => updateFeature("voicemail", checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">SMS Notifications</span>
-                  <Switch
-                    checked={settings.features.sms_notifications}
-                    onCheckedChange={(checked) => updateFeature("sms_notifications", checked)}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Email Notifications</span>
-                  <Switch
-                    checked={settings.features.email_notifications}
-                    onCheckedChange={(checked) => updateFeature("email_notifications", checked)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

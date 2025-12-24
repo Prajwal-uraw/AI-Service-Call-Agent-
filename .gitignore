@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ - COMMENTED OUT to allow frontend/lib directory
 lib64/
 parts/
 sdist/
@@ -23,6 +23,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Ignore Python lib directories specifically
+**/venv/lib/
+**/.venv/lib/
+hvac_agent/lib/
 
 # ===========================================
 # Virtual Environments
@@ -105,6 +110,19 @@ temp/
 *.bak
 
 # ===========================================
+# AI Demo Call - Videos and Generated Content
+# ===========================================
+ai-demo-call/temp/
+ai-demo-call/obs-assets/
+*.mp3
+*.mp4
+*.wav
+*.avi
+*.mov
+*.webm
+transcript.txt
+
+# ===========================================
 # Local reference files
 # ===========================================
 new 1.md
@@ -159,6 +177,13 @@ FIXES_SUMMARY.md
 LOGIN_FIX_REPORT.md
 SYSTEM_AUDIT_REPORT.md
 TROUBLESHOOTING_GUIDE.md
+
+# ===========================================
+# Documentation with Sensitive Data
+# ===========================================
+ai-demo-call/DAILY_RECORDING_SETUP.md
+MODAL_SECRETS_FIX.md
+SESSION_COMPLETE_DEC23.md
 API_KEYS_SETUP_GUIDE.md
 SECRETS_MANAGEMENT_GUIDE.md
 

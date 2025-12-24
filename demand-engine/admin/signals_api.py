@@ -93,57 +93,112 @@ class SignalStats(BaseModel):
 async def get_signal_stats(
     days: int = Query(7, description="Number of days to analyze")
 ):
-    """Get pain signal statistics"""
+    """Get pain signal statistics from both reddit_signals and signals tables"""
     try:
         supabase = get_supabase()
         cutoff_date = (datetime.utcnow() - timedelta(days=days)).isoformat()
         
-        # Get all signals from unified view
-        result = supabase.rpc(
-            'get_signal_stats',
-            {'days_back': days}
-        ).execute()
+        # Try to get from unified view first
+        try:
+            result = supabase.rpc(
+                'get_signal_stats',
+                {'days_back': days}
+            ).execute()
+            
+            if result.data:
+                return result.data[0]
+        except:
+            pass  # RPC might not exist, fall back to manual
         
-        if result.data:
-            return result.data[0]
+        # Get signals from both tables
+        reddit_signals = []
+        scraped_signals = []
         
-        # Fallback: manual aggregation
-        signals = supabase.table("reddit_signals")\
-            .select("*")\
-            .gte("created_at", cutoff_date)\
-            .execute()
+        try:
+            reddit_result = supabase.table("reddit_signals")\
+                .select("*")\
+                .gte("created_at", cutoff_date)\
+                .execute()
+            reddit_signals = reddit_result.data or []
+        except:
+            pass
         
-        data = signals.data
+        try:
+            scraped_result = supabase.table("signals")\
+                .select("*")\
+                .gte("created_at", cutoff_date)\
+                .execute()
+            scraped_signals = scraped_result.data or []
+        except:
+            pass
         
-        stats = {
-            "total_signals": len(data),
-            "by_source": {"reddit": len(data)},
-            "by_tier": {},
-            "by_intent": {},
-            "by_sentiment": {},
-            "avg_keyword_score": sum(s.get('total_score', 0) for s in data) / len(data) if data else 0,
-            "avg_ai_score": sum(s.get('ai_total_score', 0) for s in data if s.get('ai_total_score')) / len([s for s in data if s.get('ai_total_score')]) if data else 0,
-            "high_value_count": len([s for s in data if s.get('total_score', 0) >= 70]),
-            "alerted_count": len([s for s in data if s.get('alerted')]),
-            "pending_count": len([s for s in data if not s.get('alerted') and s.get('total_score', 0) >= 70])
-        }
+        # Combine and calculate stats
+        total_reddit = len(reddit_signals)
+        total_scraped = len(scraped_signals)
+        
+        by_source = {}
+        if total_reddit > 0:
+            by_source["reddit"] = total_reddit
+        
+        # Count scraped signals by source
+        for s in scraped_signals:
+            src = s.get('source', 'unknown')
+            by_source[src] = by_source.get(src, 0) + 1
+        
+        # Calculate averages
+        all_keyword_scores = [s.get('total_score', 0) for s in reddit_signals] + [s.get('pain_score', 0) for s in scraped_signals]
+        all_ai_scores = [s.get('ai_total_score', 0) for s in reddit_signals if s.get('ai_total_score')] + [s.get('pain_score', 0) for s in scraped_signals]
+        
+        avg_keyword = sum(all_keyword_scores) / len(all_keyword_scores) if all_keyword_scores else 0
+        avg_ai = sum(all_ai_scores) / len(all_ai_scores) if all_ai_scores else 0
+        
+        # Count high value (score >= 50)
+        high_value = len([s for s in reddit_signals if s.get('total_score', 0) >= 50]) + \
+                     len([s for s in scraped_signals if s.get('pain_score', 0) >= 50])
+        
+        # Count alerted
+        alerted = len([s for s in reddit_signals if s.get('alerted')]) + \
+                  len([s for s in scraped_signals if s.get('status') == 'contacted'])
         
         # Aggregate by tier
-        for signal in data:
+        by_tier = {}
+        for signal in reddit_signals:
             tier = signal.get('ai_tier', 'unknown')
-            stats['by_tier'][tier] = stats['by_tier'].get(tier, 0) + 1
+            by_tier[tier] = by_tier.get(tier, 0) + 1
+        for signal in scraped_signals:
+            score = signal.get('pain_score', 0)
+            tier = 'hot' if score >= 70 else 'warm' if score >= 50 else 'cold'
+            by_tier[tier] = by_tier.get(tier, 0) + 1
         
         # Aggregate by intent
-        for signal in data:
+        by_intent = {}
+        for signal in reddit_signals:
             intent = signal.get('intent', 'unknown')
             if intent:
-                stats['by_intent'][intent] = stats['by_intent'].get(intent, 0) + 1
+                by_intent[intent] = by_intent.get(intent, 0) + 1
+        for signal in scraped_signals:
+            intent = signal.get('signal_type', 'business_signal')
+            by_intent[intent] = by_intent.get(intent, 0) + 1
         
         # Aggregate by sentiment
-        for signal in data:
+        by_sentiment = {}
+        for signal in reddit_signals:
             sentiment = signal.get('sentiment', 'unknown')
             if sentiment:
-                stats['by_sentiment'][sentiment] = stats['by_sentiment'].get(sentiment, 0) + 1
+                by_sentiment[sentiment] = by_sentiment.get(sentiment, 0) + 1
+        
+        stats = {
+            "total_signals": total_reddit + total_scraped,
+            "by_source": by_source,
+            "by_tier": by_tier,
+            "by_intent": by_intent,
+            "by_sentiment": by_sentiment,
+            "avg_keyword_score": avg_keyword,
+            "avg_ai_score": avg_ai,
+            "high_value_count": high_value,
+            "alerted_count": alerted,
+            "pending_count": (total_reddit + total_scraped) - alerted
+        }
         
         return stats
         
@@ -161,53 +216,108 @@ async def list_signals(
     limit: int = Query(50, description="Number of results"),
     offset: int = Query(0, description="Offset for pagination")
 ):
-    """List pain signals with filters"""
+    """List pain signals with filters from both reddit_signals and signals tables"""
     try:
         supabase = get_supabase()
-        
-        # Build query
-        query = supabase.table("reddit_signals").select("*")
-        
-        if min_score > 0:
-            query = query.gte("total_score", min_score)
-        
-        if tier:
-            query = query.eq("ai_tier", tier)
-        
-        if intent:
-            query = query.eq("intent", intent)
-        
-        if alerted is not None:
-            query = query.eq("alerted", alerted)
-        
-        # Execute query
-        result = query.order("created_at", desc=True)\
-            .range(offset, offset + limit - 1)\
-            .execute()
-        
-        # Transform to response model
         signals = []
-        for signal in result.data:
-            signals.append(SignalSummary(
-                id=signal['id'],
-                source='reddit',
-                signal_id=signal['post_id'],
-                title=signal.get('title'),
-                content_preview=signal.get('body', '')[:200] + '...' if signal.get('body') else '',
-                keyword_score=signal.get('total_score', 0),
-                ai_score=signal.get('ai_total_score'),
-                combined_score=(signal.get('total_score', 0) + signal.get('ai_total_score', 0)) / 2 if signal.get('ai_total_score') else signal.get('total_score', 0),
-                tier=signal.get('ai_tier'),
-                sentiment=signal.get('sentiment'),
-                intent=signal.get('intent'),
-                recommended_action=signal.get('recommended_action'),
-                location=signal.get('location'),
-                created_at=signal['created_at'],
-                alerted=signal.get('alerted', False),
-                url=signal.get('url')
-            ))
         
-        return signals
+        # Get reddit signals if not filtering by non-reddit source
+        if source is None or source == 'reddit':
+            try:
+                query = supabase.table("reddit_signals").select("*")
+                
+                if min_score > 0:
+                    query = query.gte("total_score", min_score)
+                
+                if tier:
+                    query = query.eq("ai_tier", tier)
+                
+                if intent:
+                    query = query.eq("intent", intent)
+                
+                if alerted is not None:
+                    query = query.eq("alerted", alerted)
+                
+                result = query.order("created_at", desc=True)\
+                    .range(offset, offset + limit - 1)\
+                    .execute()
+                
+                for signal in result.data:
+                    signals.append(SignalSummary(
+                        id=signal['id'],
+                        source='reddit',
+                        signal_id=signal['post_id'],
+                        title=signal.get('title'),
+                        content_preview=signal.get('body', '')[:200] + '...' if signal.get('body') else '',
+                        keyword_score=signal.get('total_score', 0),
+                        ai_score=signal.get('ai_total_score'),
+                        combined_score=(signal.get('total_score', 0) + signal.get('ai_total_score', 0)) / 2 if signal.get('ai_total_score') else signal.get('total_score', 0),
+                        tier=signal.get('ai_tier'),
+                        sentiment=signal.get('sentiment'),
+                        intent=signal.get('intent'),
+                        recommended_action=signal.get('recommended_action'),
+                        location=signal.get('location'),
+                        created_at=signal['created_at'],
+                        alerted=signal.get('alerted', False),
+                        url=signal.get('url')
+                    ))
+            except Exception as e:
+                print(f"Error fetching reddit signals: {e}")
+        
+        # Get scraped business signals
+        if source is None or source != 'reddit':
+            try:
+                query = supabase.table("signals").select("*")
+                
+                if source and source != 'reddit':
+                    query = query.eq("source", source)
+                
+                if min_score > 0:
+                    query = query.gte("pain_score", min_score)
+                
+                if alerted is not None:
+                    if alerted:
+                        query = query.eq("status", "contacted")
+                    else:
+                        query = query.neq("status", "contacted")
+                
+                result = query.order("created_at", desc=True)\
+                    .range(offset, offset + limit - 1)\
+                    .execute()
+                
+                for signal in result.data:
+                    pain_score = signal.get('pain_score', 0)
+                    tier_val = 'hot' if pain_score >= 70 else 'warm' if pain_score >= 50 else 'cold'
+                    
+                    # Skip if tier filter doesn't match
+                    if tier and tier != tier_val:
+                        continue
+                    
+                    signals.append(SignalSummary(
+                        id=str(signal['id']),
+                        source=signal.get('source', 'scraped'),
+                        signal_id=str(signal['id']),
+                        title=signal.get('business_name'),
+                        content_preview=f"{signal.get('business_name', '')} - {signal.get('city', '')}, {signal.get('state', '')}. {signal.get('signal_type', '')}",
+                        keyword_score=pain_score,
+                        ai_score=float(pain_score),
+                        combined_score=float(pain_score),
+                        tier=tier_val,
+                        sentiment=None,
+                        intent=signal.get('signal_type', 'business_signal'),
+                        recommended_action='Contact for services',
+                        location=f"{signal.get('city', '')}, {signal.get('state', '')}",
+                        created_at=signal['created_at'],
+                        alerted=signal.get('status') == 'contacted',
+                        url=signal.get('source_url')
+                    ))
+            except Exception as e:
+                print(f"Error fetching scraped signals: {e}")
+        
+        # Sort combined results by created_at
+        signals.sort(key=lambda x: x.created_at, reverse=True)
+        
+        return signals[:limit]
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -133,8 +133,8 @@ export default function ClickToCallPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Click-to-Call Dialer</h1>
-          <p className="text-gray-600">Call from anywhere, auto-log everything</p>
+          <h1 className="text-3xl font-bold text-gray-900">Workflow Orchestration</h1>
+          <p className="text-gray-600 mt-1">Trigger downstream actions across CRM, scheduling, and notification systems</p>
         </div>
 
         <div className="grid grid-cols-12 gap-6">

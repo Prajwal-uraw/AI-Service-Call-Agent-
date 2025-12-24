@@ -4,15 +4,69 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'frontend/**'
+      - 'demand-engine/**'
+      - 'hvac_agent/**'
   workflow_dispatch:
+
+# Prevent concurrent deployments and ensure 1 hour minimum between auto-deployments
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '18'
   PYTHON_VERSION: '3.11'
+  DEPLOYMENT_THROTTLE_MINUTES: 60
 
 jobs:
+  check-throttle:
+    name: Check Deployment Throttle
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    
+    steps:
+      - name: Check last deployment time
+        id: check
+        run: |
+          # For manual deployments, always allow
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment - proceeding"
+            exit 0
+          fi
+          
+          # For automatic deployments, check throttle
+          LAST_DEPLOY=$(gh api /repos/${{ github.repository }}/actions/runs \
+            --jq '.workflow_runs[] | select(.name=="Deploy to Production" and .conclusion=="success") | .updated_at' \
+            | head -n 1)
+          
+          if [ -z "$LAST_DEPLOY" ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "No previous deployment found - proceeding"
+            exit 0
+          fi
+          
+          LAST_DEPLOY_EPOCH=$(date -d "$LAST_DEPLOY" +%s)
+          CURRENT_EPOCH=$(date +%s)
+          DIFF_MINUTES=$(( ($CURRENT_EPOCH - $LAST_DEPLOY_EPOCH) / 60 ))
+          
+          if [ $DIFF_MINUTES -ge ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} ]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "Last deployment was $DIFF_MINUTES minutes ago - proceeding"
+          else
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "Last deployment was only $DIFF_MINUTES minutes ago - skipping (throttle: ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} minutes)"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   test:
     name: Run Tests
+    needs: check-throttle
+    if: needs.check-throttle.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -65,36 +119,11 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-  deploy-frontend:
-    name: Deploy Frontend to Vercel
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod --confirm'
-          working-directory: ./frontend
-          github-comment: true
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
-          NEXT_PUBLIC_DAILY_DOMAIN: ${{ secrets.DAILY_DOMAIN }}
-
   deploy-backend:
     name: Deploy Backend to Modal
-    needs: test
+    needs: [check-throttle, test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: needs.check-throttle.outputs.should_deploy == 'true' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
@@ -105,35 +134,52 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install backend dependencies
-        working-directory: ./demand-engine
-        run: |
-          python -m pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
-          # Explicitly install FastAPI and uvicorn to ensure they're available
-          pip install fastapi uvicorn
-          # Install latest version of Modal
-          pip install --upgrade modal
+      - name: Install Modal
+        run: pip install modal
 
-      - name: Verify installations
-        working-directory: ./demand-engine
-        run: |
-          pip list | grep -E "fastapi|uvicorn|modal"
-          python -c "import fastapi; print(f'FastAPI version: {fastapi.__version__}')"
-
-      - name: Deploy to Modal
+      - name: Deploy Demand Engine to Modal
         working-directory: ./demand-engine
         run: |
           modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
-          modal deploy app.py
+          modal deploy modal_app.py
+
+      - name: Deploy HVAC Agent to Modal
+        working-directory: ./hvac_agent
+        run: |
+          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
+          modal deploy modal_app.py
+
+      - name: Deploy Scrapers to Modal
+        working-directory: ./demand-engine
+        run: |
+          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
+          modal deploy modal_scrapers.py
+
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy-backend]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Send Slack notification
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
-          DAILY_API_KEY: ${{ secrets.DAILY_API_KEY }}
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          payload: |
+            {
+              "text": "Deployment ${{ job.status }}: ${{ github.repository }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Status:* ${{ job.status }}\n*Repository:* ${{ github.repository }}\n*Branch:* ${{ github.ref_name }}\n*Commit:* ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        # SLACK_WEBHOOK_URL and SLACK_WEBHOOK_TYPE are provided via env above

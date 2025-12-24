@@ -55,8 +55,8 @@ export default function FollowUpAutopilotPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900">Follow-Up Autopilot</h1>
-          <p className="text-gray-600 mt-1">Never lose a deal in follow-up again</p>
+          <h1 className="text-3xl font-bold text-gray-900">Deterministic Follow-up Workflows</h1>
+          <p className="text-gray-600 mt-1">Automated, verifiable follow-up sequences that ensure consistent outcomes</p>
         </div>
       </div>
 

@@ -73,29 +73,76 @@ async def get_contacts(
     company: Optional[str] = None,
     email_subscribed: Optional[bool] = None
 ):
-    """Get all contacts with filtering"""
+    """Get all contacts with filtering from both contacts and business_contacts tables"""
     try:
         supabase = get_supabase()
+        all_contacts = []
+        total_count = 0
         
-        query = supabase.table("contacts").select("*").is_("deleted_at", None)
+        # Try to get from contacts table first
+        try:
+            query = supabase.table("contacts").select("*")
+            
+            if search:
+                query = query.or_(f"first_name.ilike.%{search}%,last_name.ilike.%{search}%,email.ilike.%{search}%,company_name.ilike.%{search}%")
+            
+            if company:
+                query = query.ilike("company_name", f"%{company}%")
+            
+            if email_subscribed is not None:
+                query = query.eq("email_subscribed", email_subscribed)
+            
+            response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            all_contacts.extend(response.data or [])
+            
+            count_response = supabase.table("contacts").select("id", count="exact").execute()
+            total_count += count_response.count or 0
+        except Exception as e:
+            print(f"Error fetching from contacts table: {e}")
         
-        if search:
-            query = query.or_(f"first_name.ilike.%{search}%,last_name.ilike.%{search}%,email.ilike.%{search}%,company_name.ilike.%{search}%")
+        # Also get from business_contacts table
+        try:
+            query = supabase.table("business_contacts").select("*")
+            
+            if search:
+                query = query.or_(f"business_name.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%")
+            
+            if company:
+                query = query.ilike("business_name", f"%{company}%")
+            
+            response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            
+            # Transform business_contacts to match contacts format
+            for bc in response.data or []:
+                all_contacts.append({
+                    "id": bc.get("id"),
+                    "first_name": bc.get("business_name", "").split()[0] if bc.get("business_name") else None,
+                    "last_name": " ".join(bc.get("business_name", "").split()[1:]) if bc.get("business_name") else None,
+                    "email": bc.get("email"),
+                    "phone": bc.get("phone"),
+                    "company_name": bc.get("business_name"),
+                    "address": bc.get("address"),
+                    "city": bc.get("city"),
+                    "state": bc.get("state"),
+                    "zip_code": bc.get("zip_code"),
+                    "website": bc.get("website"),
+                    "created_at": bc.get("created_at"),
+                    "source": "business_contacts",
+                    "signal_id": bc.get("signal_id"),
+                    "notes": bc.get("notes")
+                })
+            
+            count_response = supabase.table("business_contacts").select("id", count="exact").execute()
+            total_count += count_response.count or 0
+        except Exception as e:
+            print(f"Error fetching from business_contacts table: {e}")
         
-        if company:
-            query = query.ilike("company_name", f"%{company}%")
-        
-        if email_subscribed is not None:
-            query = query.eq("email_subscribed", email_subscribed)
-        
-        response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
-        
-        # Get total count
-        count_response = supabase.table("contacts").select("id", count="exact").is_("deleted_at", None).execute()
+        # Sort by created_at and apply pagination
+        all_contacts.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         
         return {
-            "contacts": response.data,
-            "total": count_response.count,
+            "contacts": all_contacts[:limit],
+            "total": total_count,
             "limit": limit,
             "offset": offset
         }

@@ -1,0 +1,32 @@
+{
+  "name": "ai-demo-call",
+  "version": "1.0.0",
+  "description": "Automated AI demo video generator",
+  "main": "index.js",
+  "scripts": {
+    "verify": "ts-node scripts/verifySetup.ts",
+    "demo": "ts-node scripts/generateRealtimeDemo.ts",
+    "demo-live": "ts-node scripts/generateLiveDemo.ts",
+    "demo-obs": "ts-node scripts/generateOBSDemo.ts",
+    "demo-meeting": "ts-node scripts/generateMeetingDemo.ts",
+    "demo-enhanced": "ts-node scripts/generateEnhancedDemo.ts",
+    "play-demo": "ts-node scripts/playDemo.ts",
+    "generate-demo": "ts-node scripts/generateSmartDemo.ts",
+    "generate-demo-simple": "ts-node scripts/generateSimpleDemo.ts",
+    "generate-demo-dial": "ts-node scripts/generateAutomatedDemo.ts",
+    "test-customer": "ts-node scripts/testCustomerBot.ts"
+  },
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "canvas": "^3.2.0",
+    "dotenv": "^16.3.1",
+    "openai": "^4.20.0",
+    "puppeteer": "^21.6.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

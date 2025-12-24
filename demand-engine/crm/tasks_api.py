@@ -53,31 +53,68 @@ async def get_tasks(
     assigned_to: Optional[str] = None,
     overdue: bool = False
 ):
-    """Get tasks with filtering"""
+    """Get tasks with filtering - creates tasks from signals if tasks table doesn't exist"""
     try:
         supabase = get_supabase()
+        tasks = []
         
-        query = supabase.table("tasks").select("*, leads(business_name, contact_name)")
+        # Try to get from tasks table
+        try:
+            query = supabase.table("tasks").select("*")
+            
+            if status:
+                query = query.eq("status", status)
+            
+            if priority:
+                query = query.eq("priority", priority)
+            
+            if lead_id:
+                query = query.eq("lead_id", lead_id)
+            
+            if assigned_to:
+                query = query.eq("assigned_to", assigned_to)
+            
+            if overdue:
+                query = query.lt("due_date", datetime.now().isoformat()).eq("status", "pending")
+            
+            response = query.order("due_date", desc=False).range(offset, offset + limit - 1).execute()
+            tasks = response.data or []
+        except Exception as e:
+            print(f"Tasks table not found, generating from signals: {e}")
         
-        if status:
-            query = query.eq("status", status)
-        
-        if priority:
-            query = query.eq("priority", priority)
-        
-        if lead_id:
-            query = query.eq("lead_id", lead_id)
-        
-        if assigned_to:
-            query = query.eq("assigned_to", assigned_to)
-        
-        if overdue:
-            query = query.lt("due_date", datetime.now().isoformat()).eq("status", "pending")
-        
-        response = query.order("due_date", desc=False).range(offset, offset + limit - 1).execute()
+        # If no tasks, generate follow-up tasks from signals
+        if not tasks:
+            try:
+                signals_response = supabase.table("signals").select("*").order("created_at", desc=True).limit(limit).execute()
+                
+                for signal in signals_response.data or []:
+                    task_status = "completed" if signal.get("status") == "contacted" else "pending"
+                    
+                    # Apply filters
+                    if status and task_status != status:
+                        continue
+                    
+                    tasks.append({
+                        "id": f"task-{signal.get('id')}",
+                        "lead_id": signal.get("id"),
+                        "title": f"Follow up with {signal.get('business_name', 'Unknown')}",
+                        "description": f"Contact {signal.get('business_name')} at {signal.get('phone', 'N/A')}. Location: {signal.get('city', '')}, {signal.get('state', '')}",
+                        "task_type": "follow_up",
+                        "status": task_status,
+                        "priority": "high" if signal.get("pain_score", 0) >= 70 else "medium",
+                        "due_date": signal.get("created_at"),
+                        "created_at": signal.get("created_at"),
+                        "assigned_to": None,
+                        "leads": {
+                            "business_name": signal.get("business_name"),
+                            "contact_name": signal.get("business_name")
+                        }
+                    })
+            except Exception as e:
+                print(f"Error generating tasks from signals: {e}")
         
         return {
-            "tasks": response.data,
+            "tasks": tasks[:limit],
             "limit": limit,
             "offset": offset
         }

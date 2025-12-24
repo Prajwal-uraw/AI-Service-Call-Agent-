@@ -23,7 +23,7 @@ scraper_image = (
 
 # Secrets for Modal (set via Modal dashboard)
 secrets = [
-    modal.Secret.from_name("demand-engine-secrets"),  # Contains all env vars
+    modal.Secret.from_name("hvac-agent-secrets"),  # Reuse existing HVAC agent secrets
 ]
 
 # Volume for caching (optional)

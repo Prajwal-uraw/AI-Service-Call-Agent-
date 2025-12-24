@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Phone, Check, AlertCircle, Settings, TestTube, Save } from "lucide-react";
-import { useToast } from "@/components/Toast";
+import { Phone, Check, AlertCircle, Settings, TestTube, Save, XCircle } from "lucide-react";
 
 export default function ForwardingOnboardingPage() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -16,7 +15,7 @@ export default function ForwardingOnboardingPage() {
   const [testSuccess, setTestSuccess] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
-  const { showToast } = useToast();
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
   const validatePhoneNumber = (phone: string): boolean => {
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
@@ -34,7 +33,8 @@ export default function ForwardingOnboardingPage() {
 
   const testForwarding = async () => {
     if (!validatePhoneNumber(forwardNumber)) {
-      showToast("error", "Please enter a valid phone number");
+      setNotification({type: "error", message: "Please enter a valid phone number"});
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
 
@@ -48,15 +48,20 @@ export default function ForwardingOnboardingPage() {
 
       if (response.ok) {
         setTestSuccess(true);
-        showToast("success", "Test call initiated successfully!");
-        setTimeout(() => setStep(3), 2000);
+        setNotification({type: "success", message: "Test call initiated successfully!"});
+        setTimeout(() => {
+          setNotification(null);
+          setStep(3);
+        }, 2000);
       } else {
         const error = await response.json();
-        showToast("error", error.detail || "Test call failed");
+        setNotification({type: "error", message: error.detail || "Test call failed"});
+        setTimeout(() => setNotification(null), 5000);
       }
     } catch (error) {
       console.error("Test failed:", error);
-      showToast("error", "Failed to initiate test call. Please check your connection.");
+      setNotification({type: "error", message: "Failed to initiate test call. Please check your connection."});
+      setTimeout(() => setNotification(null), 5000);
     } finally {
       setTesting(false);
     }
@@ -64,12 +69,14 @@ export default function ForwardingOnboardingPage() {
 
   const saveConfiguration = async () => {
     if (!validatePhoneNumber(forwardNumber)) {
-      showToast("error", "Please enter a valid phone number");
+      setNotification({type: "error", message: "Please enter a valid phone number"});
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
 
     if (missedCallSms && smsTemplate.length > 160) {
-      showToast("error", "SMS template must be 160 characters or less");
+      setNotification({type: "error", message: "SMS template must be 160 characters or less"});
+      setTimeout(() => setNotification(null), 5000);
       return;
     }
 
@@ -87,17 +94,19 @@ export default function ForwardingOnboardingPage() {
       });
 
       if (response.ok) {
-        showToast("success", "Configuration saved successfully!");
+        setNotification({type: "success", message: "Configuration saved successfully!"});
         setTimeout(() => {
           window.location.href = "/admin/portal";
         }, 1500);
       } else {
         const error = await response.json();
-        showToast("error", error.detail || "Failed to save configuration");
+        setNotification({type: "error", message: error.detail || "Failed to save configuration"});
+        setTimeout(() => setNotification(null), 5000);
       }
     } catch (error) {
       console.error("Save failed:", error);
-      showToast("error", "Failed to save configuration. Please try again.");
+      setNotification({type: "error", message: "Failed to save configuration. Please try again."});
+      setTimeout(() => setNotification(null), 5000);
     } finally {
       setSaving(false);
     }
@@ -105,6 +114,14 @@ export default function ForwardingOnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 z-50 ${notification.type === 'success' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border rounded-lg shadow-lg p-4 min-w-[300px] max-w-md flex items-start space-x-3 animate-fade-in`}>
+          {notification.type === 'success' ? <Check className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
+          <p className="flex-1 text-sm text-gray-900">{notification.message}</p>
+        </div>
+      )}
+      
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -292,14 +309,16 @@ export default function ForwardingOnboardingPage() {
               {/* SMS Template */}
               {missedCallSms && (
                 <div className="ml-9">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="sms-template" className="block text-sm font-medium text-gray-700 mb-2">
                     Missed Call SMS Template
                   </label>
                   <textarea
+                    id="sms-template"
                     value={smsTemplate}
                     onChange={(e) => setSmsTemplate(e.target.value)}
                     rows={3}
                     maxLength={160}
+                    aria-label="Missed Call SMS Template"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <p className="text-sm text-gray-500 mt-1">

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Kestrel — Customer Overview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Inter font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #FFFFFF;
+      --fg: #0B0D10;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --accent: #0B0D10;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    .deck {
+      display: flex;
+      transition: transform 0.6s ease;
+    }
+
+    .slide {
+      min-width: 100vw;
+      min-height: 100vh;
+      padding: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 56px;
+      font-weight: 600;
+      line-height: 1.15;
+      margin: 0 0 24px 0;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      font-size: 26px;
+      font-weight: 400;
+      line-height: 1.45;
+      margin: 0;
+      color: var(--muted);
+      max-width: 900px;
+    }
+
+    .strong { color: var(--fg); font-weight: 600; }
+
+    .hint {
+      position: absolute;
+      bottom: 32px;
+      left: 120px;
+      font-size: 14px;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 60px 40px; }
+      h1 { font-size: 40px; }
+      p { font-size: 22px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="deck" id="deck">
+
+  <!-- Slide 1 -->
+  <section class="slide">
+    <h1>Never miss another call.</h1>
+    <p>We make sure every customer who calls your business is answered professionally.</p>
+  </section>
+
+  <!-- Slide 2 -->
+  <section class="slide">
+    <h1>Your phone already costs money.</h1>
+    <p>Ads, SEO, referrals, and reputation all exist for one reason — to make it ring.</p>
+  </section>
+
+  <!-- Slide 3 -->
+  <section class="slide">
+    <h1>When no one answers,</h1>
+    <h1 class="strong">that money is wasted.</h1>
+    <p>Most customers don’t leave voicemails. They call someone else.</p>
+  </section>
+
+  <!-- Slide 4 -->
+  <section class="slide">
+    <h1>Kestrel answers every call.</h1>
+    <p>Daytime, after hours, weekends, and holidays.</p>
+  </section>
+
+  <!-- Slide 5 -->
+  <section class="slide">
+    <h1>It sounds human.</h1>
+    <p>Customers can interrupt, ask questions, and speak naturally.</p>
+  </section>
+
+  <!-- Slide 6 -->
+  <section class="slide">
+    <h1>It stays calm under pressure.</h1>
+    <p>No phone trees. No menus. No frustration.</p>
+  </section>
+
+  <!-- Slide 7 -->
+  <section class="slide">
+    <h1>Kestrel handles the basics.</h1>
+    <p>Booking requests, service details, callbacks, and urgent issues.</p>
+  </section>
+
+  <!-- Slide 8 -->
+  <section class="slide">
+    <h1>You stay in control.</h1>
+    <p>You decide how calls are handled and when a human steps in.</p>
+  </section>
+
+  <!-- Slide 9 -->
+  <section class="slide">
+    <h1>Nothing to replace.</h1>
+    <p>Kestrel works with your existing process. No system overhaul required.</p>
+  </section>
+
+  <!-- Slide 10 -->
+  <section class="slide">
+    <h1>No training required.</h1>
+    <p>Customers just talk. Your team just sees the results.</p>
+  </section>
+
+  <!-- Slide 11 -->
+  <section class="slide">
+    <h1>What businesses notice first:</h1>
+    <p>
+      • Fewer missed calls<br>
+      • More booked appointments<br>
+      • Less front-office stress
+    </p>
+  </section>
+
+  <!-- Slide 12 -->
+  <section class="slide">
+    <h1>What customers notice:</h1>
+    <p>They get help immediately.</p>
+  </section>
+
+  <!-- Slide 13 -->
+  <section class="slide">
+    <h1>Built for HVAC first.</h1>
+    <p>Urgent calls. Real people. High expectations.</p>
+  </section>
+
+  <!-- Slide 14 -->
+  <section class="slide">
+    <h1>Simple to start.</h1>
+    <p>We connect one phone number and show you the difference.</p>
+  </section>
+
+  <!-- Slide 15 -->
+  <section class="slide">
+    <h1>Costs less than a missed job.</h1>
+    <p>And works every hour of every day.</p>
+  </section>
+
+  <!-- Slide 16 -->
+  <section class="slide">
+    <h1>You focus on service.</h1>
+    <p>We handle the phone.</p>
+  </section>
+
+  <!-- Slide 17 -->
+  <section class="slide">
+    <h1>Kestrel.</h1>
+    <p>Professional call handling for growing service businesses.</p>
+  </section>
+
+</div>
+
+<div class="hint">Use ← → arrow keys</div>
+
+<script>
+  let index = 0;
+  const deck = document.getElementById('deck');
+  const total = deck.children.length;
+
+  function update() {
+    deck.style.transform = `translateX(-${index * 100}vw)`;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' && index < total - 1) {
+      index++;
+      update();
+    }
+    if (e.key === 'ArrowLeft' && index > 0) {
+      index--;
+      update();
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -50,21 +50,62 @@ async def get_templates(
     category: Optional[str] = None,
     active_only: bool = True
 ):
-    """Get all email templates"""
+    """Get all email templates - returns default templates if table doesn't exist"""
     try:
         supabase = get_supabase()
         
-        query = supabase.table("email_templates").select("*")
+        try:
+            query = supabase.table("email_templates").select("*")
+            
+            if active_only:
+                query = query.eq("is_active", True)
+            
+            if category:
+                query = query.eq("category", category)
+            
+            response = query.order("created_at", desc=True).execute()
+            
+            if response.data:
+                return response.data
+        except Exception as e:
+            print(f"email_templates table not found, using defaults: {e}")
         
-        if active_only:
-            query = query.eq("is_active", True)
-        
-        if category:
-            query = query.eq("category", category)
-        
-        response = query.order("created_at", desc=True).execute()
-        
-        return response.data
+        # Return default templates if table doesn't exist
+        return [
+            {
+                "id": "1",
+                "name": "Welcome Email",
+                "description": "Welcome new leads to your service",
+                "category": "onboarding",
+                "subject": "Welcome to {{company_name}}!",
+                "preview_text": "We're excited to have you",
+                "html_content": "<h1>Welcome!</h1><p>Thank you for your interest in our HVAC services.</p>",
+                "is_active": True,
+                "created_at": datetime.now().isoformat()
+            },
+            {
+                "id": "2",
+                "name": "Follow-up Email",
+                "description": "Follow up with leads after initial contact",
+                "category": "follow_up",
+                "subject": "Following up on your HVAC needs",
+                "preview_text": "Just checking in",
+                "html_content": "<h1>Hi {{first_name}},</h1><p>We wanted to follow up on your recent inquiry.</p>",
+                "is_active": True,
+                "created_at": datetime.now().isoformat()
+            },
+            {
+                "id": "3",
+                "name": "Seasonal Maintenance",
+                "description": "Remind customers about seasonal HVAC maintenance",
+                "category": "marketing",
+                "subject": "Time for your seasonal HVAC checkup!",
+                "preview_text": "Don't wait until it's too late",
+                "html_content": "<h1>Seasonal Maintenance Reminder</h1><p>Schedule your HVAC maintenance today.</p>",
+                "is_active": True,
+                "created_at": datetime.now().isoformat()
+            }
+        ]
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
