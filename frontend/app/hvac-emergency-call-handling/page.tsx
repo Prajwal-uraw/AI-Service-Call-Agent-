@@ -1,5 +1,4 @@
-'use client';
-
+import { Metadata } from 'next';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/seo/PageHero';
@@ -7,6 +6,24 @@ import ContentSection from '@/components/seo/ContentSection';
 import FAQAccordion from '@/components/seo/FAQAccordion';
 import { AlertTriangle, Thermometer, Zap, Shield, Clock, TrendingUp, CheckCircle, Phone } from 'lucide-react';
 import Link from 'next/link';
+import LastUpdated from '@/components/seo/LastUpdated';
+
+export const metadata: Metadata = {
+  title: 'HVAC Emergency Call Handling | AI-Powered Triage System | Kestrel',
+  description: 'Intelligent emergency call handling for HVAC companies. Triage urgent calls, route to on-call techs, handle no-heat and AC failures with AI precision.',
+  keywords: 'hvac emergency calls, emergency triage, hvac on-call, no heat emergency, ac failure emergency',
+  openGraph: {
+    title: 'HVAC Emergency Call Handling | AI Triage System',
+    description: 'AI-powered emergency call handling for HVAC. Intelligent triage, instant routing, 24/7 emergency response.',
+    type: 'website',
+    url: 'https://kestrelai.com/hvac-emergency-call-handling',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HVAC Emergency Call Handling | AI-Powered Triage',
+    description: 'Intelligent emergency call handling for HVAC companies. AI triage and routing.',
+  },
+};
 
 export default function HVACEmergencyCallHandling() {
   const stats = [

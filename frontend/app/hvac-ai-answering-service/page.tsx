@@ -1,5 +1,3 @@
-'use client';
-
 import { Metadata } from 'next';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
@@ -9,6 +7,24 @@ import ComparisonTable from '@/components/seo/ComparisonTable';
 import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Zap, Clock, TrendingUp, Shield, Phone, CheckCircle, DollarSign, Users, Calendar, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import LastUpdated from '@/components/seo/LastUpdated';
+
+export const metadata: Metadata = {
+  title: 'HVAC AI Answering Service | 24/7 Call Handling | Kestrel',
+  description: 'AI-powered answering service for HVAC companies. Answer 100% of calls in 200ms, book appointments instantly, integrate with ServiceTitan. Save $42K/year vs hiring.',
+  keywords: 'hvac answering service, hvac ai, 24/7 hvac calls, hvac call handling, servicetitan integration, hvac virtual receptionist',
+  openGraph: {
+    title: 'HVAC AI Answering Service | Never Miss Another Call',
+    description: 'Answer every HVAC call in 200ms with AI. Book appointments instantly, handle emergencies 24/7, integrate with ServiceTitan.',
+    type: 'website',
+    url: 'https://kestrelai.com/hvac-ai-answering-service',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HVAC AI Answering Service | 24/7 Call Handling',
+    description: 'AI-powered answering service for HVAC companies. 200ms response, 24/7 availability, ServiceTitan integration.',
+  },
+};
 
 export default function HVACAIAnsweringService() {
   const stats = [
@@ -109,6 +125,9 @@ export default function HVACAIAnsweringService() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="12" />
+        </div>
         <PageHero
           badge="Proven in HVAC. Built for Service Industries."
           title="AI Answering Service for HVAC Companies"

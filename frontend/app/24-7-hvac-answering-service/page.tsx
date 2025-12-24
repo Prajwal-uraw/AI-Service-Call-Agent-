@@ -1,5 +1,4 @@
-'use client';
-
+import { Metadata } from 'next';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/seo/PageHero';
@@ -8,6 +7,24 @@ import ComparisonTable from '@/components/seo/ComparisonTable';
 import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Clock, Moon, DollarSign, TrendingUp, AlertCircle, CheckCircle, Phone, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import LastUpdated from '@/components/seo/LastUpdated';
+
+export const metadata: Metadata = {
+  title: '24/7 HVAC Answering Service | Never Miss Emergency Calls | Kestrel',
+  description: 'Round-the-clock AI answering service for HVAC companies. Handle emergencies at 3 AM, book appointments after hours, capture every opportunity 24/7/365.',
+  keywords: '24/7 hvac answering, after hours hvac calls, hvac emergency service, round the clock answering service',
+  openGraph: {
+    title: '24/7 HVAC Answering Service | Always Available',
+    description: 'Never miss another emergency call. AI-powered 24/7 answering service for HVAC companies handles calls at 3 AM, weekends, and holidays.',
+    type: 'website',
+    url: 'https://kestrelai.com/24-7-hvac-answering-service',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '24/7 HVAC Answering Service | Never Miss Emergency Calls',
+    description: 'Round-the-clock AI answering service for HVAC. Handle emergencies 24/7/365.',
+  },
+};
 
 export default function TwentyFourSevenHVACAnsweringService() {
   const stats = [

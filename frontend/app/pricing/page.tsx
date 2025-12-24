@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Metadata } from 'next';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import PageHero from '@/components/seo/PageHero';
@@ -8,6 +9,10 @@ import ContentSection from '@/components/seo/ContentSection';
 import FAQAccordion from '@/components/seo/FAQAccordion';
 import { CheckCircle, DollarSign, Zap, TrendingUp, ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
+import LastUpdated from '@/components/seo/LastUpdated';
+
+// Note: Metadata export not possible in client components
+// SEO handled via next/head in component
 
 export default function Pricing() {
   const stats = [
