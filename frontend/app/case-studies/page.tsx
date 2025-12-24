@@ -265,7 +265,7 @@ export default function CaseStudiesPage() {
             </div>
           </div>
         </section>
-      </div>
+      </main>
       <Sources sources={[
         { id: 1, citation: 'Kestrel AI Customer Case Studies (2024) - Verified results from HVAC companies with customer permission' },
         { id: 2, citation: 'Average metrics across 200+ HVAC companies: 40% revenue increase, 99.8% call answer rate, 2.3 weeks payback' },
