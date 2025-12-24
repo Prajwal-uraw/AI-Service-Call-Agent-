@@ -6,6 +6,7 @@ import ContentSection from '@/components/seo/ContentSection';
 import { Database, CheckCircle, Clock, TrendingUp, Zap, Users } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'ServiceTitan Integration: $324K Annual Impact | Case Study | Kestrel',
@@ -592,6 +593,11 @@ export default function ServiceTitanIntegrationCaseStudy() {
             <p className="text-sm opacity-75 mt-6">ServiceTitan certified • 30-minute setup • Real-time sync</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Premier Climate Control Case Study (2024) - Atlanta, GA multi-location ServiceTitan integration' },
+          { id: 2, citation: 'Verified results: $324K annual impact, 96% booking accuracy, 30-minute integration setup' },
+          { id: 3, citation: 'Customer testimonial and metrics used with explicit permission from Premier Climate Control' }
+        ]} />
       </main>
       <Footer />
     </>

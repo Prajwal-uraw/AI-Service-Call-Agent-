@@ -6,6 +6,7 @@ import ContentSection from '@/components/seo/ContentSection';
 import { TrendingUp, DollarSign, CheckCircle, Clock, Phone, Users } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: '40% Revenue Increase: Dallas Plumbing Success | Case Study | Kestrel',
@@ -527,6 +528,11 @@ export default function RevenueIncreaseCaseStudy() {
             </div>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Elite Plumbing Solutions Case Study (June 2024) - Dallas, TX operational transformation' },
+          { id: 2, citation: 'Verified results: 40% revenue increase, $156K additional annual revenue, 81% booking rate vs 58% before' },
+          { id: 3, citation: 'Customer testimonial and metrics used with explicit permission from Elite Plumbing Solutions' }
+        ]} />
       </main>
       <Footer />
     </>
