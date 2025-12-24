@@ -9,6 +9,9 @@ import {
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { createClient } from '@/lib/supabase/client';
 
+// Force dynamic rendering to avoid build-time Supabase client creation
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [scrapedLeads, setScrapedLeads] = useState<any[]>([]);

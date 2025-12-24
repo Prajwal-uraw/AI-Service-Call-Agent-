@@ -6,6 +6,9 @@ import { LogIn, Mail, Lock, ArrowRight, Github } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { setAuthToken } from '@/lib/auth';
 
+// Force dynamic rendering to avoid build-time Supabase client creation
+export const dynamic = 'force-dynamic';
+
 export default function LoginPageWithSupabase() {
   const router = useRouter();
   const supabase = createClient();
