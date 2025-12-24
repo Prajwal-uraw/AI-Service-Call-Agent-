@@ -25,6 +25,38 @@ export const metadata: Metadata = {
     title: 'HVAC AI Answering Service | 24/7 Call Handling',
     description: 'AI-powered answering service for HVAC companies. 200ms response, 24/7 availability, ServiceTitan integration.',
   },
+  other: {
+    'application/ld+json': JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      'mainEntity': [
+        {
+          '@type': 'Question',
+          'name': 'How does an AI answering service differ from a traditional answering service?',
+          'acceptedAnswer': {
+            '@type': 'Answer',
+            'text': 'Unlike traditional services that rely on human operators, Kestrel AI responds in 200ms, never takes breaks, and handles unlimited calls simultaneously. It integrates directly with your ServiceTitan or Jobber account, automatically books appointments, and routes emergencies based on your custom protocols.'
+          }
+        },
+        {
+          '@type': 'Question',
+          'name': 'Can the AI handle emergency HVAC calls?',
+          'acceptedAnswer': {
+            '@type': 'Answer',
+            'text': 'Absolutely. Kestrel AI is specifically trained on HVAC emergency protocols. It can identify urgent situations (no heat in winter, gas leaks, AC failures in extreme heat), triage based on severity, and immediately dispatch to your on-call technician or emergency line.'
+          }
+        },
+        {
+          '@type': 'Question',
+          'name': 'What is the ROI compared to hiring a 24/7 receptionist?',
+          'acceptedAnswer': {
+            '@type': 'Answer',
+            'text': 'A 24/7 human receptionist costs $60,000-$90,000/year plus benefits. Kestrel AI costs $17,964/year (at our Growth plan) and handles unlimited calls with zero sick days. Most clients see ROI within 60 days from recovered missed calls alone.'
+          }
+        }
+      ]
+    })
+  }
 };
 
 export default function HVACAIAnsweringService() {
