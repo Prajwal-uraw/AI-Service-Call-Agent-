@@ -80,6 +80,9 @@ export default function HVACMissedCallManagement() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="15" />
+        </div>
         <PageHero
           badge="Stop Losing $47K/Year to Missed Calls"
           title="HVAC Missed Call Management - Never Miss Revenue Again"

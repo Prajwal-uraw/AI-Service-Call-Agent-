@@ -80,6 +80,9 @@ export default function AutomatedHVACAppointmentBooking() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="16" />
+        </div>
         <PageHero
           badge="Book More Appointments, Eliminate Scheduling Bottlenecks"
           title="Automated HVAC Appointment Booking - Instant Scheduling 24/7"

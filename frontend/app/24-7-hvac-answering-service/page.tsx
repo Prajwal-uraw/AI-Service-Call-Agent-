@@ -92,6 +92,9 @@ export default function TwentyFourSevenHVACAnsweringService() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="11" />
+        </div>
         <PageHero
           badge="Never Miss Another Emergency Call"
           title="24/7 HVAC Answering Service - After Hours Coverage That Works"

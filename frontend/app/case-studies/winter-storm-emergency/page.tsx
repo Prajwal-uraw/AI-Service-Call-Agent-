@@ -36,6 +36,9 @@ export default function WinterStormCaseStudy() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="10" />
+        </div>
         <PageHero
           badge="Case Study"
           title="Winter Storm Emergency: 847 Calls in 72 Hours"

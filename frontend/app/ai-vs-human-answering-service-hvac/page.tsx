@@ -94,6 +94,9 @@ export default function AIvsHumanAnsweringServiceHVAC() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="17" />
+        </div>
         <PageHero
           badge="The Definitive Comparison for HVAC Companies"
           title="AI vs. Human Answering Services for HVAC: 2025 Comparison"

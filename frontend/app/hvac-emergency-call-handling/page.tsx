@@ -80,6 +80,9 @@ export default function HVACEmergencyCallHandling() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="13" />
+        </div>
         <PageHero
           badge="Never Miss a Critical Emergency Call"
           title="HVAC Emergency Call Handling That Works 24/7"

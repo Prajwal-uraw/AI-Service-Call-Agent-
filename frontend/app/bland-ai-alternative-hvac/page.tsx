@@ -94,6 +94,9 @@ export default function BlandAIAlternativeHVAC() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="15" />
+        </div>
         <PageHero
           badge="Managed Service vs. DIY Platform"
           title="Bland AI Alternative for HVAC - Pre-Built vs. Build-Your-Own"

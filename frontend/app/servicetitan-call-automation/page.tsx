@@ -80,6 +80,9 @@ export default function ServiceTitanCallAutomation() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="16" />
+        </div>
         <PageHero
           badge="Native ServiceTitan Integration"
           title="ServiceTitan Call Automation - Instant Booking & Two-Way Sync"

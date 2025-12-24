@@ -94,6 +94,9 @@ export default function VAPIAlternativeHVAC() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="16" />
+        </div>
         <PageHero
           badge="Why HVAC Companies Are Leaving VAPI"
           title="VAPI Alternative for HVAC - Managed Service vs. DIY Platform"

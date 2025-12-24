@@ -36,6 +36,9 @@ export default function ServiceTitanIntegrationCaseStudy() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="12" />
+        </div>
         <PageHero
           badge="Case Study"
           title="ServiceTitan Integration: $324K Annual Impact"

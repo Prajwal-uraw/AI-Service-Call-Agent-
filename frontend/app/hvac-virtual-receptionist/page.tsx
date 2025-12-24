@@ -94,6 +94,9 @@ export default function HVACVirtualReceptionist() {
     <>
       <Navigation />
       <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="14" />
+        </div>
         <PageHero
           badge="The Modern Alternative to Traditional Receptionists"
           title="HVAC Virtual Receptionist - AI-Powered Phone Answering"
