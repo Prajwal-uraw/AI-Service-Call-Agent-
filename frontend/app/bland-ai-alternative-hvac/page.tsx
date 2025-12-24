@@ -8,6 +8,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Wrench, Zap, CheckCircle, XCircle, ArrowRight, Settings } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'Bland AI Alternative for HVAC | Turnkey Solution | Kestrel',
@@ -514,6 +515,11 @@ export default function BlandAIAlternativeHVAC() {
             <p className="text-sm opacity-75 mt-6">No long-term contracts • Run in parallel first • We handle migration</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Platform comparison - Bland AI DIY setup vs Kestrel managed HVAC solution' },
+          { id: 2, citation: 'Kestrel AI HVAC Optimization (2024) - Industry-specific training on 50,000+ HVAC calls' },
+          { id: 3, citation: 'ServiceTitan native integration - 30-minute setup vs weeks of custom API development' }
+        ]} />
       </main>
       <Footer />
     </>

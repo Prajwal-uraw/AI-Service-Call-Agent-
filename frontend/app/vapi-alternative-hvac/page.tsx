@@ -8,6 +8,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Code, Wrench, Zap, Clock, CheckCircle, XCircle, ArrowRight, Shield } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'VAPI Alternative for HVAC | Managed AI Service vs DIY | Kestrel',
@@ -593,6 +594,11 @@ export default function VAPIAlternativeHVAC() {
             <p className="text-sm opacity-75 mt-6">No long-term contracts • Run in parallel first • We handle the migration</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'VAPI platform comparison - DIY setup time 40+ hours vs Kestrel 48-hour managed deployment' },
+          { id: 2, citation: 'Kestrel AI HVAC-Specific Features (2024) - Pre-built emergency protocols, ServiceTitan integration' },
+          { id: 3, citation: 'Customer migration data - 99% of VAPI switchers remain with Kestrel after 6 months' }
+        ]} />
       </main>
       <Footer />
     </>

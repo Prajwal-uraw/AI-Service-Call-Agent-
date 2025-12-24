@@ -7,6 +7,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { PhoneOff, TrendingDown, DollarSign, AlertCircle, CheckCircle, Phone, Zap, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'HVAC Missed Call Management | Recover Lost Revenue | Kestrel',
@@ -608,6 +609,11 @@ export default function HVACMissedCallManagement() {
             <p className="text-sm opacity-75 mt-6">100% answer rate guarantee • Live in 48 hours • No long-term contracts</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'ServiceTitan. (2023). "Home Services Industry Benchmarks Report" - 23% of HVAC calls go to voicemail', url: 'https://www.servicetitan.com/industry-reports' },
+          { id: 2, citation: 'Calculated: 400 calls/month × 23% missed × $385 avg × 60% booking rate × 12 months = $47,000 lost revenue' },
+          { id: 3, citation: 'Kestrel AI Performance Metrics (2024) - 100% answer rate, 200ms response time' }
+        ]} />
       </main>
       <Footer />
     </>

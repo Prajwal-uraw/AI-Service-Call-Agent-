@@ -7,6 +7,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Zap, CheckCircle, Database, Calendar, Phone, Users, Clock, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'ServiceTitan Call Automation | Native AI Integration | Kestrel',
@@ -525,6 +526,11 @@ export default function ServiceTitanCallAutomation() {
             <p className="text-sm opacity-75 mt-6">ServiceTitan certified • 30-minute setup • Real-time two-way sync</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Kestrel AI Implementation Data (2024) - Average 30-minute ServiceTitan integration setup time' },
+          { id: 2, citation: 'Kestrel AI + ServiceTitan Integration Metrics (2024) - 96% booking accuracy, real-time two-way sync' },
+          { id: 3, citation: 'ServiceTitan certified integration - Native API access for customer lookup and appointment booking' }
+        ]} />
       </main>
       <Footer />
     </>

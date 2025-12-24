@@ -8,6 +8,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { Users, Zap, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, Brain } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'AI vs Human Answering Service for HVAC | Complete Comparison | Kestrel',
@@ -624,6 +625,11 @@ export default function AIvsHumanAnsweringServiceHVAC() {
             <p className="text-sm opacity-75 mt-6">14-day pilot program • No long-term contracts • Cancel anytime</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Kestrel AI Customer Comparison Study (2024) - Before/after analysis of 100+ HVAC companies' },
+          { id: 2, citation: 'Traditional answering service pricing: $3,000-5,000/month vs Kestrel $1,997/month' },
+          { id: 3, citation: 'Kestrel AI Performance Metrics (2024) - 99.2% accuracy, 200ms response time' }
+        ]} />
       </main>
       <Footer />
     </>
