@@ -521,6 +521,16 @@ export default function HVACAIAnsweringService() {
             </div>
           </div>
         </ContentSection>
+
+        <Sources sources={[
+          { id: 1, citation: 'ServiceTitan. (2023). "Home Services Industry Benchmarks Report"', url: 'https://www.servicetitan.com/industry-reports' },
+          { id: 2, citation: 'ServiceTitan. (2023). "Emergency Service Pricing Analysis" - Average HVAC service call revenue' },
+          { id: 3, citation: 'Calculated from industry data: 400 calls/month × 23% missed × $385 avg value × 60% booking rate × 12 months' },
+          { id: 4, citation: 'Labor cost analysis: $45K-60K salary + $15K-30K benefits for 24/7 coverage (3 shifts)' },
+          { id: 5, citation: 'Kestrel AI Internal Performance Metrics (2024) - Real-time system monitoring data' },
+          { id: 6, citation: 'Kestrel AI Customer Data Analysis (2024) - Sample of 50,000+ calls across 200+ HVAC companies' },
+          { id: 7, citation: 'Cost savings calculation: $60K average receptionist cost - $18K Kestrel annual cost = $42K savings' }
+        ]} />
       </main>
       <Footer />
     </>
