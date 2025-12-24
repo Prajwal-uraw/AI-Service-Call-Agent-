@@ -177,3 +177,10 @@ FIXES_SUMMARY.md
 LOGIN_FIX_REPORT.md
 SYSTEM_AUDIT_REPORT.md
 TROUBLESHOOTING_GUIDE.md
+
+# ===========================================
+# Documentation with Sensitive Data
+# ===========================================
+ai-demo-call/DAILY_RECORDING_SETUP.md
+MODAL_SECRETS_FIX.md
+SESSION_COMPLETE_DEC23.md
