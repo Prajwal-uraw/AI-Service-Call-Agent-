@@ -6,6 +6,7 @@ import ContentSection from '@/components/seo/ContentSection';
 import { TrendingUp, Phone, Clock, DollarSign, CheckCircle, AlertCircle, Zap } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'Winter Storm Emergency: 847 Calls in 72 Hours | Case Study | Kestrel',
@@ -430,6 +431,11 @@ export default function WinterStormCaseStudy() {
             </div>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'Comfort Pro HVAC Case Study (February 2024) - Phoenix, AZ winter storm emergency response' },
+          { id: 2, citation: 'Verified results: 847 calls in 72 hours, 100% answer rate, $287K revenue captured' },
+          { id: 3, citation: 'Customer testimonial and metrics used with explicit permission from Comfort Pro HVAC' }
+        ]} />
       </main>
       <Footer />
     </>

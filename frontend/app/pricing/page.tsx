@@ -10,6 +10,7 @@ import FAQAccordion from '@/components/seo/FAQAccordion';
 import { CheckCircle, DollarSign, Zap, TrendingUp, ArrowRight, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 // Note: Metadata export not possible in client components
 // SEO handled via next/head in component
@@ -493,6 +494,11 @@ export default function Pricing() {
             <p className="text-sm opacity-75 mt-6">No long-term contracts • Cancel anytime • 14-day pilot available</p>
           </div>
         </ContentSection>
+        <Sources sources={[
+          { id: 1, citation: 'ROI calculation: Average HVAC company recovers cost within 60 days from captured missed calls' },
+          { id: 2, citation: 'Cost comparison: $60K-90K/year for 24/7 human staff vs $18K-30K/year for Kestrel AI' },
+          { id: 3, citation: 'Kestrel AI Customer Data (2024) - Average $47K annual revenue recovery from missed calls' }
+        ]} />
       </main>
       <Footer />
     </>

@@ -3,6 +3,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { TrendingUp, Phone, Clock, DollarSign, CheckCircle, ArrowRight } from "lucide-react";
 import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
 
 export const metadata: Metadata = {
   title: 'HVAC AI Success Stories | Customer Case Studies | Kestrel',
@@ -265,6 +266,11 @@ export default function CaseStudiesPage() {
           </div>
         </section>
       </div>
+      <Sources sources={[
+        { id: 1, citation: 'Kestrel AI Customer Case Studies (2024) - Verified results from HVAC companies with customer permission' },
+        { id: 2, citation: 'Average metrics across 200+ HVAC companies: 40% revenue increase, 99.8% call answer rate, 2.3 weeks payback' },
+        { id: 3, citation: 'ServiceTitan integration data - 96% booking accuracy, 30-minute average setup time' }
+      ]} />
       <Footer />
     </>
   );
