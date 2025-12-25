@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+// Use server-side env var (not NEXT_PUBLIC_)
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    
+    console.log('[Outbound Call] Initiating call to:', body.to_number);
+    console.log('[Outbound Call] Backend URL:', BACKEND_URL);
     
     const response = await fetch(`${BACKEND_URL}/api/outbound-calls/initiate`, {
       method: 'POST',
@@ -14,20 +18,36 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(body),
     });
 
+    console.log('[Outbound Call] Backend response status:', response.status);
+
     if (!response.ok) {
-      const error = await response.json();
+      let errorDetail = 'Failed to initiate call';
+      try {
+        const error = await response.json();
+        errorDetail = error.detail || error.message || errorDetail;
+      } catch (e) {
+        const errorText = await response.text();
+        console.error('[Outbound Call] Error response:', errorText);
+        errorDetail = errorText || errorDetail;
+      }
+      
       return NextResponse.json(
-        { error: error.detail || 'Failed to initiate call' },
+        { error: errorDetail },
         { status: response.status }
       );
     }
 
     const data = await response.json();
+    console.log('[Outbound Call] Success:', data.call_sid);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error initiating outbound call:', error);
+    console.error('[Outbound Call] Exception:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: errorMessage,
+        details: 'Check that backend server is running and Twilio credentials are configured'
+      },
       { status: 500 }
     );
   }

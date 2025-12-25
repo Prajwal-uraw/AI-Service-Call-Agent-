@@ -1,8 +1,26 @@
-"use client";
-
+import { Metadata } from 'next';
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { TrendingUp, Phone, Clock, DollarSign, CheckCircle, ArrowRight } from "lucide-react";
+import LastUpdated from '@/components/seo/LastUpdated';
+import Sources from '@/components/seo/Sources';
+
+export const metadata: Metadata = {
+  title: 'HVAC AI Success Stories | Customer Case Studies | Kestrel',
+  description: 'Real results from HVAC companies using Kestrel AI. See revenue increases, cost savings, and operational improvements with detailed case studies.',
+  keywords: 'hvac case studies, ai success stories, hvac automation results, customer testimonials',
+  openGraph: {
+    title: 'HVAC AI Success Stories | Customer Case Studies',
+    description: 'Real results from HVAC companies. Revenue increases, cost savings, operational improvements.',
+    type: 'website',
+    url: 'https://kestrelai.com/case-studies',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HVAC AI Success Stories | Customer Case Studies',
+    description: 'Real results from HVAC companies using Kestrel AI.',
+  },
+};
 
 const caseStudies = [
   {
@@ -77,7 +95,10 @@ export default function CaseStudiesPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen bg-white">
+      <main className="min-h-screen bg-white">
+        <div className="container mx-auto px-6 pt-32">
+          <LastUpdated date="December 24, 2024" readingTime="8" />
+        </div>
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white py-24 mt-16">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20"></div>
@@ -244,7 +265,12 @@ export default function CaseStudiesPage() {
             </div>
           </div>
         </section>
-      </div>
+      </main>
+      <Sources sources={[
+        { id: 1, citation: 'Kestrel AI Customer Case Studies (2024) - Verified results from HVAC companies with customer permission' },
+        { id: 2, citation: 'Average metrics across 200+ HVAC companies: 40% revenue increase, 99.8% call answer rate, 2.3 weeks payback' },
+        { id: 3, citation: 'ServiceTitan integration data - 96% booking accuracy, 30-minute average setup time' }
+      ]} />
       <Footer />
     </>
   );

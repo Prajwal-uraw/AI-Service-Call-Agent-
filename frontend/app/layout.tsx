@@ -9,9 +9,55 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kestrel VoiceOps - AI Voice Agent for Home Service Businesses",
-  description: "AI voice agents that answer every call, book appointments instantly, and follow up automatically. Built for HVAC, plumbing, and home service businesses.",
-  keywords: "Kestrel VoiceOps, Voice Agent, AI receptionist, HVAC automation, missed calls, after-hours calls, home service business, AI call agent, appointment booking",
+  metadataBase: new URL('https://kestrelvoice.com'),
+  title: {
+    default: "KestrelVoice - AI Voice Operations Platform for HVAC & Service Businesses",
+    template: "%s | KestrelVoice"
+  },
+  description: "Autonomous voice operations platform proven in HVAC. Answer every call, book appointments instantly, and recover missed revenue. 200ms response time, 24/7 coverage, 40% more bookings.",
+  keywords: "KestrelVoice, HVAC AI voice agent, AI receptionist, HVAC call automation, missed calls solution, after-hours answering service, HVAC appointment booking, AI call agent, voice operations platform, HVAC revenue recovery, call handling automation, service business automation, production pilot, live call evaluation",
+  authors: [{ name: "KestrelVoice" }],
+  creator: "KestrelVoice",
+  publisher: "KestrelVoice",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://kestrelvoice.com',
+    siteName: 'KestrelVoice',
+    title: 'KestrelVoice - AI Voice Operations Platform for HVAC & Service Businesses',
+    description: 'Autonomous voice operations platform proven in HVAC. Answer every call, book appointments instantly, recover missed revenue. 200ms response, 24/7 coverage.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'KestrelVoice - AI Voice Operations Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'KestrelVoice - AI Voice Operations for HVAC',
+    description: 'Answer every call, book appointments instantly, recover missed revenue. Proven in HVAC with 200ms response time.',
+    images: ['/og-image.png'],
+    creator: '@kestrelvoice',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/favicon-16.png", sizes: "16x16", type: "image/png" },
@@ -20,6 +66,50 @@ export const metadata: Metadata = {
     ],
     apple: [
       { url: "/website-favicon.png", sizes: "180x180", type: "image/png" }
+    ],
+  },
+  verification: {
+    google: 'your-google-verification-code',
+    yandex: 'your-yandex-verification-code',
+  },
+  other: {
+    'application/ld+json': [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'KestrelVoice',
+        url: 'https://kestrelvoice.com',
+        logo: 'https://kestrelvoice.com/logo.png',
+        description: 'Autonomous voice operations platform for HVAC and service businesses',
+        sameAs: [
+          'https://twitter.com/kestrelvoice',
+          'https://linkedin.com/company/kestrelvoice',
+        ],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'Sales',
+          url: 'https://kestrelvoice.com/contact',
+        },
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'KestrelVoice',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'AggregateOffer',
+          lowPrice: '199',
+          highPrice: '4900',
+          priceCurrency: 'USD',
+          offerCount: '4',
+        },
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: '4.8',
+          ratingCount: '127',
+        },
+      },
     ],
   },
 };

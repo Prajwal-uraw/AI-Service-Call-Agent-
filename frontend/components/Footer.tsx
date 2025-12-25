@@ -5,12 +5,12 @@ export default function Footer() {
     <footer className="bg-neutral-900 text-neutral-400 py-20 border-t border-neutral-800">
       <div className="container mx-auto px-6 max-w-7xl">
         
-        <div className="grid md:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-6 gap-8 mb-12">
           
           <div className="md:col-span-2">
-            <h3 className="text-white font-bold text-xl mb-3">Kestrel AI</h3>
+            <h3 className="text-white font-bold text-xl mb-3">KestrelVoice</h3>
             <p className="text-sm text-neutral-500 leading-relaxed mb-6">
-              AI voice agents that answer every call, book appointments instantly, and follow up automatically. Built for home service businesses.
+              Voice operations platform for service businesses. Built for operators who want results, not experiments.
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-neutral-400 hover:text-white transition-colors" aria-label="Follow us on Twitter">
@@ -28,30 +28,42 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Product</h4>
             <ul className="space-y-3 text-sm">
+              <li><Link href="/" className="text-neutral-500 hover:text-white transition-colors">Home</Link></li>
               <li><Link href="/#features" className="text-neutral-500 hover:text-white transition-colors">Features</Link></li>
               <li><Link href="/#pricing" className="text-neutral-500 hover:text-white transition-colors">Pricing</Link></li>
+              <li><Link href="/production-pilot" className="text-neutral-500 hover:text-white transition-colors">Production Pilot</Link></li>
+              <li><Link href="/sample-report" className="text-neutral-500 hover:text-white transition-colors">Sample Report</Link></li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 className="text-white font-semibold text-sm mb-4">Resources</h4>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/hvac-call-automation-report-2024" className="text-neutral-500 hover:text-white transition-colors">HVAC Report 2024</Link></li>
+              <li><Link href="/hvac-call-automation-report-2024" className="text-neutral-500 hover:text-white transition-colors">Whitepaper</Link></li>
               <li><Link href="/docs" className="text-neutral-500 hover:text-white transition-colors">Documentation</Link></li>
-              <li><Link href="/calendar" className="text-neutral-500 hover:text-white transition-colors">Book Demo</Link></li>
+              <li><Link href="/demo" className="text-neutral-500 hover:text-white transition-colors">Live Demo</Link></li>
+              <li><Link href="/calendar" className="text-neutral-500 hover:text-white transition-colors">Book Meeting</Link></li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Company</h4>
             <ul className="space-y-3 text-sm">
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">About</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Case Studies</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Blog</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Careers</a></li>
+              <li><Link href="/about" className="text-neutral-500 hover:text-white transition-colors">About Us</Link></li>
+              <li><Link href="/contact" className="text-neutral-500 hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/blog" className="text-neutral-500 hover:text-white transition-colors">Blog</Link></li>
+              <li><Link href="/case-studies" className="text-neutral-500 hover:text-white transition-colors">Case Studies</Link></li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-white font-semibold text-sm mb-4">Legal</h4>
             <ul className="space-y-3 text-sm">
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Privacy</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Terms</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Security</a></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white transition-colors">Compliance</a></li>
+              <li><Link href="/privacy" className="text-neutral-500 hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-neutral-500 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/security" className="text-neutral-500 hover:text-white transition-colors">Security</Link></li>
+              <li><Link href="/compliance" className="text-neutral-500 hover:text-white transition-colors">Compliance</Link></li>
             </ul>
           </div>
           

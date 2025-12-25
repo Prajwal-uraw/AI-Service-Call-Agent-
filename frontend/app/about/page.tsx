@@ -2,6 +2,7 @@
 
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
+import PilotCTA from '@/components/PilotCTA';
 import { Target, Users, Zap, Shield, Award, TrendingUp, Heart, Rocket } from 'lucide-react';
 
 export default function AboutPage() {
@@ -200,6 +201,13 @@ export default function AboutPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Pilot CTA */}
+        <section className="py-24 bg-neutral-50">
+          <div className="container mx-auto px-6">
+            <PilotCTA />
           </div>
         </section>
 
