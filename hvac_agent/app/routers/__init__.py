@@ -9,3 +9,4 @@ from app.routers.twilio_realtime import router as twilio_realtime_router
 from app.routers.twilio_ivr import router as twilio_ivr_router
 from app.routers.audio import router as audio_router
 from app.routers.twilio_disclaimer import router as twilio_disclaimer_router
+from app.routers.call_intelligence import router as call_intelligence_router

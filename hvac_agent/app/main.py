@@ -29,6 +29,7 @@ from app.routers import (
     twilio_ivr_router,
     audio_router,
     twilio_disclaimer_router,
+    call_intelligence_router,
 )
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
@@ -130,7 +131,7 @@ app.include_router(twilio_realtime_router)  # OpenAI Realtime API (best latency)
 app.include_router(twilio_ivr_router)  # IVR menu to choose system
 app.include_router(audio_router)  # Audio serving for ElevenLabs TTS
 app.include_router(twilio_disclaimer_router)  # Disclaimer handler
-
+app.include_router(call_intelligence_router)  # Call Intelligence router
 
 # Root endpoint
 @app.get("/")
