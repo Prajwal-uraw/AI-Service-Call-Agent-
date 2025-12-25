@@ -1068,11 +1068,11 @@ export default function HVACCallAutomationComparison() {
         <ContentSection id="sources">
           <Sources 
             sources={[
-              { id: 1, text: 'AI Voice Agent Success Rates in Service Industries', url: 'https://www.gartner.com/en/customer-service-support/trends/ai-customer-service' },
-              { id: 2, text: 'IVR System Performance Benchmarks', url: 'https://www.callcentrehelper.com/ivr-statistics-147878.htm' },
-              { id: 3, text: 'HVAC Technology Adoption Survey 2024', url: 'https://www.ibisworld.com/industry-statistics/technology-adoption/hvac-contractors-united-states/' },
-              { id: 4, text: 'ServiceTitan Integration Impact Study', url: 'https://www.servicetitan.com/resources' },
-              { id: 5, text: 'Call Automation ROI Analysis', url: 'https://hbr.org/2024/01/the-roi-of-ai-customer-service' }
+              { id: 1, citation: 'AI Voice Agent Success Rates in Service Industries', url: 'https://www.gartner.com/en/customer-service-support/trends/ai-customer-service' },
+              { id: 2, citation: 'IVR System Performance Benchmarks', url: 'https://www.callcentrehelper.com/ivr-statistics-147878.htm' },
+              { id: 3, citation: 'HVAC Technology Adoption Survey 2024', url: 'https://www.ibisworld.com/industry-statistics/technology-adoption/hvac-contractors-united-states/' },
+              { id: 4, citation: 'ServiceTitan Integration Impact Study', url: 'https://www.servicetitan.com/resources' },
+              { id: 5, citation: 'Call Automation ROI Analysis', url: 'https://hbr.org/2024/01/the-roi-of-ai-customer-service' }
             ]}
           />
         </ContentSection>

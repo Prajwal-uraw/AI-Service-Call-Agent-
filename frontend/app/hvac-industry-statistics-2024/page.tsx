@@ -236,7 +236,7 @@ export default function HVACIndustryStatistics2024() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-orange-600 mb-1">391%</div>
-                  <div className="text-sm text-neutral-600">Higher booking rate <5min [6]</div>
+                  <div className="text-sm text-neutral-600">Higher booking rate &lt;5min [6]</div>
                 </div>
               </div>
             </div>
@@ -856,23 +856,23 @@ export default function HVACIndustryStatistics2024() {
         <ContentSection id="sources">
           <Sources
             sources={[
-              { id: 1, text: 'HVAC Market Size and Growth Projections', url: 'https://www.ibisworld.com/industry-statistics/market-size/hvac-contractors-united-states/' },
-              { id: 2, text: 'US Department of Energy HVAC Standards', url: 'https://www.energy.gov/eere/buildings/residential-central-air-conditioners-and-heat-pumps' },
-              { id: 3, text: 'Smart Home Technology Adoption Survey', url: 'https://www.statista.com/statistics/smart-home-adoption/' },
-              { id: 4, text: 'Service Industry Call Answer Rate Study', url: 'https://www.callrail.com/blog/call-tracking-benchmarks/' },
-              { id: 5, text: 'HVAC Revenue Loss from Missed Calls Analysis', url: 'https://www.servicetitan.com/resources/missed-call-revenue-impact' },
-              { id: 6, text: 'Customer Response Time Expectations Study', url: 'https://hbr.org/2011/03/the-short-life-of-online-sales-leads' },
-              { id: 7, text: 'HVAC Call Volume and Seasonal Trends', url: 'https://www.contractormag.com/industry-trends/call-volume-analysis' },
-              { id: 8, text: 'HVAC Service Pricing Benchmarks', url: 'https://www.homeadvisor.com/cost/heating-and-cooling/hvac-service/' },
-              { id: 9, text: 'HVAC Company Revenue by Size Analysis', url: 'https://www.ibisworld.com/industry-statistics/employment/hvac-contractors-united-states/' },
-              { id: 10, text: 'HVAC Industry Profitability Metrics', url: 'https://www.servicetitan.com/resources/hvac-profitability-benchmarks' },
-              { id: 11, text: 'Service Industry Booking Rate Study', url: 'https://www.callrail.com/blog/service-industry-conversion-rates/' },
-              { id: 12, text: 'CRM Adoption and ROI in Service Industries', url: 'https://www.salesforce.com/resources/articles/crm-roi/' },
-              { id: 13, text: 'AI Technology Adoption in HVAC Industry', url: 'https://www.gartner.com/en/customer-service-support/trends/ai-customer-service' },
-              { id: 14, text: 'Consumer Expectations for Home Services', url: 'https://www.thumbtack.com/blog/consumer-expectations-study/' },
-              { id: 15, text: 'Customer Communication Preferences Survey', url: 'https://www.zendesk.com/blog/customer-service-trends/' },
-              { id: 16, text: 'Customer Loyalty and Retention in Home Services', url: 'https://hbr.org/2023/08/the-value-of-customer-loyalty' },
-              { id: 17, text: 'HVAC Industry Challenges Survey 2024', url: 'https://www.contractormag.com/industry-challenges-2024' }
+              { id: 1, citation: 'HVAC Market Size and Growth Projections', url: 'https://www.ibisworld.com/industry-statistics/market-size/hvac-contractors-united-states/' },
+              { id: 2, citation: 'US Department of Energy HVAC Standards', url: 'https://www.energy.gov/eere/buildings/residential-central-air-conditioners-and-heat-pumps' },
+              { id: 3, citation: 'Smart Home Technology Adoption Survey', url: 'https://www.statista.com/statistics/smart-home-adoption/' },
+              { id: 4, citation: 'Service Industry Call Answer Rate Study', url: 'https://www.callrail.com/blog/call-tracking-benchmarks/' },
+              { id: 5, citation: 'HVAC Revenue Loss from Missed Calls Analysis', url: 'https://www.servicetitan.com/resources/missed-call-revenue-impact' },
+              { id: 6, citation: 'Customer Response Time Expectations Study', url: 'https://hbr.org/2011/03/the-short-life-of-online-sales-leads' },
+              { id: 7, citation: 'HVAC Call Volume and Seasonal Trends', url: 'https://www.contractormag.com/industry-trends/call-volume-analysis' },
+              { id: 8, citation: 'HVAC Service Pricing Benchmarks', url: 'https://www.homeadvisor.com/cost/heating-and-cooling/hvac-service/' },
+              { id: 9, citation: 'HVAC Company Revenue by Size Analysis', url: 'https://www.ibisworld.com/industry-statistics/employment/hvac-contractors-united-states/' },
+              { id: 10, citation: 'HVAC Industry Profitability Metrics', url: 'https://www.servicetitan.com/resources/hvac-profitability-benchmarks' },
+              { id: 11, citation: 'Service Industry Booking Rate Study', url: 'https://www.callrail.com/blog/service-industry-conversion-rates/' },
+              { id: 12, citation: 'CRM Adoption and ROI in Service Industries', url: 'https://www.salesforce.com/resources/articles/crm-roi/' },
+              { id: 13, citation: 'AI Technology Adoption in HVAC Industry', url: 'https://www.gartner.com/en/customer-service-support/trends/ai-customer-service' },
+              { id: 14, citation: 'Consumer Expectations for Home Services', url: 'https://www.thumbtack.com/blog/consumer-expectations-study/' },
+              { id: 15, citation: 'Customer Communication Preferences Survey', url: 'https://www.zendesk.com/blog/customer-service-trends/' },
+              { id: 16, citation: 'Customer Loyalty and Retention in Home Services', url: 'https://hbr.org/2023/08/the-value-of-customer-loyalty' },
+              { id: 17, citation: 'HVAC Industry Challenges Survey 2024', url: 'https://www.contractormag.com/industry-challenges-2024' }
             ]}
           />
         </ContentSection>

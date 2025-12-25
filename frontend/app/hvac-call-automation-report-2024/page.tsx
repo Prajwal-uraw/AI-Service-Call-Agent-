@@ -2059,98 +2059,81 @@ export default function HVACCallAutomationReport2024() {
             </div>
           </div>
         </ContentSection>
-
-        {/* Sources */}
         <Sources
           sources={[
             {
-              title: "HVAC Industry Market Size & Growth",
-              organization: "IBISWorld",
-              year: "2024",
+              id: 1,
+              citation: "HVAC Industry Market Size & Growth - IBISWorld (2024)",
               url: "https://www.ibisworld.com"
             },
             {
-              title: "The Short Life of Online Sales Leads",
-              organization: "Harvard Business Review",
-              year: "2011",
+              id: 2,
+              citation: "The Short Life of Online Sales Leads - Harvard Business Review (2011)",
               url: "https://hbr.org"
             },
             {
-              title: "Speed-to-Lead: The Importance of Fast Response",
-              organization: "InsideSales.com",
-              year: "2023",
+              id: 3,
+              citation: "Speed-to-Lead: The Importance of Fast Response - InsideSales.com (2023)",
               url: "https://www.insidesales.com"
             },
             {
-              title: "Call Center AI Market Analysis",
-              organization: "Fortune Business Insights",
-              year: "2024",
+              id: 4,
+              citation: "Call Center AI Market Analysis - Fortune Business Insights (2024)",
               url: "https://www.fortunebusinessinsights.com"
             },
             {
-              title: "Voice AI Technology Benchmarks",
-              organization: "Deepgram",
-              year: "2024",
+              id: 5,
+              citation: "Voice AI Technology Benchmarks - Deepgram (2024)",
               url: "https://deepgram.com"
             },
             {
-              title: "ServiceTitan AI Voice Agent Launch",
-              organization: "ServiceTitan",
-              year: "2023",
+              id: 6,
+              citation: "ServiceTitan AI Voice Agent Launch - ServiceTitan (2023)",
               url: "https://www.servicetitan.com"
             },
             {
-              title: "Consumer Attitudes Toward AI Customer Service",
-              organization: "CallRail",
-              year: "2024",
+              id: 7,
+              citation: "Consumer Attitudes Toward AI Customer Service - CallRail (2024)",
               url: "https://www.callrail.com"
             },
             {
-              title: "AI Receptionist Cost Analysis",
-              organization: "Dialzara",
-              year: "2024",
+              id: 8,
+              citation: "AI Receptionist Cost Analysis - Dialzara (2024)",
               url: "https://dialzara.com"
             },
             {
-              title: "AI vs Traditional Answering Service Comparison",
-              organization: "AutoRev AI",
-              year: "2024",
+              id: 9,
+              citation: "AI vs Traditional Answering Service Comparison - AutoRev AI (2024)",
               url: "https://autorev.ai"
             },
             {
-              title: "Lead Response Management Best Practices",
-              organization: "Driven Results",
-              year: "2024",
+              id: 10,
+              citation: "Lead Response Management Best Practices - Driven Results (2024)",
               url: "https://drivenresults.co"
             },
             {
-              title: "Small Business Lead Loss Analysis",
-              organization: "Anthro.ai",
-              year: "2024",
+              id: 11,
+              citation: "Small Business Lead Loss Analysis - Anthro.ai (2024)",
               url: "https://anthrova.com"
             },
             {
-              title: "Home Services Marketing Trends",
-              organization: "Hook Agency",
-              year: "2024",
+              id: 12,
+              citation: "Home Services Marketing Trends - Hook Agency (2024)",
               url: "https://hookagency.com"
             },
             {
-              title: "AI in Customer Service: Enterprise Adoption",
-              organization: "Gartner",
-              year: "2024",
+              id: 13,
+              citation: "AI in Customer Service: Enterprise Adoption - Gartner (2024)",
               url: "https://www.gartner.com"
             },
             {
-              title: "Voice Technology Market Forecast",
-              organization: "Stanford HAI",
-              year: "2024",
+              id: 14,
+              citation: "Voice Technology Market Forecast - Stanford HAI (2024)",
               url: "https://hai.stanford.edu"
             },
             {
-              title: "HVAC Contractor Business Metrics",
-              organization: "Contractor Magazine",
-              year: "2024",
+              id: 15,
+              citation: "HVAC Contractor Business Metrics - Contractor Magazine (2024)",
               url: "https://www.contractormag.com"
             }
           ]}

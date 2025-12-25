@@ -847,10 +847,10 @@ export default function ServiceTitanAnsweringServices() {
         <ContentSection id="sources">
           <Sources
             sources={[
-              { id: 1, text: 'ServiceTitan Integration Time Study', url: 'https://www.servicetitan.com/resources' },
-              { id: 2, text: 'Manual Data Entry Error Rates', url: 'https://hbr.org/2023/05/the-cost-of-manual-data-entry' },
-              { id: 3, text: 'CRM Integration ROI Analysis', url: 'https://www.salesforce.com/resources/articles/crm-roi/' },
-              { id: 4, text: 'ServiceTitan API Documentation', url: 'https://developer.servicetitan.io/' }
+              { id: 1, citation: 'ServiceTitan Integration Time Study', url: 'https://www.servicetitan.com/resources' },
+              { id: 2, citation: 'Manual Data Entry Error Rates', url: 'https://hbr.org/2023/05/the-cost-of-manual-data-entry' },
+              { id: 3, citation: 'CRM Integration ROI Analysis', url: 'https://www.salesforce.com/resources/articles/crm-roi/' },
+              { id: 4, citation: 'ServiceTitan API Documentation', url: 'https://developer.servicetitan.io/' }
             ]}
           />
         </ContentSection>
