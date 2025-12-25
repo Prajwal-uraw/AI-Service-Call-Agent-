@@ -20,7 +20,7 @@ export default function PricingSection() {
         </div>
         
         {/* Demo CTA - Prominent */}
-        <div className="max-w-4xl mx-auto mb-16">
+        <div className="max-w-4xl mx-auto mb-8">
           <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-8 md:p-12 text-white shadow-2xl border border-brand-500/20">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex-1">
@@ -35,6 +35,33 @@ export default function PricingSection() {
                   className="inline-flex items-center gap-2 bg-white text-brand-700 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-brand-50 transition-all shadow-lg hover:shadow-xl hover:scale-105"
                 >
                   Book Workflow Demo
+                  <ArrowRight className="w-5 h-5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Production Pilot Option */}
+        <div className="max-w-4xl mx-auto mb-16">
+          <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 md:p-8 text-white shadow-xl border border-neutral-700">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="inline-flex items-center gap-2 bg-blue-500/20 px-3 py-1 rounded-full text-sm font-medium text-blue-300 mb-3">
+                  <Sparkles className="w-4 h-4" />
+                  Production Pilot Available
+                </div>
+                <h3 className="text-2xl font-bold mb-2">Test on Your Live Phone Line</h3>
+                <p className="text-neutral-300">
+                  7-day production evaluation • $199 (credited if you continue) • Executive report included
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <a 
+                  href="/production-pilot"
+                  className="inline-flex items-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                >
+                  Start Pilot
                   <ArrowRight className="w-5 h-5" />
                 </a>
               </div>

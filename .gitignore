@@ -184,3 +184,19 @@ TROUBLESHOOTING_GUIDE.md
 ai-demo-call/DAILY_RECORDING_SETUP.md
 MODAL_SECRETS_FIX.md
 SESSION_COMPLETE_DEC23.md
+
+# ===========================================
+# Conversation & Session Files (Today's Work)
+# ===========================================
+DEPLOYMENT_STATUS_AND_ANSWERS.md
+MIGRATION_AND_SERVICES_GUIDE.md
+REAL_DATA_INTEGRATION_COMPLETE.md
+REMAINING_WORK_ROADMAP.md
+RUN_MIGRATIONS_NOW.bat
+VERIFY_MIGRATIONS.bat
+database/migrations/VERIFY_ALL_TABLES.sql
+database/migrations/FIX_015_leads_DROP_CREATE.sql
+database/migrations/016_analytics_DROP_CREATE.sql
+
+# Keep only essential migration files
+# Ignore temporary/fix migrations after they're applied

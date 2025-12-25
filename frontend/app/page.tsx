@@ -13,6 +13,7 @@ import PricingSection from "@/components/PricingSection";
 import FAQSection from "@/components/FAQSection";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
+import PilotCTA from "@/components/PilotCTA";
 
 export default function Home() {
   return (
@@ -40,6 +41,11 @@ export default function Home() {
         </AnimatedSection>
         <AnimatedSection animation="fade-in" delay={100}>
           <PricingSection />
+        </AnimatedSection>
+        <AnimatedSection animation="fade-in" delay={100}>
+          <div className="container mx-auto px-6 py-12">
+            <PilotCTA />
+          </div>
         </AnimatedSection>
         <AnimatedSection animation="fade-in" delay={100}>
           <FAQSection />

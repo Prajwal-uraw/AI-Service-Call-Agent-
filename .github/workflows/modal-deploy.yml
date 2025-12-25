@@ -39,8 +39,24 @@ jobs:
         run: |
           modal deploy modal_scrapers.py
 
+      - name: Deploy Analytics API to Modal
+        working-directory: ./demand-engine
+        run: |
+          modal deploy modal_analytics.py
+
       - name: Verify deployment
         run: |
           echo "Deployment complete!"
-          echo "Both HVAC Agent and Demand Engine deployed to Modal"
-          echo "Both services use hvac-agent-secrets from Modal"
+          echo "✅ HVAC Agent deployed to Modal"
+          echo "✅ Demand Engine Scrapers deployed to Modal"
+          echo "✅ Analytics API (6 engines) deployed to Modal"
+          echo ""
+          echo "All services use hvac-agent-secrets from Modal"
+          echo ""
+          echo "Analytics API includes:"
+          echo "  - Baseline & Counterfactual Engine"
+          echo "  - Assumptions & Disclosure Engine"
+          echo "  - Metric Segregation Engine"
+          echo "  - Call Intent Classification Engine"
+          echo "  - Capacity Saturation Engine"
+          echo "  - Latency & Performance Engine"

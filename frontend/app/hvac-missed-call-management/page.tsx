@@ -299,7 +299,7 @@ export default function HVACMissedCallManagement() {
                     <label className="block text-sm font-semibold text-neutral-900 mb-2">
                       Booking rate
                     </label>
-                    <select className="w-full px-4 py-3 border-2 border-neutral-300 rounded-lg focus:border-blue-600 focus:outline-none">
+                    <select aria-label="Booking rate" className="w-full px-4 py-3 border-2 border-neutral-300 rounded-lg focus:border-blue-600 focus:outline-none">
                       <option value="0.45">45% - Below average</option>
                       <option value="0.60" selected>60% - Industry average</option>
                       <option value="0.75">75% - Above average</option>
