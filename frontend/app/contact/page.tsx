@@ -111,9 +111,9 @@ export default function ContactPage() {
         {/* Contact Form & Info */}
         <section className="py-24 bg-neutral-50">
           <div className="container mx-auto px-6">
-            <div className="max-w-6xl mx-auto grid lg:grid-cols-5 gap-12">
-              <div className="grid md:grid-cols-2 gap-12">
-                {/* Left Column - Info */}
+            <div className="max-w-6xl mx-auto grid lg:grid-cols-1 gap-12">
+            <div className="space-y-8">
+              {/* Left Column - Info */}
                 <div>
                   <h2 className="text-3xl font-bold mb-2 text-neutral-900">Send us a message</h2>
                   <p className="text-neutral-600 mb-8">We'll get back to you within 24 hours</p>
