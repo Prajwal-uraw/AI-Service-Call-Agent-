@@ -18,7 +18,13 @@ image = (
         "openai>=1.12.0",
         "supabase>=2.3.4",
         "python-dotenv>=1.0.0",
+        "resend>=0.7.0",  # For email alerts
     )
+    .add_local_python_source("config")
+    .add_local_python_source("classifiers")
+    .add_local_python_source("email_service")
+    .add_local_python_source("alerts")
+    .add_local_python_source("scrapers")
 )
 
 # Define secrets needed

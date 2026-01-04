@@ -12,8 +12,9 @@ import secrets
 import string
 import hashlib
 
-# Import the get_db dependency from the application context
-get_db = None  # This will be set by the application
+from app.database import get_db
+from app.models.db_models import Tenant, TenantUser, TenantAPIKey
+from services.tenant_notifications import TenantNotificationService
 
 router = APIRouter(prefix="/api/admin/tenants", tags=["Admin - Tenants"])
 
@@ -176,6 +177,34 @@ async def create_tenant(
     
     db.add(owner)
     db.commit()
+    
+    # Send notifications
+    try:
+        notification_service = TenantNotificationService()
+        
+        # Notify admin
+        notification_service.notify_admin_new_tenant({
+            'id': str(tenant.id),
+            'company_name': tenant.company_name,
+            'slug': tenant.slug,
+            'owner_name': tenant.owner_name,
+            'owner_email': tenant.owner_email,
+            'owner_phone': tenant.owner_phone,
+            'industry': tenant.industry,
+            'plan_tier': tenant.plan_tier
+        })
+        
+        # Send welcome email to customer
+        notification_service.send_welcome_pending({
+            'company_name': tenant.company_name,
+            'slug': tenant.slug,
+            'owner_name': tenant.owner_name,
+            'owner_email': tenant.owner_email,
+            'plan_tier': tenant.plan_tier
+        })
+    except Exception as e:
+        # Don't fail tenant creation if email fails
+        print(f"Failed to send notifications: {e}")
     
     return tenant
 

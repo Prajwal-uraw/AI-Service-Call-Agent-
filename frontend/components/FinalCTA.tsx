@@ -15,9 +15,23 @@ export default function FinalCTA() {
           Deploy Voice Operations in 48 Hours
         </h2>
         
-        <p className="text-xl md:text-2xl text-neutral-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+        <p className="text-xl md:text-2xl text-neutral-300 mb-8 max-w-3xl mx-auto leading-relaxed">
           Proven infrastructure handling thousands of calls monthly. Start with workflow validation.
         </p>
+        
+        {/* Voice Agent CTA */}
+        <div className="mb-8">
+          <div className="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6">
+            <div className="text-sm text-neutral-300 mb-2">🎯 Try Our AI Agent Now</div>
+            <a 
+              href="tel:+19388396504"
+              className="text-3xl md:text-4xl font-bold text-white hover:text-blue-300 transition-all"
+            >
+              (938) 839-6504
+            </a>
+            <div className="text-xs text-neutral-400 mt-2">Call • Experience AI in 30 seconds • Free</div>
+          </div>
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <a 

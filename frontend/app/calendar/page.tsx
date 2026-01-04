@@ -60,17 +60,17 @@ export default function CalendarPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="bg-white rounded-lg">
-                    {/* Cal.com Embed */}
-                    <Cal
-                      calLink="team/kestrel-ai/demo"
-                      style={{ width: "100%", height: "100%", overflow: "scroll" }}
-                      config={{
-                        name: "Demo Call",
-                        email: "customer@example.com",
-                        notes: "Interested in AI voice agent for HVAC business",
-                        theme: "light"
-                      }}
-                    />
+                    {/* Redirect to book-ai-demo page for now */}
+                    <div className="text-center py-12">
+                      <p className="text-gray-600 mb-6">Book your personalized demo with our team</p>
+                      <a
+                        href="/book-ai-demo"
+                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold transition-all"
+                      >
+                        <Calendar className="h-5 w-5" />
+                        Schedule Your Demo
+                      </a>
+                    </div>
                   </div>
                   
                   <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

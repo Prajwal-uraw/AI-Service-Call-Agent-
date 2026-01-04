@@ -1,0 +1,6 @@
+# Exclude Private folder from Vercel builds
+Private/
+Private/**/*
+
+# This prevents the AlertStream backend code from being included in the Next.js build
+# which causes errors due to missing Node.js dependencies like 'pg'

@@ -32,6 +32,7 @@ image = (
         "jinja2>=3.1.0",
         "weasyprint>=60.0",
         "pillow>=10.0.0",
+        "email-validator>=2.0.0",
     )
     .apt_install("libpango-1.0-0", "libpangoft2-1.0-0", "libharfbuzz0b")  # For WeasyPrint PDF generation
 )

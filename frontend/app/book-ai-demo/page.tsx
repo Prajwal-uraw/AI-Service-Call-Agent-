@@ -31,7 +31,8 @@ export default function BookAIDemoPage() {
     try {
       const scheduledTime = new Date(`${formData.scheduledDate}T${formData.scheduledTime}:00`);
 
-      const response = await fetch("http://localhost:8000/api/ai-demo/create-meeting", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/ai-demo/create-meeting`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

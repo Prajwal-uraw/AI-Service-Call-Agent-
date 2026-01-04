@@ -29,10 +29,10 @@ export default function Footer() {
             <h4 className="text-white font-semibold text-sm mb-4">Product</h4>
             <ul className="space-y-3 text-sm">
               <li><Link href="/" className="text-neutral-500 hover:text-white transition-colors">Home</Link></li>
+              <li><Link href="/products" className="text-neutral-500 hover:text-white transition-colors">All Products</Link></li>
               <li><Link href="/#features" className="text-neutral-500 hover:text-white transition-colors">Features</Link></li>
               <li><Link href="/#pricing" className="text-neutral-500 hover:text-white transition-colors">Pricing</Link></li>
               <li><Link href="/production-pilot" className="text-neutral-500 hover:text-white transition-colors">Production Pilot</Link></li>
-              <li><Link href="/sample-report" className="text-neutral-500 hover:text-white transition-colors">Sample Report</Link></li>
             </ul>
           </div>
           
@@ -44,6 +44,17 @@ export default function Footer() {
               <li><Link href="/docs" className="text-neutral-500 hover:text-white transition-colors">Documentation</Link></li>
               <li><Link href="/demo" className="text-neutral-500 hover:text-white transition-colors">Live Demo</Link></li>
               <li><Link href="/calendar" className="text-neutral-500 hover:text-white transition-colors">Book Meeting</Link></li>
+              <li>
+                <a 
+                  href="/alertstream" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-neutral-500 hover:text-white transition-colors inline-flex items-center gap-2"
+                >
+                  AlertStream
+                  <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">Coming Soon</span>
+                </a>
+              </li>
             </ul>
           </div>
           

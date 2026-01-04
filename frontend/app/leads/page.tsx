@@ -1,58 +1,122 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
-import { Target, Phone, Mail, Calendar, DollarSign, Filter, Search, Plus } from 'lucide-react';
+import { Target, Phone, Mail, Calendar, DollarSign, Filter, Search, Plus, Database, ExternalLink } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    total: 0,
+    hot: 0,
+    warm: 0,
+    cold: 0
+  });
 
-  const stats = {
-    total: 156,
-    hot: 42,
-    warm: 68,
-    cold: 46
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      const supabase = createClient();
+      
+      // Fetch all scraped leads from different sources
+      const { data: signals } = await supabase
+        .from('signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      const { data: jobSignals } = await supabase
+        .from('job_board_signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      const { data: bbbSignals } = await supabase
+        .from('bbb_signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      const { data: localSignals } = await supabase
+        .from('local_business_signals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      // Transform and combine all leads
+      const allLeads = [
+        ...(signals || []).map(s => ({
+          id: s.id,
+          name: s.business_name || 'Unknown',
+          company: s.business_name || 'Unknown',
+          email: s.email || '',
+          phone: s.phone || '',
+          value: (s.pain_score || 0) * 100,
+          status: s.pain_score >= 70 ? 'hot' : s.pain_score >= 50 ? 'warm' : 'cold',
+          source: 'Signals',
+          lastContact: new Date(s.created_at).toLocaleDateString(),
+          nextAction: 'New lead - needs follow-up'
+        })),
+        ...(jobSignals || []).map(s => ({
+          id: s.id,
+          name: s.company_name || 'Unknown',
+          company: s.company_name || 'Unknown',
+          email: s.contact_email || '',
+          phone: s.contact_phone || '',
+          value: (s.score || 0) * 100,
+          status: s.score >= 70 ? 'hot' : s.score >= 50 ? 'warm' : 'cold',
+          source: 'Job Board',
+          lastContact: new Date(s.created_at).toLocaleDateString(),
+          nextAction: 'Job posting detected'
+        })),
+        ...(bbbSignals || []).map(s => ({
+          id: s.id,
+          name: s.business_name || 'Unknown',
+          company: s.business_name || 'Unknown',
+          email: '',
+          phone: s.phone || '',
+          value: (100 - (s.complaints_count || 0) * 10),
+          status: s.complaints_count > 20 ? 'hot' : s.complaints_count > 10 ? 'warm' : 'cold',
+          source: 'BBB',
+          lastContact: new Date(s.created_at).toLocaleDateString(),
+          nextAction: 'BBB complaints detected'
+        })),
+        ...(localSignals || []).map(s => ({
+          id: s.id,
+          name: s.business_name || 'Unknown',
+          company: s.business_name || 'Unknown',
+          email: s.email || '',
+          phone: s.phone || '',
+          value: (s.google_rating || 0) * 2000,
+          status: s.google_rating < 3 ? 'hot' : s.google_rating < 4 ? 'warm' : 'cold',
+          source: 'Local Business',
+          lastContact: new Date(s.created_at).toLocaleDateString(),
+          nextAction: 'Low rating - opportunity'
+        }))
+      ];
+
+      setLeads(allLeads);
+      
+      // Calculate stats
+      const hot = allLeads.filter(l => l.status === 'hot').length;
+      const warm = allLeads.filter(l => l.status === 'warm').length;
+      const cold = allLeads.filter(l => l.status === 'cold').length;
+      
+      setStats({
+        total: allLeads.length,
+        hot,
+        warm,
+        cold
+      });
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const leads = [
-    {
-      id: '1',
-      name: 'Sarah Mitchell',
-      company: 'Tech Solutions Inc',
-      email: 'sarah@techsolutions.com',
-      phone: '+1 (555) 123-4567',
-      value: 12500,
-      status: 'hot',
-      source: 'AI Chat',
-      lastContact: '2024-01-15',
-      nextAction: 'Follow-up call scheduled'
-    },
-    {
-      id: '2',
-      name: 'James Wilson',
-      company: 'Wilson & Co',
-      email: 'james@wilsonco.com',
-      phone: '+1 (555) 234-5678',
-      value: 8200,
-      status: 'warm',
-      source: 'Phone Call',
-      lastContact: '2024-01-14',
-      nextAction: 'Send proposal'
-    },
-    {
-      id: '3',
-      name: 'Emily Chen',
-      company: 'Chen Enterprises',
-      email: 'emily@chenent.com',
-      phone: '+1 (555) 345-6789',
-      value: 15000,
-      status: 'hot',
-      source: 'Email',
-      lastContact: '2024-01-15',
-      nextAction: 'Demo scheduled for tomorrow'
-    },
-  ];
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -74,12 +138,21 @@ export default function LeadsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-neutral-900">Leads</h1>
-            <p className="text-sm text-neutral-600 mt-1">Manage and track your sales leads</p>
+            <p className="text-sm text-neutral-600 mt-1">Manage and track your sales leads from scraped data</p>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-            <Plus className="w-4 h-4" />
-            Add Lead
-          </button>
+          <div className="flex gap-3">
+            <a
+              href="/admin/scraped-leads"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+            >
+              <Database className="w-4 h-4" />
+              View All Scraped Data
+            </a>
+            <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+              <Plus className="w-4 h-4" />
+              Add Lead
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -146,7 +219,25 @@ export default function LeadsPage() {
 
         {/* Leads Grid */}
         <div className="grid gap-4">
-          {leads.map((lead) => (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-neutral-600">Loading leads from database...</p>
+            </div>
+          ) : leads.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-neutral-200 rounded-lg">
+              <Database className="w-16 h-16 mx-auto mb-4 text-neutral-300" />
+              <h3 className="text-lg font-semibold text-neutral-900 mb-2">No leads found</h3>
+              <p className="text-neutral-600 mb-4">Run scrapers to populate the database with leads</p>
+              <a
+                href="/scrapers"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Database className="w-4 h-4" />
+                Go to Scrapers
+              </a>
+            </div>
+          ) : leads.map((lead) => (
             <div key={lead.id} className="bg-white border border-neutral-200 rounded-lg p-6 hover:shadow-md transition-all">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">

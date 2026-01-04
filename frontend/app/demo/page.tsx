@@ -64,10 +64,10 @@ export default function DemoPage() {
 
   const startDemo = () => {
     console.log('Starting demo...');
-    setIsPlaying(true);
     setCurrentSlide(0);
     setProgress(0);
     setAudioLoaded(false);
+    setIsPlaying(true);
   };
 
   const toggleMute = () => {
@@ -85,20 +85,27 @@ export default function DemoPage() {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
       }
+      setIsPlaying(false);
     } else {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => console.error('Play failed:', err));
       progressIntervalRef.current = setInterval(() => {
         if (audioRef.current && audioRef.current.duration) {
           const progressPercent = (audioRef.current.currentTime / audioRef.current.duration) * 100;
           setProgress(progressPercent);
         }
       }, 100);
+      setIsPlaying(true);
     }
-    setIsPlaying(!isPlaying);
   };
 
   const nextSlide = () => {
     if (currentSlide < demoSlides.length - 1) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+      }
       setCurrentSlide(currentSlide + 1);
       setProgress(0);
     }
@@ -106,6 +113,12 @@ export default function DemoPage() {
 
   const prevSlide = () => {
     if (currentSlide > 0) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+      }
       setCurrentSlide(currentSlide - 1);
       setProgress(0);
     }

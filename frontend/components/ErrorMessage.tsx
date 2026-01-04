@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 interface ErrorMessageProps {
   message: string;
-  type?: 'error' | 'warning' | 'info';
+  type?: 'error' | 'warning' | 'info' | 'success';
   dismissible?: boolean;
   onDismiss?: () => void;
   onRetry?: () => void;
@@ -51,6 +51,11 @@ export default function ErrorMessage({
       container: 'bg-blue-50 border-blue-200 text-blue-900',
       icon: <Info className="w-5 h-5 text-blue-600" />,
       button: 'text-blue-600 hover:text-blue-800',
+    },
+    success: {
+      container: 'bg-green-50 border-green-200 text-green-900',
+      icon: <AlertCircle className="w-5 h-5 text-green-600" />,
+      button: 'text-green-600 hover:text-green-800',
     },
   };
 

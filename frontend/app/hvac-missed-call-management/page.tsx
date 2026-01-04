@@ -287,7 +287,7 @@ export default function HVACMissedCallManagement() {
                     <label className="block text-sm font-semibold text-neutral-900 mb-2">
                       Missed call rate
                     </label>
-                    <select className="w-full px-4 py-3 border-2 border-neutral-300 rounded-lg focus:border-blue-600 focus:outline-none">
+                    <select aria-label="Missed call rate" className="w-full px-4 py-3 border-2 border-neutral-300 rounded-lg focus:border-blue-600 focus:outline-none">
                       <option value="0.15">15% - Excellent coverage</option>
                       <option value="0.23" selected>23% - Industry average</option>
                       <option value="0.35">35% - Poor coverage</option>

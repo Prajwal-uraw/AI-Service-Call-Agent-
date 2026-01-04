@@ -78,3 +78,33 @@ export function DialogTitle({
 }) {
   return <h2 className={className ?? "text-lg font-semibold"}>{children}</h2>;
 }
+
+export function DialogTrigger({
+  children,
+  asChild,
+}: {
+  children: React.ReactNode;
+  asChild?: boolean;
+}) {
+  return <>{children}</>;
+}
+
+export function DialogDescription({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return <p className={className ?? "text-sm text-muted-foreground mt-1"}>{children}</p>;
+}
+
+export function DialogFooter({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return <div className={className ?? "flex justify-end gap-2 p-6 pt-4"}>{children}</div>;
+}

@@ -938,28 +938,17 @@ export default function BestHVACAnsweringServices2024() {
             </div>
           </div>
 
-          {/* Sources */}
-          <div className="mt-12">
-            <Sources 
-              sources={[
-                { 
-                  id: 1, 
-                  citation: 'HVAC Industry Revenue Loss Study', 
-                  url: 'https://www.ibisworld.com/industry-statistics/market-size/hvac-contractors-united-states/' 
-                },
-                { 
-                  id: 2, 
-                  citation: 'Call Answer Rate Benchmarks for Service Businesses', 
-                  url: 'https://www.callrail.com/blog/call-tracking-benchmarks/' 
-                },
-                { 
-                  id: 3, 
-                  citation: 'HVAC Emergency Service Pricing Data', 
-                  url: 'https://www.homeadvisor.com/cost/heating-and-cooling/hvac-service/' 
-                }
-              ]} 
-            />
-          </div>
+        {/* Sources */}
+        <ContentSection id="sources">
+          <Sources 
+            sources={[
+              { id: 1, citation: 'HVAC Industry Revenue Loss Study', url: 'https://www.ibisworld.com/industry-statistics/market-size/hvac-contractors-united-states/' },
+              { id: 2, citation: 'Call Answer Rate Benchmarks for Service Businesses', url: 'https://www.callrail.com/blog/call-tracking-benchmarks/' },
+              { id: 3, citation: 'Consumer Response Time Study', url: 'https://hbr.org/2011/03/the-short-life-of-online-sales-leads' },
+              { id: 4, citation: 'HVAC Emergency Service Pricing Data', url: 'https://www.homeadvisor.com/cost/heating-and-cooling/hvac-service/' },
+              { id: 5, citation: 'ServiceTitan Integration Impact Study', url: 'https://www.servicetitan.com/resources' }
+            ]}
+          />
         </ContentSection>
       </main>
       <Footer />

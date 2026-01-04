@@ -1,130 +1,188 @@
 """
 Scraped Leads API
-Provides access to leads from scraping operations
+Provides access to leads from scraping operations - fetches from Supabase
 """
 
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional, List
 from datetime import datetime, timedelta
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/scraped-leads", tags=["scraped-leads"])
+
+def get_supabase_client():
+    """Get Supabase client"""
+    try:
+        from supabase import create_client
+        url = os.getenv("SUPABASE_URL", "https://soudakcdmpcfavticrxd.supabase.co")
+        key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+        if not key:
+            return None
+        return create_client(url, key)
+    except Exception as e:
+        logger.error(f"Failed to create Supabase client: {e}")
+        return None
 
 
 @router.get("")
 async def get_scraped_leads(
     limit: int = Query(50, ge=1, le=200),
     status: str = Query("new", description="Filter by status: new, contacted, converted"),
-    priority: Optional[str] = Query(None, description="Filter by priority: high, medium, low")
+    priority: Optional[str] = Query(None, description="Filter by priority: high, medium, low"),
+    source: Optional[str] = Query(None, description="Filter by source: signals, job_board, bbb, licensing, local_business")
 ):
     """
-    Get scraped leads from various sources (Reddit, Google Maps, etc.)
-    Auto-refreshes to show new leads as they come in
+    Get scraped leads from Supabase database
+    Fetches from signals table and specialized scraper tables
     """
     try:
-        # Mock data - will integrate with actual scraping results
-        mock_leads = [
-            {
-                "id": "lead_001",
-                "name": "John's HVAC Service",
-                "phone": "+1 (555) 234-5678",
-                "email": "john@hvacservice.com",
-                "location": "Austin, TX",
-                "source": "Reddit - r/HVAC",
-                "priority": "high",
-                "created_at": (datetime.utcnow() - timedelta(minutes=5)).isoformat(),
-                "notes": "Posted about needing emergency AC repair service"
-            },
-            {
-                "id": "lead_002",
-                "name": "Sarah's Home Comfort",
-                "phone": "+1 (555) 345-6789",
-                "email": "sarah@homecomfort.com",
-                "location": "Dallas, TX",
-                "source": "Google Maps",
-                "priority": "high",
-                "created_at": (datetime.utcnow() - timedelta(minutes=12)).isoformat(),
-                "notes": "Looking for maintenance contract quotes"
-            },
-            {
-                "id": "lead_003",
-                "name": "Mike's Cooling Solutions",
-                "phone": "+1 (555) 456-7890",
-                "location": "Houston, TX",
-                "source": "Reddit - r/HomeImprovement",
-                "priority": "medium",
-                "created_at": (datetime.utcnow() - timedelta(minutes=25)).isoformat(),
-                "notes": "Asked about AC installation costs"
-            },
-            {
-                "id": "lead_004",
-                "name": "Lisa's Property Management",
-                "phone": "+1 (555) 567-8901",
-                "email": "lisa@propertymanage.com",
-                "location": "San Antonio, TX",
-                "source": "Google Maps",
-                "priority": "high",
-                "created_at": (datetime.utcnow() - timedelta(minutes=35)).isoformat(),
-                "notes": "Managing 50+ properties, needs bulk service contract"
-            },
-            {
-                "id": "lead_005",
-                "name": "Tom's Heating & Air",
-                "phone": "+1 (555) 678-9012",
-                "location": "Fort Worth, TX",
-                "source": "Reddit - r/HVAC",
-                "priority": "medium",
-                "created_at": (datetime.utcnow() - timedelta(hours=1)).isoformat(),
-                "notes": "Interested in preventive maintenance plans"
-            },
-            {
-                "id": "lead_006",
-                "name": "Jennifer's Home Services",
-                "phone": "+1 (555) 789-0123",
-                "email": "jen@homeservices.com",
-                "location": "Plano, TX",
-                "source": "Google Maps",
-                "priority": "low",
-                "created_at": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
-                "notes": "General inquiry about services"
-            },
-            {
-                "id": "lead_007",
-                "name": "Robert's Commercial HVAC",
-                "phone": "+1 (555) 890-1234",
-                "location": "Arlington, TX",
-                "source": "Reddit - r/CommercialHVAC",
-                "priority": "high",
-                "created_at": (datetime.utcnow() - timedelta(hours=3)).isoformat(),
-                "notes": "Commercial building needs immediate service"
-            },
-            {
-                "id": "lead_008",
-                "name": "Emily's Comfort Solutions",
-                "phone": "+1 (555) 901-2345",
-                "email": "emily@comfortsolutions.com",
-                "location": "Irving, TX",
-                "source": "Google Maps",
-                "priority": "medium",
-                "created_at": (datetime.utcnow() - timedelta(hours=4)).isoformat(),
-                "notes": "Looking for energy-efficient AC options"
-            }
-        ]
+        supabase = get_supabase_client()
         
-        # Filter by priority if specified
-        if priority:
-            mock_leads = [lead for lead in mock_leads if lead["priority"] == priority]
+        if supabase:
+            all_leads = []
+            
+            # Fetch from signals table
+            try:
+                signals_query = supabase.table("signals").select("*").order("created_at", desc=True).limit(limit)
+                if priority == "high":
+                    signals_query = signals_query.gte("pain_score", 70)
+                elif priority == "medium":
+                    signals_query = signals_query.gte("pain_score", 40).lt("pain_score", 70)
+                elif priority == "low":
+                    signals_query = signals_query.lt("pain_score", 40)
+                
+                signals_result = signals_query.execute()
+                
+                for signal in signals_result.data:
+                    pain_score = signal.get("pain_score", 0) or 0
+                    all_leads.append({
+                        "id": str(signal.get("id")),
+                        "name": signal.get("business_name") or signal.get("title", "Unknown"),
+                        "phone": signal.get("contact_phone"),
+                        "email": signal.get("contact_email"),
+                        "location": signal.get("location", ""),
+                        "source": f"Signal - {signal.get('source', 'Unknown')}",
+                        "priority": "high" if pain_score >= 70 else "medium" if pain_score >= 40 else "low",
+                        "created_at": signal.get("created_at"),
+                        "notes": signal.get("content", "")[:200] if signal.get("content") else "",
+                        "url": signal.get("url"),
+                        "pain_score": pain_score
+                    })
+            except Exception as e:
+                logger.warning(f"Error fetching signals: {e}")
+            
+            # Fetch from job_board_signals if exists
+            if not source or source == "job_board":
+                try:
+                    job_result = supabase.table("job_board_signals").select("*").order("created_at", desc=True).limit(limit).execute()
+                    for job in job_result.data:
+                        score = job.get("score", 0) or 0
+                        all_leads.append({
+                            "id": str(job.get("id")),
+                            "name": job.get("company_name", "Unknown Company"),
+                            "phone": None,
+                            "email": None,
+                            "location": job.get("location", ""),
+                            "source": f"Job Board - {job.get('source', 'Indeed')}",
+                            "priority": "high" if score >= 70 else "medium" if score >= 40 else "low",
+                            "created_at": job.get("created_at"),
+                            "notes": f"{job.get('job_title', '')} - {job.get('description', '')[:150]}",
+                            "url": job.get("job_url"),
+                            "pain_score": score
+                        })
+                except Exception as e:
+                    logger.debug(f"job_board_signals table may not exist: {e}")
+            
+            # Fetch from bbb_signals if exists
+            if not source or source == "bbb":
+                try:
+                    bbb_result = supabase.table("bbb_signals").select("*").order("created_at", desc=True).limit(limit).execute()
+                    for bbb in bbb_result.data:
+                        score = bbb.get("score", 0) or 0
+                        all_leads.append({
+                            "id": str(bbb.get("id")),
+                            "name": bbb.get("business_name", "Unknown Business"),
+                            "phone": bbb.get("phone"),
+                            "email": None,
+                            "location": bbb.get("location", ""),
+                            "source": "BBB",
+                            "priority": "high" if score >= 70 else "medium" if score >= 40 else "low",
+                            "created_at": bbb.get("created_at"),
+                            "notes": f"Rating: {bbb.get('rating', 'N/A')} - Complaints: {bbb.get('complaints_count', 0)}",
+                            "url": bbb.get("bbb_url"),
+                            "pain_score": score
+                        })
+                except Exception as e:
+                    logger.debug(f"bbb_signals table may not exist: {e}")
+            
+            # Fetch from licensing_signals if exists
+            if not source or source == "licensing":
+                try:
+                    lic_result = supabase.table("licensing_signals").select("*").order("created_at", desc=True).limit(limit).execute()
+                    for lic in lic_result.data:
+                        score = lic.get("score", 0) or 0
+                        all_leads.append({
+                            "id": str(lic.get("id")),
+                            "name": lic.get("business_name", "Unknown Business"),
+                            "phone": lic.get("phone"),
+                            "email": lic.get("email"),
+                            "location": f"{lic.get('address', '')} - {lic.get('state', '')}",
+                            "source": f"Licensing - {lic.get('state', 'Unknown')}",
+                            "priority": "high" if score >= 70 else "medium" if score >= 40 else "low",
+                            "created_at": lic.get("created_at"),
+                            "notes": f"License: {lic.get('license_type', '')} #{lic.get('license_number', '')}",
+                            "url": None,
+                            "pain_score": score
+                        })
+                except Exception as e:
+                    logger.debug(f"licensing_signals table may not exist: {e}")
+            
+            # Fetch from local_business_signals if exists
+            if not source or source == "local_business":
+                try:
+                    local_result = supabase.table("local_business_signals").select("*").order("created_at", desc=True).limit(limit).execute()
+                    for local in local_result.data:
+                        score = local.get("score", 0) or 0
+                        all_leads.append({
+                            "id": str(local.get("id")),
+                            "name": local.get("business_name", "Unknown Business"),
+                            "phone": local.get("phone"),
+                            "email": None,
+                            "location": f"{local.get('city', '')}, {local.get('state', '')}",
+                            "source": f"Local Business - {local.get('source', 'Google')}",
+                            "priority": "high" if score >= 70 else "medium" if score >= 40 else "low",
+                            "created_at": local.get("created_at"),
+                            "notes": f"Rating: {local.get('google_rating', 'N/A')} ({local.get('review_count', 0)} reviews)",
+                            "url": local.get("website"),
+                            "pain_score": score
+                        })
+                except Exception as e:
+                    logger.debug(f"local_business_signals table may not exist: {e}")
+            
+            # Sort by created_at and limit
+            all_leads.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+            all_leads = all_leads[:limit]
+            
+            if all_leads:
+                return {
+                    "leads": all_leads,
+                    "total": len(all_leads),
+                    "status": status,
+                    "priority_filter": priority,
+                    "source": "database"
+                }
         
-        # Limit results
-        mock_leads = mock_leads[:limit]
-        
+        # Return empty if no data found
         return {
-            "leads": mock_leads,
-            "total": len(mock_leads),
+            "leads": [],
+            "total": 0,
             "status": status,
-            "priority_filter": priority
+            "priority_filter": priority,
+            "source": "database",
+            "message": "No leads found. Run scrapers to populate data."
         }
         
     except Exception as e:

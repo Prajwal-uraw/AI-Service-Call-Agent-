@@ -41,6 +41,9 @@ image = (
         "redis>=5.0.0",  # Session store backend
         "cachetools>=5.3.0",  # Local TTL cache for session store
         "phonenumbers>=8.13.0",  # Phone number validation
+        # AlertStream dependencies
+        "bcrypt>=4.0.0",  # Password hashing for AlertStream auth
+        "email-validator>=2.0.0",  # Email validation for Pydantic EmailStr
     )
     .add_local_python_source("app")  # Include the app package
 )

@@ -46,6 +46,11 @@ env/
 .env.staging
 *.local
 
+# AlertStream backend .env files
+frontend/Private/alertstream-engine/.env
+frontend/Private/alertstream-engine/.env.local
+frontend/Private/alertstream-engine/.env.production
+
 # ===========================================
 # Database Files (Local Development)
 # ===========================================
@@ -200,6 +205,29 @@ database/migrations/016_analytics_DROP_CREATE.sql
 
 # Keep only essential migration files
 # Ignore temporary/fix migrations after they're applied
+
+# ===========================================
+# AlertStream Private Documentation
+# ===========================================
+frontend/Private/ALERTSTREAM_*.md
+frontend/Private/TODO*.md
+frontend/Private/textstream*.md
+frontend/Private/Textstream*.md
+frontend/Private/MISSING_TASKS_ANALYSIS.md
+frontend/Private/INTEGRATION_COMPLETE_SUMMARY.md
+frontend/Private/GAPS_AND_ERRORS_ANALYSIS.md
+frontend/Private/CRITICAL_*.md
+frontend/Private/CODE_QUALITY_REVIEW.md
+
+# Keep only essential AlertStream docs
+!frontend/Private/alertstream-engine/README.md
+!frontend/Private/alertstream-sdk/README.md
+!frontend/Private/alertstream-wordpress/readme.txt
+
+# ===========================================
+# Exclude Private folder from Vercel builds
+# ===========================================
+frontend/Private/
 API_KEYS_SETUP_GUIDE.md
 SECRETS_MANAGEMENT_GUIDE.md
 

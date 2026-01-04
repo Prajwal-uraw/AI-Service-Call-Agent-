@@ -2061,81 +2061,21 @@ export default function HVACCallAutomationReport2024() {
         </ContentSection>
         <Sources
           sources={[
-            {
-              id: 1,
-              citation: "HVAC Industry Market Size & Growth - IBISWorld (2024)",
-              url: "https://www.ibisworld.com"
-            },
-            {
-              id: 2,
-              citation: "The Short Life of Online Sales Leads - Harvard Business Review (2011)",
-              url: "https://hbr.org"
-            },
-            {
-              id: 3,
-              citation: "Speed-to-Lead: The Importance of Fast Response - InsideSales.com (2023)",
-              url: "https://www.insidesales.com"
-            },
-            {
-              id: 4,
-              citation: "Call Center AI Market Analysis - Fortune Business Insights (2024)",
-              url: "https://www.fortunebusinessinsights.com"
-            },
-            {
-              id: 5,
-              citation: "Voice AI Technology Benchmarks - Deepgram (2024)",
-              url: "https://deepgram.com"
-            },
-            {
-              id: 6,
-              citation: "ServiceTitan AI Voice Agent Launch - ServiceTitan (2023)",
-              url: "https://www.servicetitan.com"
-            },
-            {
-              id: 7,
-              citation: "Consumer Attitudes Toward AI Customer Service - CallRail (2024)",
-              url: "https://www.callrail.com"
-            },
-            {
-              id: 8,
-              citation: "AI Receptionist Cost Analysis - Dialzara (2024)",
-              url: "https://dialzara.com"
-            },
-            {
-              id: 9,
-              citation: "AI vs Traditional Answering Service Comparison - AutoRev AI (2024)",
-              url: "https://autorev.ai"
-            },
-            {
-              id: 10,
-              citation: "Lead Response Management Best Practices - Driven Results (2024)",
-              url: "https://drivenresults.co"
-            },
-            {
-              id: 11,
-              citation: "Small Business Lead Loss Analysis - Anthro.ai (2024)",
-              url: "https://anthrova.com"
-            },
-            {
-              id: 12,
-              citation: "Home Services Marketing Trends - Hook Agency (2024)",
-              url: "https://hookagency.com"
-            },
-            {
-              id: 13,
-              citation: "AI in Customer Service: Enterprise Adoption - Gartner (2024)",
-              url: "https://www.gartner.com"
-            },
-            {
-              id: 14,
-              citation: "Voice Technology Market Forecast - Stanford HAI (2024)",
-              url: "https://hai.stanford.edu"
-            },
-            {
-              id: 15,
-              citation: "HVAC Contractor Business Metrics - Contractor Magazine (2024)",
-              url: "https://www.contractormag.com"
-            }
+            { id: 1, citation: "HVAC Industry Market Size & Growth - IBISWorld (2024)", url: "https://www.ibisworld.com" },
+            { id: 2, citation: "The Short Life of Online Sales Leads - Harvard Business Review (2011)", url: "https://hbr.org" },
+            { id: 3, citation: "Speed-to-Lead: The Importance of Fast Response - InsideSales.com (2023)", url: "https://www.insidesales.com" },
+            { id: 4, citation: "Call Center AI Market Analysis - Fortune Business Insights (2024)", url: "https://www.fortunebusinessinsights.com" },
+            { id: 5, citation: "Voice AI Technology Benchmarks - Deepgram (2024)", url: "https://deepgram.com" },
+            { id: 6, citation: "ServiceTitan AI Voice Agent Launch - ServiceTitan (2023)", url: "https://www.servicetitan.com" },
+            { id: 7, citation: "Consumer Attitudes Toward AI Customer Service - CallRail (2024)", url: "https://www.callrail.com" },
+            { id: 8, citation: "AI Receptionist Cost Analysis - Dialzara (2024)", url: "https://dialzara.com" },
+            { id: 9, citation: "AI vs Traditional Answering Service Comparison - AutoRev AI (2024)", url: "https://autorev.ai" },
+            { id: 10, citation: "Lead Response Management Best Practices - Driven Results (2024)", url: "https://drivenresults.co" },
+            { id: 11, citation: "Small Business Lead Loss Analysis - Anthro.ai (2024)", url: "https://anthrova.com" },
+            { id: 12, citation: "Home Services Marketing Trends - Hook Agency (2024)", url: "https://hookagency.com" },
+            { id: 13, citation: "AI in Customer Service: Enterprise Adoption - Gartner (2024)", url: "https://www.gartner.com" },
+            { id: 14, citation: "Voice Technology Market Forecast - Stanford HAI (2024)", url: "https://hai.stanford.edu" },
+            { id: 15, citation: "HVAC Contractor Business Metrics - Contractor Magazine (2024)", url: "https://www.contractormag.com" }
           ]}
         />
 

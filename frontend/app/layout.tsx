@@ -73,28 +73,44 @@ export const metadata: Metadata = {
     yandex: 'your-yandex-verification-code',
   },
   other: {
-    'application/ld+json': JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": "KestrelVoice",
-      "url": "https://kestrelvoice.com",
-      "logo": "https://kestrelvoice.com/logo.png",
-      "description": "Autonomous voice operations platform for HVAC and service businesses",
-      "sameAs": [
-        "https://twitter.com/kestrelvoice",
-        "https://linkedin.com/company/kestrelvoice"
-      ],
-      "contactPoint": {
-        "@type": "ContactPoint",
-        "contactType": "Sales",
-        "url": "https://kestrelvoice.com/contact"
+    'application/ld+json': JSON.stringify([
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'KestrelVoice',
+        url: 'https://kestrelvoice.com',
+        logo: 'https://kestrelvoice.com/logo.png',
+        description: 'Autonomous voice operations platform for HVAC and service businesses',
+        sameAs: [
+          'https://twitter.com/kestrelvoice',
+          'https://linkedin.com/company/kestrelvoice',
+        ],
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'Sales',
+          url: 'https://kestrelvoice.com/contact',
+        },
       },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "ratingCount": "127"
-      }
-    }, null, 2)
+      {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'KestrelVoice',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        offers: {
+          '@type': 'AggregateOffer',
+          lowPrice: '199',
+          highPrice: '4900',
+          priceCurrency: 'USD',
+          offerCount: '4',
+        },
+        aggregateRating: {
+          '@type': 'AggregateRating',
+          ratingValue: '4.8',
+          ratingCount: '127',
+        },
+      },
+    ]),
   },
 };
 

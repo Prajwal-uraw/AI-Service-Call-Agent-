@@ -22,49 +22,71 @@ export default function Hero() {
               <span className="text-sm font-medium text-blue-900">Proven in HVAC. Scaling to Service Industries.</span>
             </div>
             
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tracking-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-tight tracking-tight">
               <span className="block mb-2 animate-fade-in" style={{animationDelay: '0.3s'}}>Autonomous Voice Operations Platform</span>
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient animate-fade-in" style={{animationDelay: '0.4s'}}>
                 for Service Businesses
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-neutral-600 mb-10 leading-relaxed max-w-3xl mx-auto animate-fade-in" style={{animationDelay: '0.5s'}}>
+            <p className="text-lg md:text-xl lg:text-2xl text-neutral-600 mb-8 leading-relaxed max-w-3xl mx-auto animate-fade-in" style={{animationDelay: '0.5s'}}>
               <span className="font-semibold text-neutral-900">Proven in HVAC.</span> Built to answer every call, qualify intent, and resolve workflows without human lift.
             </p>
             
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in" style={{animationDelay: '0.6s'}}>
-              <a 
-                href="/calendar"
-                className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                Book Workflow Demo
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </a>
-              <a 
-                href="/demo"
-                className="group inline-flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
-              >
-                Watch AI Demo
-                <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              </a>
-            </div>
-            
-            {/* Trust indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-neutral-600">
-              <div className="flex items-center gap-2">
-                <Check className="text-green-600 w-5 h-5" />
-                Enterprise-Grade Security
-              </div>
-              <div className="flex items-center gap-2">
-                <Check className="text-green-600 w-5 h-5" />
-                <span className="font-medium">99.9% Uptime SLA</span>
-              </div>
+            {/* Trust indicators - moved above CTAs for mobile */}
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-sm mb-8 animate-fade-in" style={{animationDelay: '0.55s'}}>
               <div className="flex items-center gap-2">
                 <Check className="text-green-600 w-5 h-5" />
                 <span className="font-medium">Live in 48 hours</span>
               </div>
+              <div className="flex items-center gap-2">
+                <Check className="text-green-600 w-5 h-5" />
+                <span className="font-medium">200+ companies trust us</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="text-green-600 w-5 h-5" />
+                <span className="font-medium">No credit card</span>
+              </div>
+            </div>
+            
+            {/* Primary CTA - Voice Agent */}
+            <div className="mb-6 animate-fade-in" style={{animationDelay: '0.6s'}}>
+              <div className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 p-1 rounded-xl shadow-2xl">
+                <div className="bg-white rounded-lg px-8 py-6">
+                  <div className="text-sm font-semibold text-neutral-600 mb-2">Try Our AI Agent Right Now</div>
+                  <a 
+                    href="tel:+19388396504"
+                    className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all"
+                  >
+                    (938) 839-6504
+                  </a>
+                  <div className="text-xs text-neutral-500 mt-2">Call now • Experience AI in 30 seconds • No signup required</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Secondary CTAs */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 animate-fade-in" style={{animationDelay: '0.7s'}}>
+              <a 
+                href="/calendar"
+                className="group inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-base font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                Book Live Demo
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </a>
+              <a 
+                href="/demo"
+                className="group inline-flex items-center justify-center gap-2 bg-white hover:bg-neutral-50 text-neutral-900 border-2 border-neutral-200 hover:border-neutral-300 px-6 py-3 rounded-lg text-base font-semibold transition-all"
+              >
+                Watch Video Demo
+                <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              </a>
+            </div>
+            
+            {/* Additional trust signals */}
+            <div className="text-sm text-neutral-500 animate-fade-in" style={{animationDelay: '0.75s'}}>
+              <span className="inline-block px-3 py-1 bg-neutral-100 rounded-full mr-2">Enterprise Security</span>
+              <span className="inline-block px-3 py-1 bg-neutral-100 rounded-full">99.9% Uptime SLA</span>
             </div>
           </div>
           

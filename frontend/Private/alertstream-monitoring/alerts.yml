@@ -1,0 +1,55 @@
+groups:
+  - name: alertstream.rules
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on {{ $labels.instance }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for 5 minutes"
+          
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time on {{ $labels.instance }}"
+          description: "95th percentile response time is {{ $value }}s"
+          
+      - alert: SMSQueueBacklog
+        expr: redis_queue_length{queue="sms"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SMS queue backlog is high"
+          description: "SMS queue has {{ $value }} pending messages"
+          
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database connections"
+          description: "Database has {{ $value }} active connections"
+          
+      - alert: TwilioBalanceLow
+        expr: twilio_account_balance < 50
+        labels:
+          severity: critical
+        annotations:
+          summary: "Twilio balance is low"
+          description: "Twilio balance is ${{ $value }}"
+          
+      - alert: MemoryUsageHigh
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanizePercentage }}"

@@ -72,6 +72,9 @@ export default function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
+            <Link href="/products" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
+              Products
+            </Link>
             <Link href="/#features" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
               Features
             </Link>
@@ -80,9 +83,6 @@ export default function Navigation() {
             </Link>
             <a href="/customer-demo.html" target="_blank" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
               Customer Demo
-            </a>
-            <a href="/partner-demo.html" target="_blank" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
-              Partner Demo
             </a>
             <Link href="/docs" className="text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
               Docs
@@ -131,7 +131,7 @@ export default function Navigation() {
       )}
 
       {/* Mobile Menu */}
-      <div className={`fixed top-0 right-0 h-full w-80 bg-white/95 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+      <div className={`fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
         mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
         <div className="flex flex-col h-full pt-20 px-6 pb-6 overflow-y-auto">
@@ -140,6 +140,13 @@ export default function Navigation() {
           <div className="mb-6">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Navigation</h3>
             <div className="space-y-1">
+              <Link 
+                href="/products" 
+                className="block px-4 py-3 rounded-lg hover:bg-blue-50 transition-colors text-gray-900 font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Products
+              </Link>
               <Link 
                 href="/#features" 
                 className="block px-4 py-3 rounded-lg hover:bg-blue-50 transition-colors text-gray-900 font-medium"
@@ -266,6 +273,34 @@ export default function Navigation() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Dashboard
+                  </Link>
+                  <Link 
+                    href="/admin/ai-demos" 
+                    className="block px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-900"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    AI Demos
+                  </Link>
+                  <Link 
+                    href="/admin/video-rooms" 
+                    className="block px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-900"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Video Rooms
+                  </Link>
+                  <Link 
+                    href="/admin/call-intelligence" 
+                    className="block px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-900"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Call Intelligence
+                  </Link>
+                  <Link 
+                    href="/admin/support-simulation" 
+                    className="block px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors text-gray-900"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Support Simulation
                   </Link>
                   <Link 
                     href="/admin/analytics" 

@@ -31,6 +31,8 @@ from app.routers import (
     twilio_disclaimer_router,
     call_intelligence_router,
 )
+from app.routers.twilio_demo_call import router as twilio_demo_router
+from app.routers.alertstream import router as alertstream_router
 from app.utils.logging import get_logger
 from app.utils.error_handler import HVACAgentError
 from app.middleware.logging_middleware import log_requests
@@ -129,6 +131,7 @@ app.include_router(twilio_elevenlabs_router)
 app.include_router(twilio_gather_router)  # Enterprise Gather-based voice agent
 app.include_router(twilio_realtime_router)  # OpenAI Realtime API (best latency)
 app.include_router(twilio_ivr_router)  # IVR menu to choose system
+app.include_router(twilio_demo_router)  # Demo call handler with 2-min limit
 app.include_router(audio_router)  # Audio serving for ElevenLabs TTS
 app.include_router(twilio_disclaimer_router)  # Disclaimer handler
 app.include_router(call_intelligence_router)  # Call Intelligence router

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Use server-side env var (not NEXT_PUBLIC_)
-const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+// Modal deployment URL or local backend
+const BACKEND_URL = process.env.BACKEND_URL || 
+                    process.env.NEXT_PUBLIC_API_URL || 
+                    'https://subodhkc--kestrel-demand-engine-fastapi-app.modal.run';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +19,10 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    }).catch((err) => {
+      console.error('[Outbound Call] Fetch error:', err);
+      throw new Error(`Network error: ${err.message}. Check if backend is running at ${BACKEND_URL}`);
     });
 
     console.log('[Outbound Call] Backend response status:', response.status);

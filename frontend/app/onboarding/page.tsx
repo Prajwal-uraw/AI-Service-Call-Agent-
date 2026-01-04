@@ -15,7 +15,9 @@ import {
   CheckCircle,
   ArrowRight,
   ArrowLeft,
-  Check
+  Check,
+  Clock,
+  AlertCircle
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -404,22 +406,53 @@ export default function OnboardingPage() {
               <p className="text-xl text-gray-600">Your account has been created successfully</p>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-left">
-              <h3 className="font-semibold mb-4">What happens next:</h3>
-              <ol className="space-y-3">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 text-left">
+              <div className="flex items-center gap-2 mb-4">
+                <Clock className="text-blue-600" size={24} />
+                <h3 className="font-bold text-lg">What Happens Next</h3>
+              </div>
+              <ol className="space-y-4">
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">1</span>
-                  <span>Our team will contact you within 24 hours to schedule your deployment</span>
+                  <span className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                  <div>
+                    <div className="font-semibold text-gray-900">Admin Review (Within 24 hours)</div>
+                    <div className="text-sm text-gray-600">Our team will review your application and contact you to confirm details</div>
+                  </div>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">2</span>
-                  <span>We'll set up your Twilio phone number and configure your AI agent</span>
+                  <span className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                  <div>
+                    <div className="font-semibold text-gray-900">Phone Number Provisioning (Day 1)</div>
+                    <div className="text-sm text-gray-600">We'll purchase your Twilio phone number and configure webhooks automatically</div>
+                  </div>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">3</span>
-                  <span>Your voice agent will be live in 48 hours</span>
+                  <span className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                  <div>
+                    <div className="font-semibold text-gray-900">AI Agent Configuration (Day 1-2)</div>
+                    <div className="text-sm text-gray-600">We'll customize your AI agent with your business info, services, and instructions</div>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">✓</span>
+                  <div>
+                    <div className="font-semibold text-gray-900">Go Live! (Within 48 hours)</div>
+                    <div className="text-sm text-gray-600">Your AI voice agent will be live and answering calls 24/7</div>
+                  </div>
                 </li>
               </ol>
+              
+              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="text-sm">
+                    <div className="font-semibold text-yellow-900 mb-1">Processing Time: 24-48 Hours</div>
+                    <div className="text-yellow-800">
+                      Your account is pending admin approval. You'll receive an email confirmation once your AI agent is configured and ready to go live.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="space-y-3">

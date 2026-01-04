@@ -20,10 +20,17 @@ env:
   PYTHON_VERSION: '3.11'
   DEPLOYMENT_THROTTLE_MINUTES: 60
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   check-throttle:
     name: Check Deployment Throttle
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       should_deploy: ${{ steps.check.outputs.should_deploy }}
     
@@ -38,19 +45,21 @@ jobs:
             exit 0
           fi
           
-          # For automatic deployments, check throttle
-          LAST_DEPLOY=$(gh api /repos/${{ github.repository }}/actions/runs \
-            --jq '.workflow_runs[] | select(.name=="Deploy to Production" and .conclusion=="success") | .updated_at' \
-            | head -n 1)
+          # For automatic deployments, check throttle using GitHub API
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs?status=success&per_page=5")
           
-          if [ -z "$LAST_DEPLOY" ]; then
+          LAST_DEPLOY=$(echo "$RESPONSE" | jq -r '.workflow_runs[] | select(.name=="Deploy to Production" and .conclusion=="success") | .updated_at' | head -n 1)
+          
+          if [ -z "$LAST_DEPLOY" ] || [ "$LAST_DEPLOY" = "null" ]; then
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             echo "No previous deployment found - proceeding"
             exit 0
           fi
           
-          LAST_DEPLOY_EPOCH=$(date -d "$LAST_DEPLOY" +%s)
-          CURRENT_EPOCH=$(date +%s)
+          LAST_DEPLOY_EPOCH=$(date -u -d "$LAST_DEPLOY" +%s 2>/dev/null || echo "0")
+          CURRENT_EPOCH=$(date -u +%s)
           DIFF_MINUTES=$(( ($CURRENT_EPOCH - $LAST_DEPLOY_EPOCH) / 60 ))
           
           if [ $DIFF_MINUTES -ge ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} ]; then
@@ -60,8 +69,6 @@ jobs:
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             echo "Last deployment was only $DIFF_MINUTES minutes ago - skipping (throttle: ${{ env.DEPLOYMENT_THROTTLE_MINUTES }} minutes)"
           fi
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   test:
     name: Run Tests
@@ -137,23 +144,50 @@ jobs:
       - name: Install Modal
         run: pip install modal
 
+      - name: Authenticate with Modal
+        run: |
+          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
+          modal --version
+
       - name: Deploy Demand Engine to Modal
         working-directory: ./demand-engine
         run: |
-          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
-          modal deploy modal_app.py
+          echo "Deploying Demand Engine..."
+          if [ -f modal_app.py ]; then
+            modal deploy modal_app.py --name demand-engine
+          else
+            echo "⚠️  modal_app.py not found, skipping"
+          fi
 
       - name: Deploy HVAC Agent to Modal
         working-directory: ./hvac_agent
         run: |
-          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
-          modal deploy modal_app.py
+          echo "Deploying HVAC Agent..."
+          if [ -f modal_app.py ]; then
+            modal deploy modal_app.py --name hvac-agent
+          else
+            echo "⚠️  modal_app.py not found, skipping"
+          fi
 
       - name: Deploy Scrapers to Modal
         working-directory: ./demand-engine
         run: |
-          modal token set --token-id ${{ secrets.MODAL_TOKEN_ID }} --token-secret ${{ secrets.MODAL_TOKEN_SECRET }}
-          modal deploy modal_scrapers.py
+          echo "Deploying Scrapers..."
+          if [ -f modal_scrapers.py ]; then
+            modal deploy modal_scrapers.py --name scrapers
+          else
+            echo "⚠️  modal_scrapers.py not found, skipping"
+          fi
+        
+      - name: Deploy Analytics to Modal
+        working-directory: ./demand-engine
+        run: |
+          echo "Deploying Analytics API..."
+          if [ -f modal_analytics.py ]; then
+            modal deploy modal_analytics.py --name analytics
+          else
+            echo "⚠️  modal_analytics.py not found, skipping"
+          fi
 
   notify:
     name: Notify Deployment Status
