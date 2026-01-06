@@ -12,8 +12,8 @@ import secrets
 import string
 import hashlib
 
-from app.database import get_db
-from app.models.db_models import Tenant, TenantUser, TenantAPIKey
+from database.session import get_db
+from models.tenant_models import Tenant, TenantUser, TenantAPIKey
 from services.tenant_notifications import TenantNotificationService
 
 router = APIRouter(prefix="/api/admin/tenants", tags=["Admin - Tenants"])

@@ -43,12 +43,16 @@ class CallInsights(BaseModel):
     resolution_status: str  # "resolved", "pending", "escalated"
 
 
+class TopicCount(BaseModel):
+    topic: str
+    count: int
+
 class CallIntelligenceSummary(BaseModel):
     total_calls: int
     avg_quality_score: float
     avg_sentiment_score: float
     avg_duration: int
-    top_topics: List[Dict[str, int]]
+    top_topics: List[TopicCount]
     sentiment_distribution: Dict[str, int]
     resolution_rate: float
 

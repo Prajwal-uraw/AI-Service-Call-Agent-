@@ -135,27 +135,27 @@ async def get_score_correlation(days: int = 30):
     try:
         supabase = get_supabase()
         
-        # Get signals with both keyword and AI scores
-        response = supabase.table("unified_signals_with_ai").select(
-            "keyword_total, ai_total, combined_score, converted_to_lead"
+        # Get signals with pain scores (using pain_score as the combined score)
+        response = supabase.table("signals").select(
+            "id, pain_score, status, created_at, source_type"
         ).gte(
             "created_at",
             (datetime.now() - timedelta(days=days)).isoformat()
-        ).not_.is_("ai_total", "null").execute()
+        ).not_.is_("pain_score", "null").execute()
         
         if not response.data:
             return []
         
         # Group by score ranges
         ranges = {
-            "0-49": {"scores": [], "keyword": [], "ai": [], "converted": 0, "total": 0},
-            "50-69": {"scores": [], "keyword": [], "ai": [], "converted": 0, "total": 0},
-            "70-84": {"scores": [], "keyword": [], "ai": [], "converted": 0, "total": 0},
-            "85-100": {"scores": [], "keyword": [], "ai": [], "converted": 0, "total": 0}
+            "0-49": {"scores": [], "converted": 0, "total": 0},
+            "50-69": {"scores": [], "converted": 0, "total": 0},
+            "70-84": {"scores": [], "converted": 0, "total": 0},
+            "85-100": {"scores": [], "converted": 0, "total": 0}
         }
         
         for signal in response.data:
-            score = signal["combined_score"]
+            score = signal.get("pain_score", 0)
             
             if score < 50:
                 range_key = "0-49"
@@ -167,9 +167,10 @@ async def get_score_correlation(days: int = 30):
                 range_key = "85-100"
             
             ranges[range_key]["total"] += 1
-            ranges[range_key]["keyword"].append(signal["keyword_total"])
-            ranges[range_key]["ai"].append(signal["ai_total"])
-            if signal.get("converted_to_lead"):
+            ranges[range_key]["scores"].append(score)
+            
+            # Check if signal was converted (status is 'contacted')
+            if signal.get("status") == "contacted":
                 ranges[range_key]["converted"] += 1
         
         result = []
@@ -178,9 +179,9 @@ async def get_score_correlation(days: int = 30):
                 result.append(ScoreCorrelation(
                     score_range=range_key,
                     count=data["total"],
-                    avg_keyword_score=round(sum(data["keyword"]) / len(data["keyword"]), 2) if data["keyword"] else 0,
-                    avg_ai_score=round(sum(data["ai"]) / len(data["ai"]), 2) if data["ai"] else 0,
-                    conversion_rate=round((data["converted"] / data["total"] * 100), 2)
+                    avg_keyword_score=0,  # Not available in signals table
+                    avg_ai_score=round(sum(data["scores"]) / len(data["scores"]), 2) if data["scores"] else 0,
+                    conversion_rate=round((data["converted"] / data["total"] * 100), 2) if data["total"] > 0 else 0
                 ))
         
         return result
@@ -203,35 +204,36 @@ async def get_intent_analysis(days: int = 30):
     try:
         supabase = get_supabase()
         
-        response = supabase.table("unified_signals_with_ai").select(
-            "intent, combined_score, sentiment, converted_to_lead"
+        # Get signals with pain scores and status
+        response = supabase.table("signals").select(
+            "id, pain_score, status, created_at, source_type, signal_type"
         ).gte(
             "created_at",
             (datetime.now() - timedelta(days=days)).isoformat()
-        ).not_.is_("intent", "null").execute()
+        ).not_.is_("signal_type", "null").execute()
         
         if not response.data:
             return []
         
-        # Aggregate by intent
+        # Aggregate by signal_type (as intent)
         intent_stats = {}
         for signal in response.data:
-            intent = signal["intent"]
+            intent = signal.get("signal_type", "unknown")
             if intent not in intent_stats:
                 intent_stats[intent] = {
                     "count": 0,
                     "scores": [],
                     "converted": 0,
-                    "sentiments": {}
+                    "sentiments": {"neutral": 1}  # Default sentiment since we don't have it in signals
                 }
             
             intent_stats[intent]["count"] += 1
-            intent_stats[intent]["scores"].append(signal["combined_score"])
-            if signal.get("converted_to_lead"):
-                intent_stats[intent]["converted"] += 1
+            score = signal.get("pain_score", 0)
+            intent_stats[intent]["scores"].append(score)
             
-            sentiment = signal.get("sentiment", "unknown")
-            intent_stats[intent]["sentiments"][sentiment] = intent_stats[intent]["sentiments"].get(sentiment, 0) + 1
+            # Check if signal was converted (status is 'contacted')
+            if signal.get("status") == "contacted":
+                intent_stats[intent]["converted"] += 1
         
         result = []
         for intent, stats in intent_stats.items():

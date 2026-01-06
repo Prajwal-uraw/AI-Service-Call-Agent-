@@ -28,6 +28,7 @@ image = (
         "python-multipart>=0.0.6",  # Required for form data (Twilio webhooks)
         "openai>=1.50.0",
         "pydantic>=2.7.0",
+        "pydantic-settings>=2.2.1",
         "sqlalchemy>=2.0.0",
         "psycopg2-binary>=2.9.0",  # PostgreSQL driver
         "websockets>=12.0",
@@ -44,6 +45,9 @@ image = (
         # AlertStream dependencies
         "bcrypt>=4.0.0",  # Password hashing for AlertStream auth
         "email-validator>=2.0.0",  # Email validation for Pydantic EmailStr
+        "google-auth>=2.25.0",
+"google-auth-oauthlib>=1.2.0",
+"google-api-python-client>=2.110.0",
     )
     .add_local_python_source("app")  # Include the app package
 )

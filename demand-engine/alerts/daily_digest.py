@@ -293,7 +293,7 @@ def send_slack_alert(signal: Dict) -> bool:
         return False
 
 
-@app.local_entrypoint()
+@app.local_entrypoint(name="daily_digest_entrypoint")
 def main(test: bool = False):
     """
     Local entrypoint for testing

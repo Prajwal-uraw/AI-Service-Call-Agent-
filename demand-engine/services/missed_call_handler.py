@@ -6,7 +6,7 @@ Automatically sends SMS when calls are missed
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
-from services.notification_service import send_sms_twilio
+from services.twilio_provisioner import TwilioProvisioningService
 
 logger = logging.getLogger(__name__)
 

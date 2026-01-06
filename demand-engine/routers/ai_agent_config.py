@@ -10,8 +10,8 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 import json
 
-from app.database import get_db
-from app.models.db_models import Tenant
+from database.session import get_db
+from models.tenant_models import Tenant
 
 router = APIRouter(prefix="/api/admin/ai-config", tags=["AI Agent Configuration"])
 

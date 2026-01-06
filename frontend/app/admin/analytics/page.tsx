@@ -104,11 +104,21 @@ export default function AnalyticsPage() {
 
   const fetchSourcePerformance = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/analytics/source-performance?days=${days}`);
+      const response = await fetch(
+        `${API_URL}/api/admin/analytics/source-performance?days=${days}`
+      );
       const data = await response.json();
-      setSourcePerformance(data);
+
+      setSourcePerformance(
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data?.sources)
+          ? data.sources
+          : []
+      );
     } catch (error) {
       console.error("Failed to fetch source performance:", error);
+      setSourcePerformance([]);
     }
   };
 
@@ -116,7 +126,14 @@ export default function AnalyticsPage() {
     try {
       const response = await fetch(`${API_URL}/api/admin/analytics/score-correlation?days=${days}`);
       const data = await response.json();
-      setScoreCorrelation(data);
+      setScoreCorrelation(
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data?.correlations)
+          ? data.correlations
+          : []
+      );
+      
     } catch (error) {
       console.error("Failed to fetch score correlation:", error);
     }
@@ -124,21 +141,42 @@ export default function AnalyticsPage() {
 
   const fetchIntentAnalysis = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/admin/analytics/intent-analysis?days=${days}`);
+      const response = await fetch(
+        `${API_URL}/api/admin/analytics/intent-analysis?days=${days}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`Intent API failed: ${response.status}`);
+      }
+
       const data = await response.json();
-      setIntentAnalysis(data);
+
+      setIntentAnalysis(
+        Array.isArray(data)
+          ? data
+          : Array.isArray(data?.intents)
+          ? data.intents
+          : Array.isArray(data?.data)
+          ? data.data
+          : []
+      );
     } catch (error) {
       console.error("Failed to fetch intent analysis:", error);
+      setIntentAnalysis([]);
     }
   };
+
+
+  
 
   const fetchTrends = async () => {
     try {
       const response = await fetch(`${API_URL}/api/admin/analytics/trends?days=${days}`);
       const data = await response.json();
-      setTrends(data.slice(0, 14)); // Last 14 days
+      setTrends((data?.trends ?? []).slice(0, 14)); // Safely get trends array and take last 14 days
     } catch (error) {
       console.error("Failed to fetch trends:", error);
+      setTrends([]); // Ensure trends is set to empty array on error
     }
   };
 
@@ -204,7 +242,7 @@ export default function AnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-gray-600">Total Signals</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{conversionStats.total_signals}</div>
+                  <div className="text-2xl font-bold">{conversionStats?.total_signals ?? 0}</div>
                   <p className="text-xs text-gray-500">Last {days} days</p>
                 </CardContent>
               </Card>
@@ -214,8 +252,8 @@ export default function AnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-gray-600">Converted to Leads</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{conversionStats.converted_signals}</div>
-                  <p className="text-xs text-gray-500">{conversionStats.conversion_rate.toFixed(1)}% conversion rate</p>
+                  <div className="text-2xl font-bold text-green-600">{conversionStats?.converted_signals ?? 0}</div>
+                  <p className="text-xs text-gray-500">{(conversionStats?.conversion_rate || 0).toFixed(1)}% conversion rate</p>
                 </CardContent>
               </Card>
 
@@ -224,7 +262,7 @@ export default function AnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-gray-600">Avg Score (Converted)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">{conversionStats.avg_score_converted.toFixed(1)}</div>
+                  <div className="text-2xl font-bold text-orange-600">{(conversionStats?.avg_score_converted ?? 0).toFixed(1)}</div>
                   <p className="text-xs text-gray-500">Signals that converted</p>
                 </CardContent>
               </Card>
@@ -234,7 +272,7 @@ export default function AnalyticsPage() {
                   <CardTitle className="text-sm font-medium text-gray-600">Avg Score (Not Converted)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{conversionStats.avg_score_not_converted.toFixed(1)}</div>
+                  <div className="text-2xl font-bold">{(conversionStats?.avg_score_not_converted ?? 0).toFixed(1)}</div>
                   <p className="text-xs text-gray-500">Signals not converted</p>
                 </CardContent>
               </Card>
@@ -252,7 +290,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {sourcePerformance.map((source) => (
+                {Array.isArray(sourcePerformance) && sourcePerformance.map((source) => (
                   <div key={source.source} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
@@ -302,7 +340,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {scoreCorrelation.map((range) => (
+                {Array.isArray(scoreCorrelation) && scoreCorrelation.map((range) => (
                   <div key={range.score_range} className="border rounded-lg p-4">
                     <div className="text-center mb-3">
                       <div className="text-lg font-bold">{range.score_range}</div>
@@ -340,7 +378,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {intentAnalysis.map((intent) => (
+                {Array.isArray(intentAnalysis) && intentAnalysis.map((intent) => (
                   <div key={intent.intent} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">

@@ -8,7 +8,7 @@ from typing import List, Dict, Optional
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 from sqlalchemy.orm import Session
-from app.models.db_models import Tenant
+from models.tenant_models import Tenant
 
 # Twilio credentials
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -222,7 +222,7 @@ class TwilioProvisioningService:
         Returns:
             Provisioning result with phone number details
         """
-        from app.models.db_models import Tenant
+        from models.tenant_models import Tenant
         
         # Get tenant
         tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()

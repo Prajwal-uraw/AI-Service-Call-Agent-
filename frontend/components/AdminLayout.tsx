@@ -63,7 +63,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     tools: [
       { name: 'Call Intelligence', href: '/admin/call-intelligence', icon: Brain },
       { name: 'Scrapers', href: '/scrapers', icon: Database },
-      { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+      { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
       { name: 'Help Center', href: '/help', icon: HelpCircle },
       { name: 'System Status', href: '/status', icon: Activity },
       { name: 'Settings', href: '/settings', icon: Settings },

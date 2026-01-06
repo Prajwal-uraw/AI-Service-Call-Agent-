@@ -290,7 +290,7 @@ def score_batch(batch_size: int = 50, source_type: Optional[str] = None) -> Dict
     return stats
 
 
-@app.local_entrypoint()
+@app.local_entrypoint(name="score_signal_entrypoint")
 def main(
     signal_id: Optional[str] = None,
     batch: bool = False,

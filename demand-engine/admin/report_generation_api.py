@@ -4,13 +4,13 @@ FastAPI endpoints for generating pilot reports
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
 import logging
 
-from ..analytics.report_orchestrator import ReportOrchestrator, PilotData
-from ..analytics.data_connector import AnalyticsDataConnector, PilotReport
+from analytics.report_orchestrator import ReportOrchestrator, PilotData, PilotReport
+from analytics.data_connector import AnalyticsDataConnector
 
 logger = logging.getLogger(__name__)
 

@@ -48,9 +48,10 @@ class RateLimiter:
             return f"api_key:{api_key}"
         
         # Check for authenticated user
-        user_id = request.state.get("user_id")
-        if user_id:
-            return f"user:{user_id}"
+        if hasattr(request.state, 'user_id'):
+            user_id = request.state.user_id
+            if user_id:
+                return f"user:{user_id}"
         
         # Fall back to IP address
         client_ip = request.client.host if request.client else "unknown"
