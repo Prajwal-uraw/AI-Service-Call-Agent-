@@ -8,6 +8,8 @@ export default function CallsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('today');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Demo data
   const stats = {
@@ -113,9 +115,47 @@ export default function CallsPage() {
             <h1 className="text-2xl font-semibold text-neutral-900">Calls</h1>
             <p className="text-sm text-neutral-600 mt-1">Track and manage all customer calls</p>
           </div>
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors">
+          <button 
+            onClick={() => {
+              // Create CSV header
+              const headers = ['Customer Name', 'Phone', 'Service', 'Duration', 'Outcome', 'Time'];
+              
+              // Convert data to CSV rows
+              const csvRows = [
+                headers.join(','), // Add header row first
+                ...calls.map(call => 
+                  [
+                    `"${call.customer_name.replace(/"/g, '""')}"`,
+                    `"${call.phone}"`,
+                    `"${call.service_type}"`,
+                    `"${call.duration}"`,
+                    `"${call.outcome}"`,
+                    `"${call.timestamp}"`
+                  ].join(',')
+                )
+              ];
+
+              // Create CSV content
+              const csvContent = csvRows.join('\n');
+              
+              // Create a Blob with the CSV data
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              
+              // Create a download link and trigger it
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.setAttribute('href', url);
+              link.setAttribute('download', `calls_export_${new Date().toISOString().split('T')[0]}.csv`);
+              link.style.visibility = 'hidden';
+              
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg text-sm font-medium hover:bg-neutral-800 transition-colors"
+          >
             <Download className="w-4 h-4" />
-            Export
+            Export as CSV
           </button>
         </div>
 
@@ -223,7 +263,20 @@ export default function CallsPage() {
                 </tr>
               </thead>
               <tbody>
-                {calls.map((call, index) => (
+                {calls
+                  .filter(call => {
+                    // Apply search filter
+                    const matchesSearch = searchQuery === '' || 
+                      call.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      call.phone.includes(searchQuery);
+                    
+                    // Apply status filter
+                    const matchesStatus = statusFilter === 'all' || call.outcome === statusFilter;
+                    
+                    return matchesSearch && matchesStatus;
+                  })
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((call, index) => (
                   <tr
                     key={call.id}
                     className={`${index !== calls.length - 1 ? 'border-b border-neutral-100' : ''} hover:bg-neutral-50 transition-colors group`}
@@ -269,19 +322,25 @@ export default function CallsPage() {
               Showing <span className="font-medium">1-5</span> of <span className="font-medium">156</span> calls
             </div>
             <div className="flex gap-2">
-              <button className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded transition-colors">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded transition-colors"
+              >
                 Previous
               </button>
               <button className="px-3 py-1.5 text-sm font-medium bg-neutral-900 text-white rounded">
-                1
+                {currentPage}
               </button>
-              <button className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded transition-colors">
-                2
-              </button>
-              <button className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded transition-colors">
-                3
-              </button>
-              <button className="px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 rounded transition-colors">
+              <button 
+                onClick={() => setCurrentPage(p => p + 1)}
+                disabled={currentPage >= Math.ceil(calls.length / itemsPerPage)}
+                className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                  currentPage >= Math.ceil(calls.length / itemsPerPage)
+                    ? 'text-neutral-400 cursor-not-allowed' 
+                    : 'text-neutral-700 hover:bg-neutral-100'
+                }`}
+              >
                 Next
               </button>
             </div>

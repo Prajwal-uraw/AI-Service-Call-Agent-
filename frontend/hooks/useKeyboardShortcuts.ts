@@ -77,30 +77,53 @@ Ctrl+/ - Show this help`);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const shortcut = shortcuts.find(
-        (s) =>
-          s.key.toLowerCase() === event.key.toLowerCase() &&
-          (s.ctrlKey === undefined || s.ctrlKey === event.ctrlKey) &&
-          (s.shiftKey === undefined || s.shiftKey === event.shiftKey) &&
-          (s.altKey === undefined || s.altKey === event.altKey)
-      );
+      try {
+        // Skip if event or event.key is not defined
+        if (!event || typeof event.key === 'undefined') return;
 
-      if (shortcut) {
-        // Don't trigger shortcuts when typing in input fields
-        const target = event.target as HTMLElement;
-        if (
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable
-        ) {
-          // Exception: Allow Ctrl+K even in input fields for quick search
-          if (!(shortcut.key === 'k' && shortcut.ctrlKey)) {
-            return;
+        // Ensure we have a string key to work with
+        const key = String(event.key).toLowerCase();
+        if (!key) return;
+
+        const shortcut = shortcuts.find(
+          (s) => {
+            try {
+              return (
+                s.key.toLowerCase() === key &&
+                (s.ctrlKey === undefined || s.ctrlKey === event.ctrlKey) &&
+                (s.shiftKey === undefined || s.shiftKey === event.shiftKey) &&
+                (s.altKey === undefined || s.altKey === event.altKey)
+              );
+            } catch (e) {
+              console.error('Error in shortcut matching:', e);
+              return false;
+            }
+          }
+        );
+
+        if (shortcut) {
+          // Don't trigger shortcuts when typing in input fields
+          const target = event.target as HTMLElement;
+          if (
+            target?.tagName === 'INPUT' ||
+            target?.tagName === 'TEXTAREA' ||
+            target?.isContentEditable
+          ) {
+            // Exception: Allow Ctrl+K even in input fields for quick search
+            if (!(shortcut.key === 'k' && shortcut.ctrlKey)) {
+              return;
+            }
+          }
+
+          event.preventDefault();
+          try {
+            shortcut.action();
+          } catch (e) {
+            console.error('Error executing shortcut action:', e);
           }
         }
-
-        event.preventDefault();
-        shortcut.action();
+      } catch (error) {
+        console.error('Error in keyboard shortcut handler:', error);
       }
     };
 

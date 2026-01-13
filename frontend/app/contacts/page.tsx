@@ -1,78 +1,205 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import AddContactModal from '@/components/AddContactModal';
 import { Search, Phone, Mail, MapPin, Calendar, Tag, Plus, Download, Filter } from 'lucide-react';
 
-export default function ContactsPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [tagFilter, setTagFilter] = useState('all');
+interface Contact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  company_name?: string;
+  address?: string;
+  email_subscribed?: boolean;
+  created_at: string;
+  updated_at: string;
+  tags?: string[];
+  last_contact?: string;
+  service_count?: number;
+  lifetime_value?: string;
+  name?: string; // For backward compatibility
+}
 
-  // Demo data
-  const stats = {
-    total_contacts: 342,
-    active: 298,
-    new_this_month: 24,
-    high_value: 56
+const API_BASE_URL = 'http://localhost:8000/api/crm/contacts'; // Updated to match the backend route
+
+export default function ContactsPage() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [tagFilter, setTagFilter] = useState<string>('all');
+  const [showAddContactModal, setShowAddContactModal] = useState(false);
+  const router = useRouter();
+
+  // Safe version of contacts that's always an array
+  const safeContacts = Array.isArray(contacts) ? contacts : [];
+
+  // Fetch contacts with proper error handling
+  const fetchContacts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const url = `${API_BASE_URL}?search=${encodeURIComponent(searchQuery)}`;
+      console.log('Fetching contacts from:', url);
+      
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to fetch contacts: ${response.status} ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      console.log('API Response:', responseData);
+      
+      // The contacts are in the 'contacts' property of the response
+      const contactsData = Array.isArray(responseData.contacts) ? responseData.contacts : [];
+      console.log('Extracted contacts:', contactsData);
+      setContacts(contactsData);
+    } catch (err) {
+      console.error('Error fetching contacts:', err);
+      setError('Failed to load contacts. Please try again later.');
+      setContacts([]); // Ensure contacts is always an array
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const contacts = [
-    {
-      id: '1',
-      name: 'John Smith',
-      email: 'john.smith@email.com',
-      phone: '+1 (555) 123-4567',
-      address: '123 Main St, Phoenix, AZ 85001',
-      tags: ['VIP', 'Commercial'],
-      last_contact: '2024-01-15',
-      service_count: 12,
-      lifetime_value: '$24,500'
-    },
-    {
-      id: '2',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@email.com',
-      phone: '+1 (555) 234-5678',
-      address: '456 Oak Ave, Phoenix, AZ 85002',
-      tags: ['Residential'],
-      last_contact: '2024-01-14',
-      service_count: 5,
-      lifetime_value: '$8,200'
-    },
-    {
-      id: '3',
-      name: 'Mike Davis',
-      email: 'mike.davis@email.com',
-      phone: '+1 (555) 345-6789',
-      address: '789 Pine Rd, Phoenix, AZ 85003',
-      tags: ['Emergency', 'Residential'],
-      last_contact: '2024-01-15',
-      service_count: 3,
-      lifetime_value: '$4,100'
-    },
-    {
-      id: '4',
-      name: 'Emily Chen',
-      email: 'emily.chen@email.com',
-      phone: '+1 (555) 456-7890',
-      address: '321 Elm St, Phoenix, AZ 85004',
-      tags: ['Commercial', 'VIP'],
-      last_contact: '2024-01-10',
-      service_count: 18,
-      lifetime_value: '$42,300'
-    },
-    {
-      id: '5',
-      name: 'Robert Wilson',
-      email: 'r.wilson@email.com',
-      phone: '+1 (555) 567-8901',
-      address: '654 Maple Dr, Phoenix, AZ 85005',
-      tags: ['Residential'],
-      last_contact: '2024-01-12',
-      service_count: 7,
-      lifetime_value: '$12,600'
+  useEffect(() => {
+    fetchContacts();
+  }, [searchQuery]);
+
+  const handleExport = () => {
+    try {
+      if (!safeContacts || safeContacts.length === 0) {
+        console.error('No contacts to export');
+        return;
+      }
+
+      // Convert contacts to CSV
+      const headers = Object.keys(safeContacts[0]).join(',');
+      const csvRows = safeContacts.map(contact => 
+        Object.values(contact).map(field => {
+          // Handle null/undefined values
+          if (field === null || field === undefined) return '';
+          // Convert to string and escape quotes
+          const str = String(field);
+          return `"${str.replace(/"/g, '""')}"`;
+        }).join(',')
+      );
+      
+      const csvContent = [headers, ...csvRows].join('\n');
+      
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contacts-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error exporting contacts:', error);
     }
-  ];
+  };
+
+  const openAddContactModal = () => {
+    setShowAddContactModal(true);
+  };
+
+  const handleAddContact = async (newContact: Omit<Contact, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      // Format the contact data to match the backend's ContactCreate model
+      const contactData = {
+        first_name: newContact.first_name || '',
+        last_name: newContact.last_name || '',
+        email: newContact.email,
+        phone: newContact.phone || '',
+        company_name: newContact.company_name || '',
+        address: newContact.address || '',
+        email_subscribed: newContact.email_subscribed !== false, // Default to true if not provided
+        tags: newContact.tags || [],
+      };
+
+      const response = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        throw new Error(errorData.detail || 'Failed to add contact');
+      }
+
+      if (response.ok) {
+        const savedContact = await response.json();
+        setContacts(prevContacts => [savedContact, ...prevContacts]);
+        setShowAddContactModal(false);
+      }
+    } catch (error) {
+      console.error('Error adding contact:', error);
+    }
+  };
+
+  // Safe stats calculation with null checks
+  const stats = {
+    total_contacts: safeContacts.length,
+    active: safeContacts.length,
+    new_this_month: safeContacts.filter(c => 
+      c?.created_at?.startsWith?.(new Date().toISOString().split('T')[0].substring(0, 7))
+    ).length,
+    high_value: safeContacts.filter(c => 
+      c?.company_name ? c.company_name.length > 0 : false
+    ).length
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="p-6 flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-neutral-600">Loading contacts...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="p-6">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
 
   return (
     <AdminLayout>
@@ -84,11 +211,17 @@ export default function ContactsPage() {
             <p className="text-sm text-neutral-600 mt-1">Manage customer contacts and relationships</p>
           </div>
           <div className="flex gap-3">
-            <button className="inline-flex items-center gap-2 px-4 py-2 border border-neutral-200 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors">
+            <button 
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-neutral-200 text-neutral-700 rounded-lg text-sm font-medium hover:bg-neutral-50 transition-colors"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
-            <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={openAddContactModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               Add Contact
             </button>
@@ -171,9 +304,11 @@ export default function ContactsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-neutral-900">{contact.name}</h3>
+                    <h3 className="text-lg font-semibold text-neutral-900">
+                      {contact.first_name} {contact.last_name}
+                    </h3>
                     <div className="flex gap-2">
-                      {contact.tags.map((tag, index) => (
+                      {contact.tags?.map((tag, index) => (
                         <span
                           key={index}
                           className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -258,6 +393,11 @@ export default function ContactsPage() {
           </div>
         </div>
       </div>
+      <AddContactModal
+        isOpen={showAddContactModal}
+        onClose={() => setShowAddContactModal(false)}
+        onAddContact={handleAddContact}
+      />
     </AdminLayout>
   );
 }

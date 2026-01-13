@@ -5,6 +5,8 @@ import Navigation from "@/components/Navigation";
 import { ToastProvider } from "@/components/ui/toast";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from '@/contexts/AuthContext';
+import { QueryProvider } from './QueryProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -122,13 +124,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning className={inter.className}>
-        <ThemeProvider>
-          <ErrorBoundary>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </ErrorBoundary>
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <ErrorBoundary>
+              <ToastProvider>
+                <QueryProvider>
+                  {children}
+                </QueryProvider>
+              </ToastProvider>
+            </ErrorBoundary>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );

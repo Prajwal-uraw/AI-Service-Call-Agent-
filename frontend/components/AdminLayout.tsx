@@ -29,6 +29,7 @@ import {
   HelpCircle,
   Activity
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import FeedbackWidget from './FeedbackWidget';
 
 interface AdminLayoutProps {
@@ -38,6 +39,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { signOut } = useAuth();
   
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -210,14 +212,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* User Section */}
         <div className="p-2 border-t border-neutral-800/50">
-          <div className={`flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-neutral-800/50 cursor-pointer transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <div 
+            className={`flex items-center gap-2.5 px-2 py-2 rounded-md hover:bg-neutral-800/50 cursor-pointer transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
+            onClick={signOut}
+          >
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
               A
             </div>
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">Admin User</p>
-                <p className="text-xs text-neutral-500 truncate">Online</p>
+                <p className="text-xs text-neutral-500 truncate">Click to logout</p>
               </div>
             )}
           </div>
