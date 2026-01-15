@@ -109,15 +109,12 @@ class AIDemoService:
         
         payload = {
             "name": room_name,
-            "privacy": "private",
+            "privacy": "public",
             "properties": {
                 "enable_screenshare": True,
                 "enable_chat": True,
-                "enable_recording": "cloud",  # Auto-record for compliance
                 "start_video_off": True,
-                "start_audio_off": False,
-                "exp": int(expiry_time.timestamp()),
-                "max_participants": 5  # Customer + AI + 3 shadow users
+                "start_audio_off": False
             }
         }
         

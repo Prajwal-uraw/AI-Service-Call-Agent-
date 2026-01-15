@@ -90,7 +90,7 @@ async def get_dashboard_stats():
         supabase = get_supabase()
         
         # Get all leads
-        response = supabase.table("calculator_submissions").select("*").execute()
+        response = supabase.table("leads").select("*").execute()
         leads = response.data
         
         if not leads:
@@ -170,15 +170,21 @@ async def get_leads(
     try:
         supabase = get_supabase()
         
-        # Build query
-        query = supabase.table("calculator_submissions").select("*")
+        # Build query with only existing columns
+        query = supabase.table("leads").select("""
+            id, email, phone, business_name, business_type,
+            lead_score, tier, status, source_type,
+            created_at, updated_at, pdf_url, custom_fields
+        """)
         
         # Apply filters
         if tier:
-            query = query.eq("lead_tier", tier)
+            query = query.eq("tier", tier)
         
         if min_loss is not None:
-            query = query.gte("monthly_loss", min_loss)
+            # Filtering on custom_fields requires a different approach
+            # We'll filter in Python after fetching
+            pass
         
         if has_email is not None:
             if has_email:
@@ -188,36 +194,48 @@ async def get_leads(
         
         if days:
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-            query = query.gte("submitted_at", cutoff.isoformat())
+            query = query.gte("created_at", cutoff.isoformat())
         
         # Order and paginate
-        query = query.order("submitted_at", desc=True).range(offset, offset + limit - 1)
+        query = query.order("created_at", desc=True).range(offset, offset + limit - 1)
         
         response = query.execute()
         leads = response.data
         
-        # Convert to response model
-        return [
-            LeadSummary(
-                id=lead['id'],
-                session_id=lead['session_id'],
-                email=lead.get('email'),
-                phone=lead.get('phone'),
-                company_name=lead.get('company_name'),
-                business_type=lead['business_type'],
-                monthly_loss=lead['monthly_loss'],
-                annual_loss=lead['annual_loss'],
-                lead_score=lead['lead_score'],
-                lead_tier=lead['lead_tier'],
-                submitted_at=datetime.fromisoformat(lead['submitted_at'].replace('Z', '+00:00')),
-                pdf_url=lead.get('pdf_url'),
-                viewed_full_report=lead.get('viewed_full_report', False),
-                downloaded_pdf=lead.get('downloaded_pdf', False),
-                clicked_cta=lead.get('clicked_cta', False),
-                email_opened=lead.get('email_opened', False)
-            )
-            for lead in leads
-        ]
+        # Convert to response model with proper error handling
+        result = []
+        for lead in leads:
+            custom_fields = lead.get("custom_fields", {})
+            lead_data = {
+                "id": lead.get("id"),
+                "session_id": custom_fields.get("session_id"),
+                "email": lead.get("email"),
+                "phone": lead.get("phone"),
+                "company_name": lead.get("business_name"),
+                "business_type": lead.get("business_type"),
+                "monthly_loss": custom_fields.get("monthly_loss"),
+                "annual_loss": custom_fields.get("annual_loss"),
+                "lead_score": lead.get("lead_score"),
+                "lead_tier": lead.get("tier"),
+                "submitted_at": lead.get("created_at"),
+                "pdf_url": lead.get("pdf_url"),
+                "viewed_full_report": custom_fields.get("viewed_full_report", False),
+                "downloaded_pdf": custom_fields.get("downloaded_pdf", False),
+                "clicked_cta": custom_fields.get("clicked_cta", False),
+                "email_opened": custom_fields.get("email_opened", False)
+            }
+            
+            # Apply min_loss filter in Python since it's in custom_fields
+            if min_loss is not None and lead_data["monthly_loss"] is not None and lead_data["monthly_loss"] < min_loss:
+                continue
+            
+            try:
+                result.append(LeadSummary(**lead_data))
+            except Exception as e:
+                print(f"Error processing lead {lead.get('id')}: {str(e)}")
+                continue
+                
+        return result
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(e)}")
@@ -237,36 +255,49 @@ async def get_lead_detail(session_id: str):
     try:
         supabase = get_supabase()
         
-        response = supabase.table("calculator_submissions").select("*").eq("session_id", session_id).execute()
+        # Get all fields including custom_fields
+        response = supabase.table("leads").select("*").execute()
         
         if not response.data:
-            raise HTTPException(status_code=404, detail="Lead not found")
+            raise HTTPException(status_code=404, detail="No leads found")
         
-        lead = response.data[0]
+        # Find lead by session_id in custom_fields
+        lead = None
+        for item in response.data:
+            custom_fields = item.get('custom_fields', {})
+            if custom_fields.get('session_id') == session_id:
+                lead = item
+                lead['custom_fields'] = custom_fields
+                break
+                
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+            
+        custom_fields = lead.get('custom_fields', {})
         
         return LeadDetail(
             id=lead['id'],
-            session_id=lead['session_id'],
+            session_id=custom_fields.get('session_id'),
             email=lead.get('email'),
             phone=lead.get('phone'),
-            company_name=lead.get('company_name'),
-            location=lead.get('location'),
-            business_type=lead['business_type'],
-            monthly_loss=lead['monthly_loss'],
-            annual_loss=lead['annual_loss'],
-            lead_score=lead['lead_score'],
-            lead_tier=lead['lead_tier'],
-            submitted_at=datetime.fromisoformat(lead['submitted_at'].replace('Z', '+00:00')),
-            last_activity_at=datetime.fromisoformat(lead['last_activity_at'].replace('Z', '+00:00')) if lead.get('last_activity_at') else None,
+            company_name=lead.get('business_name'),
+            location=custom_fields.get('location'),
+            business_type=lead.get('business_type', ''),
+            monthly_loss=custom_fields.get('monthly_loss', 0),
+            annual_loss=custom_fields.get('annual_loss', 0),
+            lead_score=lead.get('lead_score', 0),
+            lead_tier=lead.get('tier', 'Qualified'),
+            submitted_at=datetime.fromisoformat(lead['created_at'].replace('Z', '+00:00')),
+            last_activity_at=datetime.fromisoformat(lead['updated_at'].replace('Z', '+00:00')) if lead.get('updated_at') else None,
             referral_source=lead.get('referral_source'),
             pdf_url=lead.get('pdf_url'),
-            pdf_path=lead.get('pdf_path'),
-            viewed_full_report=lead.get('viewed_full_report', False),
-            downloaded_pdf=lead.get('downloaded_pdf', False),
-            clicked_cta=lead.get('clicked_cta', False),
-            email_opened=lead.get('email_opened', False),
-            raw_input=lead.get('raw_input', {}),
-            raw_output=lead.get('raw_output', {})
+            pdf_path=custom_fields.get('pdf_path'),
+            viewed_full_report=custom_fields.get('viewed_full_report', False),
+            downloaded_pdf=custom_fields.get('downloaded_pdf', False),
+            clicked_cta=custom_fields.get('clicked_cta', False),
+            email_opened=custom_fields.get('email_opened', False),
+            raw_input=custom_fields.get('raw_input', {}),
+            raw_output=custom_fields.get('raw_output', {})
         )
         
     except HTTPException:
@@ -287,33 +318,56 @@ async def get_timeline_analytics(days: int = Query(30, le=365, description="Days
         
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         
-        response = supabase.table("calculator_submissions")\
-            .select("submitted_at, lead_tier, monthly_loss")\
-            .gte("submitted_at", cutoff.isoformat())\
-            .execute()
-        
+        # Get all leads with necessary fields
+        response = supabase.table("leads").select("created_at, tier, custom_fields").execute()
         leads = response.data
+        
+        # Filter by date and process
+        filtered_leads = []
+        for lead in leads:
+            created_at = lead.get('created_at')
+            if not created_at:
+                continue
+                
+            # Parse date and check if it's within the cutoff
+            try:
+                lead_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                if lead_date >= cutoff:
+                    filtered_leads.append(lead)
+            except (ValueError, TypeError):
+                continue
         
         # Group by date
         daily_data = {}
-        for lead in leads:
-            date = lead['submitted_at'][:10]  # YYYY-MM-DD
-            if date not in daily_data:
-                daily_data[date] = {
-                    'date': date,
-                    'total': 0,
-                    'hot': 0,
-                    'warm': 0,
-                    'qualified': 0,
-                    'total_loss': 0
-                }
-            
-            daily_data[date]['total'] += 1
-            daily_data[date]['total_loss'] += lead.get('monthly_loss', 0)
-            
-            tier = lead.get('lead_tier', 'Qualified').lower()
-            if tier in daily_data[date]:
-                daily_data[date][tier] += 1
+        for lead in filtered_leads:
+            try:
+                lead_date = datetime.fromisoformat(lead['created_at'].replace('Z', '+00:00'))
+                date_str = lead_date.strftime('%Y-%m-%d')
+                
+                if date_str not in daily_data:
+                    daily_data[date_str] = {
+                        'date': date_str,
+                        'total': 0,
+                        'hot': 0,
+                        'warm': 0,
+                        'qualified': 0,
+                        'total_loss': 0
+                    }
+                
+                daily_data[date_str]['total'] += 1
+                
+                # Get monthly_loss from custom_fields
+                custom_fields = lead.get('custom_fields', {})
+                monthly_loss = float(custom_fields.get('monthly_loss', 0))
+                daily_data[date_str]['total_loss'] += monthly_loss
+                
+                # Get tier, default to 'qualified' if not set
+                tier = (lead.get('tier') or 'qualified').lower()
+                if tier in daily_data[date_str]:
+                    daily_data[date_str][tier] += 1
+            except (KeyError, ValueError, TypeError) as e:
+                print(f"Error processing lead: {e}")
+                continue
         
         # Convert to sorted list
         timeline = sorted(daily_data.values(), key=lambda x: x['date'])
@@ -339,33 +393,45 @@ async def get_source_analytics():
     try:
         supabase = get_supabase()
         
-        response = supabase.table("calculator_submissions")\
-            .select("referral_source, lead_tier, monthly_loss")\
-            .execute()
-        
+        # Get all leads with necessary fields
+        response = supabase.table("leads").select("tier, custom_fields").execute()
         leads = response.data
+        
+        if not leads:
+            return {"sources": [], "total_sources": 0}
         
         # Group by source
         sources = {}
         for lead in leads:
-            source = lead.get('referral_source') or 'Direct'
-            if source not in sources:
-                sources[source] = {
-                    'source': source,
-                    'count': 0,
-                    'hot': 0,
-                    'warm': 0,
-                    'qualified': 0,
-                    'avg_loss': 0,
-                    'total_loss': 0
-                }
-            
-            sources[source]['count'] += 1
-            sources[source]['total_loss'] += lead.get('monthly_loss', 0)
-            
-            tier = lead.get('lead_tier', 'Qualified').lower()
-            if tier in sources[source]:
-                sources[source][tier] += 1
+            try:
+                custom_fields = lead.get('custom_fields', {})
+                source = custom_fields.get('referral_source', 'Direct')
+                
+                if source not in sources:
+                    sources[source] = {
+                        'source': source,
+                        'count': 0,
+                        'hot': 0,
+                        'warm': 0,
+                        'qualified': 0,
+                        'avg_loss': 0,
+                        'total_loss': 0
+                    }
+                
+                sources[source]['count'] += 1
+                
+                # Get monthly_loss from custom_fields
+                monthly_loss = float(custom_fields.get('monthly_loss', 0))
+                sources[source]['total_loss'] += monthly_loss
+                
+                # Get tier, default to 'qualified' if not set
+                tier = (lead.get('tier') or 'qualified').lower()
+                if tier in sources[source]:
+                    sources[source][tier] += 1
+                    
+            except (KeyError, ValueError, TypeError) as e:
+                print(f"Error processing lead: {e}")
+                continue
         
         # Calculate averages
         for source_data in sources.values():
@@ -394,18 +460,31 @@ async def export_leads_csv(
     try:
         supabase = get_supabase()
         
-        # Build query
-        query = supabase.table("calculator_submissions").select("*")
+        # Get all leads with necessary fields
+        query = supabase.table("leads").select("*")
         
         if tier:
-            query = query.eq("lead_tier", tier)
-        
-        if days:
-            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-            query = query.gte("submitted_at", cutoff.isoformat())
+            query = query.eq("tier", tier)
         
         response = query.execute()
-        leads = response.data
+        all_leads = response.data
+        
+        # Filter by days if needed
+        if days is not None:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            filtered_leads = []
+            for lead in all_leads:
+                try:
+                    created_at = lead.get('created_at')
+                    if created_at:
+                        lead_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        if lead_date >= cutoff:
+                            filtered_leads.append(lead)
+                except (ValueError, TypeError):
+                    continue
+            leads = filtered_leads
+        else:
+            leads = all_leads
         
         # Generate CSV
         import csv
@@ -416,28 +495,26 @@ async def export_leads_csv(
         
         # Header
         writer.writerow([
-            'Session ID', 'Email', 'Phone', 'Company Name', 'Business Type',
-            'Monthly Loss', 'Annual Loss', 'Lead Tier', 'Lead Score',
-            'Submitted At', 'Email Opened', 'PDF Downloaded', 'CTA Clicked',
-            'PDF URL'
+            'ID', 'Email', 'Phone', 'Business Name', 'Business Type',
+            'Lead Score', 'Tier', 'Status', 'Source Type',
+            'Created At', 'Updated At', 'PDF URL'
         ])
         
-        # Data rows
+        # Rows
         for lead in leads:
+            custom_fields = lead.get('custom_fields', {})
             writer.writerow([
-                lead['session_id'],
+                lead.get('id', ''),
                 lead.get('email', ''),
                 lead.get('phone', ''),
-                lead.get('company_name', ''),
-                lead['business_type'],
-                lead['monthly_loss'],
-                lead['annual_loss'],
-                lead['lead_tier'],
-                lead['lead_score'],
-                lead['submitted_at'],
-                lead.get('email_opened', False),
-                lead.get('downloaded_pdf', False),
-                lead.get('clicked_cta', False),
+                lead.get('business_name', ''),
+                lead.get('business_type', ''),
+                lead.get('lead_score', ''),
+                lead.get('tier', ''),
+                lead.get('status', ''),
+                lead.get('source_type', ''),
+                lead.get('created_at', ''),
+                lead.get('updated_at', ''),
                 lead.get('pdf_url', '')
             ])
         

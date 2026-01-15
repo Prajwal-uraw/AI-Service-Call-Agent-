@@ -31,11 +31,9 @@ class ContactCreate(BaseModel):
     state: Optional[str] = None
     zip_code: Optional[str] = None
     linkedin_url: Optional[str] = None
-    website: Optional[str] = None
+    website_url: Optional[str] = None
     preferred_contact_method: str = "email"
-    timezone: Optional[str] = None
     lead_id: Optional[str] = None
-    is_primary: bool = False
     email_subscribed: bool = True
     sms_subscribed: bool = False
     tags: List[str] = []
@@ -55,10 +53,8 @@ class ContactUpdate(BaseModel):
     state: Optional[str] = None
     zip_code: Optional[str] = None
     linkedin_url: Optional[str] = None
-    website: Optional[str] = None
+    website_url: Optional[str] = None
     preferred_contact_method: Optional[str] = None
-    timezone: Optional[str] = None
-    is_primary: Optional[bool] = None
     email_subscribed: Optional[bool] = None
     sms_subscribed: Optional[bool] = None
     tags: Optional[List[str]] = None
@@ -125,7 +121,7 @@ async def get_contacts(
                     "city": bc.get("city"),
                     "state": bc.get("state"),
                     "zip_code": bc.get("zip_code"),
-                    "website": bc.get("website"),
+                    "website_url": bc.get("website_url"),
                     "created_at": bc.get("created_at"),
                     "source": "business_contacts",
                     "signal_id": bc.get("signal_id"),
