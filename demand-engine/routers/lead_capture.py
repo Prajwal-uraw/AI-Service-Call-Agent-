@@ -11,10 +11,14 @@ import os
 from typing import Optional
 from datetime import datetime
 import httpx
+import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 import logging
+from database.session import get_db
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +56,8 @@ async def capture_phone_lead(request: PhoneLeadRequest):
     - Voice agent phone number
     - Lead ID for tracking
     """
+    db = next(get_db())
+    
     try:
         # Format phone number (remove non-digits)
         phone = ''.join(filter(str.isdigit, request.phone_number))
@@ -60,8 +66,43 @@ async def capture_phone_lead(request: PhoneLeadRequest):
         
         logger.info(f"Phone lead captured: {phone} from {request.source}")
         
-        # TODO: Save lead to database
-        lead_id = f"phone_{datetime.now().strftime('%Y%m%d%H%M%S')}_{phone[-4:]}"
+        # Save lead to database
+        lead_id = str(uuid.uuid4())
+        insert_query = """
+        INSERT INTO leads (
+            id,
+            phone,
+            source_type,
+            status,
+            tier,
+            notes,
+            created_at,
+            updated_at
+        ) VALUES (
+            :id,
+            :phone,
+            :source_type,
+            :status,
+            :tier,
+            :notes,
+            :created_at,
+            :updated_at
+        )
+        """
+        
+        db.execute(text(insert_query), {
+            "id": lead_id,
+            "phone": phone,
+            "source_type": request.source or "website",
+            "status": "new",
+            "tier": "cold",
+            "notes": f"Phone lead captured via {request.source or 'website'}",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        })
+        
+        db.commit()
+        logger.info(f"Phone lead saved to database: {lead_id}")
         
         return LeadCaptureResponse(
             success=True,
@@ -71,6 +112,7 @@ async def capture_phone_lead(request: PhoneLeadRequest):
         
     except Exception as e:
         logger.error(f"Error capturing phone lead: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to capture phone number: {str(e)}"
@@ -88,6 +130,8 @@ async def send_email_lead(request: EmailLeadRequest):
     - Demo booking link
     - Product features overview
     """
+    db = next(get_db())
+    
     if not RESEND_API_KEY:
         raise HTTPException(
             status_code=500,
@@ -196,8 +240,43 @@ async def send_email_lead(request: EmailLeadRequest):
             result = response.json()
             logger.info(f"Email sent successfully to {request.email}: {result.get('id')}")
         
-        # TODO: Save lead to database
-        lead_id = f"email_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        # Save lead to database
+        lead_id = str(uuid.uuid4())
+        insert_query = """
+        INSERT INTO leads (
+            id,
+            email,
+            source_type,
+            status,
+            tier,
+            notes,
+            created_at,
+            updated_at
+        ) VALUES (
+            :id,
+            :email,
+            :source_type,
+            :status,
+            :tier,
+            :notes,
+            :created_at,
+            :updated_at
+        )
+        """
+        
+        db.execute(text(insert_query), {
+            "id": lead_id,
+            "email": request.email,
+            "source_type": request.source or "website",
+            "status": "new",
+            "tier": "cold",
+            "notes": "Email lead capture - case study sent via Resend",
+            "created_at": datetime.now(),
+            "updated_at": datetime.now()
+        })
+        
+        db.commit()
+        logger.info(f"Email lead saved to database: {lead_id}")
         
         return LeadCaptureResponse(
             success=True,
@@ -209,6 +288,7 @@ async def send_email_lead(request: EmailLeadRequest):
         raise
     except Exception as e:
         logger.error(f"Error sending email: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to send email: {str(e)}"
@@ -218,14 +298,48 @@ async def send_email_lead(request: EmailLeadRequest):
 @router.get("/stats")
 async def get_lead_stats():
     """Get lead capture statistics."""
-    # TODO: Query database for actual stats
-    return {
-        "total_leads": 0,
-        "phone_leads": 0,
-        "email_leads": 0,
-        "conversion_rate": 0.0,
-        "last_updated": datetime.now().isoformat()
-    }
+    db = next(get_db())
+    
+    try:
+        # Query database for actual stats
+        total_query = """
+        SELECT 
+            COUNT(*) as total_leads,
+            COUNT(CASE WHEN phone IS NOT NULL THEN 1 END) as phone_leads,
+            COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as email_leads,
+            MAX(created_at) as last_updated
+        FROM leads
+        """
+        
+        result = db.execute(text(total_query))
+        row = result.fetchone()
+        
+        total_leads = row.total_leads if row.total_leads else 0
+        phone_leads = row.phone_leads if row.phone_leads else 0
+        email_leads = row.email_leads if row.email_leads else 0
+        last_updated = row.last_updated.isoformat() if row.last_updated else datetime.now().isoformat()
+        
+        # Calculate conversion rate (safe division)
+        conversion_rate = 0.0
+        if total_leads > 0:
+            conversion_rate = round((email_leads / total_leads) * 100, 2)
+        
+        logger.info(f"Stats retrieved: {total_leads} total, {phone_leads} phone, {email_leads} email")
+        
+        return {
+            "total_leads": total_leads,
+            "phone_leads": phone_leads,
+            "email_leads": email_leads,
+            "conversion_rate": conversion_rate,
+            "last_updated": last_updated
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving stats: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve statistics: {str(e)}"
+        )
 
 @router.get("/voice-agent-number")
 async def get_voice_agent_number():

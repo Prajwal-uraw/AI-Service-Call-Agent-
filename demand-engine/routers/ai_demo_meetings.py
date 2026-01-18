@@ -73,7 +73,7 @@ async def create_ai_demo_meeting(request: CreateMeetingRequest):
             customer_phone=request.customer_phone
         )
     
-     # TODO: Store in database (ai_demo_meetings table)
+     
      
         # Store in database
         from database.session import get_db
@@ -93,6 +93,7 @@ async def create_ai_demo_meeting(request: CreateMeetingRequest):
             duration_minutes=15,
             daily_room_name=meeting_data["daily_room_name"],
             daily_room_url=meeting_data["daily_room_url"],
+            customer_join_url=meeting_data.get("customer_join_url"),
             customer_token=meeting_data.get("customer_token"),
             ai_token=meeting_data.get("ai_token"),
             shadow_token=meeting_data.get("shadow_token"),
@@ -178,20 +179,75 @@ async def cancel_meeting(meeting_id: str):
     Cancel an AI demo meeting
     """
     try:
+        from database.session import get_db
+        from models.ai_demo_models import AIDemoMeeting
+        
+        db = next(get_db())
+        
+        # Get meeting from database
+        meeting = db.query(AIDemoMeeting).filter(
+            AIDemoMeeting.meeting_id == meeting_id
+        ).first()
+        
+        if not meeting:
+            raise HTTPException(status_code=404, detail="Meeting not found")
+        
+        # Check if already cancelled
+        if meeting.status == "cancelled":
+            return {"message": "Meeting already cancelled", "meeting_id": meeting_id}
+        
         service = get_ai_demo_service()
         
-        # TODO: Get room name from database
-        room_name = f"ai-demo-{meeting_id}"
+        # Delete Daily.co room
+        if meeting.daily_room_name:
+            try:
+                await service.delete_meeting(meeting.daily_room_name)
+                logger.info(f"Deleted Daily.co room: {meeting.daily_room_name}")
+            except Exception as daily_error:
+                logger.warning(f"Failed to delete Daily.co room: {daily_error}")
+                # Continue with cancellation even if room deletion fails
         
-        await service.delete_meeting(room_name)
+        # Cancel calendar event if exists
+        if meeting.calendar_event_id and meeting.calendar_provider:
+            try:
+                await service.cancel_calendar_event(
+                    meeting.calendar_event_id,
+                    meeting.calendar_provider
+                )
+                logger.info(f"Cancelled calendar event: {meeting.calendar_event_id}")
+            except Exception as calendar_error:
+                logger.warning(f"Failed to cancel calendar event: {calendar_error}")
+                # Continue with cancellation even if calendar cancellation fails
         
-        # TODO: Update database status to 'cancelled'
-        # TODO: Send cancellation email
+        # Update database
+        meeting.status = "cancelled"
+        meeting.cancelled_at = datetime.utcnow()
+        meeting.updated_at = datetime.utcnow()
         
-        return {"message": "Meeting cancelled successfully"}
+        db.commit()
         
+        # Send cancellation email
+        try:
+            await service.send_cancellation_email(
+                meeting.customer_email,
+                meeting.customer_name,
+                meeting.scheduled_time
+            )
+            logger.info(f"Sent cancellation email to {meeting.customer_email}")
+        except Exception as email_error:
+            logger.warning(f"Failed to send cancellation email: {email_error}")
+            # Don't fail the cancellation if email fails
+        
+        return {
+            "message": "Meeting cancelled successfully",
+            "meeting_id": meeting_id,
+            "cancelled_at": meeting.cancelled_at.isoformat()
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error cancelling meeting: {e}")
+        logger.error(f"Error cancelling meeting {meeting_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -332,15 +388,64 @@ async def takeover_meeting(meeting_id: str, takeover_data: dict):
     Human takeover of AI demo call
     """
     try:
-        # TODO: Mute AI bot
-        # TODO: Update database with takeover info
+        from database.session import get_db
+        from models.ai_demo_models import AIDemoMeeting
         
-        logger.info(f"Human takeover for meeting {meeting_id}")
+        db = next(get_db())
         
-        return {"message": "Takeover successful", "ai_muted": True}
+        # Get meeting from database
+        meeting = db.query(AIDemoMeeting).filter(
+            AIDemoMeeting.meeting_id == meeting_id
+        ).first()
         
+        if not meeting:
+            raise HTTPException(status_code=404, detail="Meeting not found")
+        
+        # Check if already taken over
+        if meeting.taken_over:
+            return {
+                "message": "Meeting already taken over",
+                "meeting_id": meeting_id,
+                "taken_over_by": meeting.taken_over_by,
+                "taken_over_at": meeting.taken_over_at.isoformat() if meeting.taken_over_at else None
+            }
+        
+        # Get takeover user info
+        takeover_user = takeover_data.get("user_email", "unknown")
+        
+        service = get_ai_demo_service()
+        
+        # Mute AI bot in Daily.co room
+        if meeting.daily_room_name:
+            try:
+                await service.mute_ai_bot(meeting.daily_room_name)
+                logger.info(f"Muted AI bot in room: {meeting.daily_room_name}")
+            except Exception as mute_error:
+                logger.warning(f"Failed to mute AI bot: {mute_error}")
+                # Continue with takeover even if muting fails
+        
+        # Update database with takeover info
+        meeting.taken_over = True
+        meeting.taken_over_by = takeover_user
+        meeting.taken_over_at = datetime.utcnow()
+        meeting.updated_at = datetime.utcnow()
+        
+        db.commit()
+        
+        logger.info(f"Human takeover for meeting {meeting_id} by {takeover_user}")
+        
+        return {
+            "message": "Takeover successful",
+            "meeting_id": meeting_id,
+            "taken_over_by": takeover_user,
+            "taken_over_at": meeting.taken_over_at.isoformat(),
+            "ai_muted": True
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error during takeover: {e}")
+        logger.error(f"Error during takeover of meeting {meeting_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

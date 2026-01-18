@@ -38,6 +38,7 @@ class AIDemoMeeting(Base):
     # Daily.co Integration
     daily_room_name = Column(String(255), unique=True, nullable=False)
     daily_room_url = Column(Text, nullable=False)
+    customer_join_url = Column(Text)
     customer_token = Column(Text)
     ai_token = Column(Text)
     shadow_token = Column(Text)
@@ -52,7 +53,17 @@ class AIDemoMeeting(Base):
     customer_joined_at = Column(DateTime(timezone=True))
     started_at = Column(DateTime(timezone=True))
     ended_at = Column(DateTime(timezone=True))
+    cancelled_at = Column(DateTime(timezone=True))
     actual_duration_seconds = Column(Integer)
+    
+    # Takeover Information
+    taken_over = Column(Boolean, default=False)
+    taken_over_by = Column(String(255))  # Email or user ID
+    taken_over_at = Column(DateTime(timezone=True))
+    
+    # Meeting Outcomes
+    icp_fit = Column(Boolean)  # Ideal Customer Profile fit
+    cta_taken = Column(String(100))  # Call-to-action taken: 'book_call', 'start_trial', 'get_deck', 'none'
     
     # Metadata
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
