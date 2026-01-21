@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     console.log('[Outbound Call] Initiating call to:', body.to_number);
     console.log('[Outbound Call] Backend URL:', BACKEND_URL);
     
-    const response = await fetch(`${BACKEND_URL}/api/outbound-calls/initiate`, {
+    const response = await fetch(`${BACKEND_URL}/api/click-to-call/initiate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

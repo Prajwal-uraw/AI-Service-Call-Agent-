@@ -73,11 +73,11 @@ class ClickToCallService:
             call = self.client.calls.create(
                 to=to_number,
                 from_=self.from_number,
-                url=f"https://yourapp.com/api/click-to-call/twiml?user={user_email}",
-                status_callback=f"https://yourapp.com/api/click-to-call/status",
+                url=f"https://5ce366569d0f.ngrok-free.app/api/click-to-call/twiml?user={user_email}&to_number={to_number}",
+                status_callback=f"https://5ce366569d0f.ngrok-free.app/api/click-to-call/status",
                 status_callback_event=['initiated', 'ringing', 'answered', 'completed'],
                 record=True,  # Auto-record
-                recording_status_callback=f"https://yourapp.com/api/click-to-call/recording"
+                recording_status_callback=f"https://5ce366569d0f.ngrok-free.app/api/click-to-call/recording"
             )
             
             # Log to database
@@ -233,7 +233,7 @@ class ClickToCallService:
             logger.error(f"Error logging to CRM: {e}")
             raise
     
-    def generate_twiml(self, user_email: str) -> str:
+    def generate_twiml(self, user_email: str, to_number: str) -> str:
         """
         Generate TwiML for outbound call
         Connects user to customer
@@ -243,14 +243,13 @@ class ClickToCallService:
         # Play message to user
         response.say("Connecting your call now.", voice='alice')
         
-        # Dial customer
-        dial = Dial(
+        # Dial customer directly
+        response.dial(
+            to_number,
             record='record-from-answer',
-            recording_status_callback=f"https://yourapp.com/api/click-to-call/recording",
+            recording_status_callback=f"https://5ce366569d0f.ngrok-free.app/api/click-to-call/recording",
             timeout=30
         )
-        
-        response.append(dial)
         
         return str(response)
 

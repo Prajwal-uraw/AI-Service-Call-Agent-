@@ -125,14 +125,14 @@ async def log_call_to_crm(call_sid: str, request: LogCallRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/twiml")
-async def get_twiml(user: str):
+@router.post("/twiml")
+async def get_twiml(user: str, to_number: str):
     """
     Generate TwiML for outbound call
     """
     try:
         service = get_click_to_call_service()
-        twiml = service.generate_twiml(user)
+        twiml = service.generate_twiml(user, to_number)
         
         return Response(content=twiml, media_type="application/xml")
         
